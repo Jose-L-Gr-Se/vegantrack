@@ -11,11 +11,12 @@
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior-y: none;
   }
 
   body {
     @apply bg-surface-50 text-surface-900 font-sans;
-    overscroll-behavior: none;
+    overscroll-behavior-y: none;
   }
 
   /* Hide scrollbar but keep scroll */
