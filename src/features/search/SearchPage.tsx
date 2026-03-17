@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useDiaryStore } from '@/stores/diaryStore';
 import { Spinner } from '@/components/ui/Spinner';
 import { SkeletonList } from '@/components/ui/Skeleton';
-import { Search, ScanBarcode, X, Leaf, Plus, Clock, Star } from 'lucide-react';
+import { Search, ScanBarcode, X, Leaf, Plus, Clock, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import type { OpenFoodFactsProduct, MealType, RecentFood } from '@/types';
 
 const MEAL_OPTIONS: { value: MealType; label: string; icon: string }[] = [
@@ -13,6 +13,16 @@ const MEAL_OPTIONS: { value: MealType; label: string; icon: string }[] = [
   { value: 'dinner', label: 'Cena', icon: '🌙' },
   { value: 'snack', label: 'Snacks', icon: '🍎' },
 ];
+
+const MEAL_LABELS: Record<MealType, string> = {
+  breakfast: 'Desayuno',
+  lunch: 'Comida',
+  dinner: 'Cena',
+  snack: 'Snacks',
+};
+
+// Timeout for add operation (15 seconds)
+const ADD_TIMEOUT = 15000;
 
 export function SearchPage() {
   const { user } = useAuthStore();
@@ -23,29 +33,43 @@ export function SearchPage() {
   const [scanning, setScanning] = useState(false);
   const [veganOnly, setVeganOnly] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<OpenFoodFactsProduct | null>(null);
-  const [servingGrams, setServingGrams] = useState(100);
+  const [servingInput, setServingInput] = useState('100'); // String for input flexibility
   const [mealType, setMealType] = useState<MealType>('lunch');
+  const [lockedMealType, setLockedMealType] = useState<MealType | null>(null); // When coming from diary
   const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
+  const [showAllRecents, setShowAllRecents] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const scannerRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const servingGrams = Math.max(1, parseInt(servingInput) || 0);
 
   // Load recent foods on mount
   useEffect(() => {
     if (user) fetchRecentFoods(user.id);
   }, [user]);
 
-  // Listen for meal type from diary page
+  // Listen for meal type from diary page (locked — no selector shown)
   useEffect(() => {
     const handler = (e: CustomEvent) => {
-      if (e.detail) setMealType(e.detail);
+      if (e.detail) {
+        setMealType(e.detail);
+        setLockedMealType(e.detail);
+      }
     };
     window.addEventListener('navigate-search', handler as any);
     return () => window.removeEventListener('navigate-search', handler as any);
   }, []);
 
-  // Debounced search — stops when a product is selected
+  // Reset locked meal type when going back to search list
+  const clearProduct = () => {
+    setSelectedProduct(null);
+    setAddError(null);
+  };
+
+  // Debounced search
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (selectedProduct) return;
@@ -79,7 +103,7 @@ export function SearchPage() {
           const product = await getProductByBarcode(decodedText);
           if (product) {
             setSelectedProduct(product);
-            setServingGrams(product.serving_quantity || 100);
+            setServingInput(String(product.serving_quantity || 100));
           } else {
             setResults([]);
             setQuery(`Código: ${decodedText} (no encontrado)`);
@@ -102,13 +126,24 @@ export function SearchPage() {
   }, []);
 
   const handleAddFood = async () => {
-    if (!selectedProduct || !user) return;
+    if (!selectedProduct || !user || adding) return;
+    if (servingGrams <= 0) {
+      setAddError('Introduce una cantidad válida en gramos');
+      return;
+    }
+
     setAdding(true);
+    setAddError(null);
 
     const n = selectedProduct.nutriments;
     const ratio = servingGrams / 100;
 
-    const { error } = await addEntry({
+    // Add with timeout
+    const timeoutPromise = new Promise<{ error: string }>((resolve) =>
+      setTimeout(() => resolve({ error: 'La operación tardó demasiado. Comprueba tu conexión e inténtalo de nuevo.' }), ADD_TIMEOUT)
+    );
+
+    const addPromise = addEntry({
       user_id: user.id,
       date: selectedDate,
       meal_type: mealType,
@@ -128,12 +163,18 @@ export function SearchPage() {
       image_url: selectedProduct.image_front_url || null,
     });
 
+    const result = await Promise.race([addPromise, timeoutPromise]);
+
     setAdding(false);
-    if (!error) {
-      setAddedMessage(`${selectedProduct.product_name} añadido`);
+    if (result.error) {
+      setAddError(result.error);
+    } else {
+      setAddedMessage(`${selectedProduct.product_name} añadido a ${MEAL_LABELS[mealType]}`);
       setSelectedProduct(null);
-      fetchRecentFoods(user.id); // Refresh recents
-      setTimeout(() => setAddedMessage(null), 2000);
+      setLockedMealType(null);
+      setAddError(null);
+      fetchRecentFoods(user.id);
+      setTimeout(() => setAddedMessage(null), 2500);
     }
   };
 
@@ -141,7 +182,7 @@ export function SearchPage() {
   const handleQuickAdd = async (food: RecentFood) => {
     if (!user) return;
     const ratio = food.last_serving_g / 100;
-    
+
     const { error } = await addEntry({
       user_id: user.id,
       date: selectedDate,
@@ -163,12 +204,12 @@ export function SearchPage() {
     });
 
     if (!error) {
-      setAddedMessage(`${food.food_name} añadido`);
-      setTimeout(() => setAddedMessage(null), 2000);
+      setAddedMessage(`${food.food_name} añadido a ${MEAL_LABELS[mealType]}`);
+      setTimeout(() => setAddedMessage(null), 2500);
     }
   };
 
-  // Convert RecentFood to OpenFoodFactsProduct for detail view
+  // Convert RecentFood to product for detail view
   const openRecentDetail = (food: RecentFood) => {
     setSelectedProduct({
       code: food.barcode || '',
@@ -190,10 +231,10 @@ export function SearchPage() {
       serving_size: `${food.last_serving_g}g`,
       serving_quantity: food.last_serving_g,
     });
-    setServingGrams(food.last_serving_g);
+    setServingInput(String(food.last_serving_g));
   };
 
-  // Product detail / add modal
+  // ==================== PRODUCT DETAIL VIEW ====================
   if (selectedProduct) {
     const n = selectedProduct.nutriments;
     const ratio = servingGrams / 100;
@@ -201,7 +242,7 @@ export function SearchPage() {
 
     return (
       <div className="pb-28 px-4 pt-6">
-        <button onClick={() => setSelectedProduct(null)} className="flex items-center gap-1 text-sm text-surface-500 mb-4 hover:text-surface-700">
+        <button onClick={clearProduct} className="flex items-center gap-1 text-sm text-surface-500 mb-4 hover:text-surface-700">
           <X className="w-4 h-4" /> Volver a búsqueda
         </button>
 
@@ -224,20 +265,25 @@ export function SearchPage() {
               )}
             </div>
 
-            {/* Serving selector */}
+            {/* Serving selector — allows empty input for typing */}
             <div>
               <label className="label">Cantidad (gramos)</label>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  value={servingGrams}
-                  onChange={(e) => setServingGrams(Math.max(1, +e.target.value))}
+                  value={servingInput}
+                  onChange={(e) => setServingInput(e.target.value)}
+                  onBlur={() => {
+                    if (!servingInput || parseInt(servingInput) <= 0) {
+                      setServingInput('100');
+                    }
+                  }}
                   className="input flex-1 font-mono"
-                  min={1}
+                  inputMode="numeric"
                 />
                 {selectedProduct.serving_quantity > 0 && (
                   <button
-                    onClick={() => setServingGrams(selectedProduct.serving_quantity)}
+                    onClick={() => setServingInput(String(selectedProduct.serving_quantity))}
                     className="btn-secondary text-xs whitespace-nowrap"
                   >
                     1 porción ({selectedProduct.serving_quantity}g)
@@ -249,7 +295,7 @@ export function SearchPage() {
                 {[50, 100, 150, 200].map((g) => (
                   <button
                     key={g}
-                    onClick={() => setServingGrams(g)}
+                    onClick={() => setServingInput(String(g))}
                     className={`flex-1 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                       servingGrams === g
                         ? 'border-brand-500 bg-brand-50 text-brand-700'
@@ -266,7 +312,7 @@ export function SearchPage() {
             <div className="bg-surface-50 rounded-2xl p-4 space-y-2">
               <div className="flex justify-between font-semibold">
                 <span>Calorías</span>
-                <span className="font-mono">{Math.round(n['energy-kcal_100g'] * ratio)} kcal</span>
+                <span className="font-mono">{servingGrams > 0 ? Math.round(n['energy-kcal_100g'] * ratio) : 0} kcal</span>
               </div>
               <div className="h-px bg-surface-200" />
               {[
@@ -279,46 +325,86 @@ export function SearchPage() {
               ].map((item) => (
                 <div key={item.label} className={`flex justify-between text-sm ${item.indent ? 'pl-3 text-surface-500' : ''}`}>
                   <span>{item.label}</span>
-                  <span className={`font-mono ${item.color}`}>{(item.val * ratio).toFixed(1)}g</span>
+                  <span className={`font-mono ${item.color}`}>{servingGrams > 0 ? (item.val * ratio).toFixed(1) : '0.0'}g</span>
                 </div>
               ))}
             </div>
 
-            {/* Meal selector */}
-            <div>
-              <label className="label">Añadir a</label>
-              <div className="grid grid-cols-4 gap-2">
-                {MEAL_OPTIONS.map((m) => (
-                  <button
-                    key={m.value}
-                    onClick={() => setMealType(m.value)}
-                    className={`py-2 rounded-xl text-xs font-semibold border-2 transition-all ${
-                      mealType === m.value
-                        ? 'border-brand-500 bg-brand-50 text-brand-700'
-                        : 'border-surface-200 text-surface-500'
-                    }`}
-                  >
-                    <span className="block text-base">{m.icon}</span>
-                    {m.label}
-                  </button>
-                ))}
+            {/* Meal selector — ONLY shown when NOT coming from diary (no lockedMealType) */}
+            {lockedMealType ? (
+              <div className="bg-surface-50 rounded-2xl px-4 py-3 flex items-center gap-2">
+                <span className="text-sm text-surface-600">Añadir a</span>
+                <span className="text-sm font-semibold text-surface-800">
+                  {MEAL_OPTIONS.find(m => m.value === lockedMealType)?.icon} {MEAL_LABELS[lockedMealType]}
+                </span>
               </div>
-            </div>
+            ) : (
+              <div>
+                <label className="label">Añadir a</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {MEAL_OPTIONS.map((m) => (
+                    <button
+                      key={m.value}
+                      onClick={() => setMealType(m.value)}
+                      className={`py-2 rounded-xl text-xs font-semibold border-2 transition-all ${
+                        mealType === m.value
+                          ? 'border-brand-500 bg-brand-50 text-brand-700'
+                          : 'border-surface-200 text-surface-500'
+                      }`}
+                    >
+                      <span className="block text-base">{m.icon}</span>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
+            {/* Error message */}
+            {addError && (
+              <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-2xl border border-red-100 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{addError}</span>
+              </div>
+            )}
+
+            {/* Add button */}
             <button
               onClick={handleAddFood}
-              disabled={adding}
+              disabled={adding || servingGrams <= 0}
               className="btn-primary w-full flex items-center justify-center gap-2"
             >
-              {adding ? <Spinner className="text-white" /> : (
-                <><Plus className="w-4 h-4" /> Añadir al diario</>
+              {adding ? (
+                <>
+                  <Spinner className="text-white" />
+                  <span>Añadiendo...</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  Añadir {servingGrams > 0 ? `${servingGrams}g` : ''} al diario
+                </>
               )}
             </button>
+
+            {/* Retry hint when stuck */}
+            {adding && (
+              <button
+                onClick={() => setAdding(false)}
+                className="w-full text-center text-xs text-surface-400 hover:text-surface-600 py-1"
+              >
+                ¿Tarda mucho? Toca aquí para cancelar
+              </button>
+            )}
           </div>
         </div>
       </div>
     );
   }
+
+  // ==================== SEARCH LIST VIEW ====================
+
+  const recentsToShow = showAllRecents ? recentFoods : recentFoods.slice(0, 5);
 
   return (
     <div className="pb-28 px-4 pt-6">
@@ -331,25 +417,8 @@ export function SearchPage() {
         </div>
       )}
 
-      {/* Meal type selector (always visible) */}
-      <div className="flex gap-1.5 mb-4 overflow-x-auto no-scrollbar">
-        {MEAL_OPTIONS.map((m) => (
-          <button
-            key={m.value}
-            onClick={() => setMealType(m.value)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
-              mealType === m.value
-                ? 'bg-brand-100 text-brand-700 border border-brand-200'
-                : 'bg-surface-100 text-surface-500 border border-surface-200'
-            }`}
-          >
-            <span>{m.icon}</span> {m.label}
-          </button>
-        ))}
-      </div>
-
       {/* Search bar */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
           <input
@@ -379,17 +448,19 @@ export function SearchPage() {
         </button>
       </div>
 
-      {/* Vegan filter */}
-      <button
-        onClick={() => setVeganOnly(!veganOnly)}
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all mb-4 ${
-          veganOnly
-            ? 'bg-brand-100 text-brand-700 border border-brand-200'
-            : 'bg-surface-100 text-surface-500 border border-surface-200'
-        }`}
-      >
-        <Leaf className="w-3 h-3" /> Solo veganos
-      </button>
+      {/* Filters row */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setVeganOnly(!veganOnly)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+            veganOnly
+              ? 'bg-brand-100 text-brand-700 border border-brand-200'
+              : 'bg-surface-100 text-surface-500 border border-surface-200'
+          }`}
+        >
+          <Leaf className="w-3 h-3" /> Solo veganos
+        </button>
+      </div>
 
       {/* Scanner container */}
       {scanning && (
@@ -412,7 +483,7 @@ export function SearchPage() {
               key={product.code}
               onClick={() => {
                 setSelectedProduct(product);
-                setServingGrams(product.serving_quantity || 100);
+                setServingInput(String(product.serving_quantity || 100));
               }}
               className="w-full card p-3 flex items-center gap-3 text-left hover:border-brand-200 transition-colors"
             >
@@ -454,15 +525,16 @@ export function SearchPage() {
         </div>
       )}
 
-      {/* Recent foods (shown when not searching) */}
+      {/* Recent foods (shown when not searching) — limited with "show more" */}
       {!searching && !query && recentFoods.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Clock className="w-4 h-4 text-surface-400" />
             <h2 className="text-sm font-semibold text-surface-600">Recientes</h2>
+            <span className="text-xs text-surface-400">· {MEAL_LABELS[mealType]}</span>
           </div>
           <div className="space-y-2">
-            {recentFoods.map((food, i) => (
+            {recentsToShow.map((food, i) => (
               <div
                 key={food.food_name + i}
                 className="card p-3 flex items-center gap-3"
@@ -501,6 +573,18 @@ export function SearchPage() {
               </div>
             ))}
           </div>
+          {recentFoods.length > 5 && (
+            <button
+              onClick={() => setShowAllRecents(!showAllRecents)}
+              className="w-full mt-2 py-2 text-xs text-surface-500 hover:text-surface-700 flex items-center justify-center gap-1"
+            >
+              {showAllRecents ? (
+                <><ChevronUp className="w-3 h-3" /> Mostrar menos</>
+              ) : (
+                <><ChevronDown className="w-3 h-3" /> Ver {recentFoods.length - 5} más</>
+              )}
+            </button>
+          )}
         </div>
       )}
 
