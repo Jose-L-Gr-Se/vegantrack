@@ -75,4 +75,22 @@ export interface MealGroup {
   totals: NutrientSummary;
 }
 
+export interface RecentFood {
+  food_name: string;
+  barcode: string | null;
+  brand: string | null;
+  image_url: string | null;
+  calories_per_100g: number;
+  protein_per_100g: number;
+  carbs_per_100g: number;
+  fat_per_100g: number;
+  fiber_per_100g: number;
+  sugar_per_100g: number;
+  saturated_fat_per_100g: number;
+  sodium_per_100g: number;
+  is_vegan: boolean;
+  last_serving_g: number;
+  use_count: number;
+}
+
 export type MealType = FoodLogEntry['meal_type'];

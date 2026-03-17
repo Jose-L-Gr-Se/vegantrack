@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDiaryStore } from '@/stores/diaryStore';
 import { ProgressRing } from '@/components/ui/ProgressRing';
@@ -155,8 +155,10 @@ export function DiaryPage() {
 }
 
 function FoodEntry({ entry, onDelete }: { entry: FoodLogEntry; onDelete: (id: string) => void }) {
+  const [confirming, setConfirming] = useState(false);
+
   return (
-    <div className="flex items-center gap-3 px-4 py-3 group">
+    <div className="flex items-center gap-3 px-4 py-3">
       {/* Thumbnail or placeholder */}
       {entry.image_url ? (
         <img src={entry.image_url} alt="" className="w-10 h-10 rounded-xl object-cover bg-surface-100" />
@@ -191,12 +193,22 @@ function FoodEntry({ entry, onDelete }: { entry: FoodLogEntry; onDelete: (id: st
       </div>
 
       {/* Delete */}
-      <button
-        onClick={() => onDelete(entry.id)}
-        className="w-8 h-8 flex items-center justify-center rounded-xl text-surface-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
-      >
-        <Trash2 className="w-3.5 h-3.5" />
-      </button>
+      {confirming ? (
+        <button
+          onClick={() => { onDelete(entry.id); setConfirming(false); }}
+          className="w-8 h-8 flex items-center justify-center rounded-xl text-red-600 bg-red-50 transition-all flex-shrink-0"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      ) : (
+        <button
+          onClick={() => setConfirming(true)}
+          onBlur={() => setTimeout(() => setConfirming(false), 2000)}
+          className="w-8 h-8 flex items-center justify-center rounded-xl text-surface-300 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      )}
     </div>
   );
 }

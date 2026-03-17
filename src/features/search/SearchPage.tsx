@@ -3,8 +3,9 @@ import { searchProducts, getProductByBarcode, isProductVegan } from '@/lib/openf
 import { useAuthStore } from '@/stores/authStore';
 import { useDiaryStore } from '@/stores/diaryStore';
 import { Spinner } from '@/components/ui/Spinner';
-import { Search, ScanBarcode, X, Leaf, Plus, ChevronDown } from 'lucide-react';
-import type { OpenFoodFactsProduct, MealType } from '@/types';
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { Search, ScanBarcode, X, Leaf, Plus, Clock, Star } from 'lucide-react';
+import type { OpenFoodFactsProduct, MealType, RecentFood } from '@/types';
 
 const MEAL_OPTIONS: { value: MealType; label: string; icon: string }[] = [
   { value: 'breakfast', label: 'Desayuno', icon: '🌅' },
@@ -15,7 +16,7 @@ const MEAL_OPTIONS: { value: MealType; label: string; icon: string }[] = [
 
 export function SearchPage() {
   const { user } = useAuthStore();
-  const { addEntry, selectedDate } = useDiaryStore();
+  const { addEntry, selectedDate, recentFoods, fetchRecentFoods } = useDiaryStore();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<OpenFoodFactsProduct[]>([]);
   const [searching, setSearching] = useState(false);
@@ -27,8 +28,13 @@ export function SearchPage() {
   const [adding, setAdding] = useState(false);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
-  const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<any>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Load recent foods on mount
+  useEffect(() => {
+    if (user) fetchRecentFoods(user.id);
+  }, [user]);
 
   // Listen for meal type from diary page
   useEffect(() => {
@@ -42,7 +48,7 @@ export function SearchPage() {
   // Debounced search — stops when a product is selected
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (selectedProduct) return; // Don't search while viewing a product
+    if (selectedProduct) return;
     if (!query.trim() || query.length < 2) {
       setResults([]);
       return;
@@ -80,7 +86,7 @@ export function SearchPage() {
           }
           setSearching(false);
         },
-        () => {} // ignore errors
+        () => {}
       );
     } catch (err) {
       console.error('Scanner error:', err);
@@ -90,9 +96,7 @@ export function SearchPage() {
 
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
-      try {
-        await scannerRef.current.stop();
-      } catch {}
+      try { await scannerRef.current.stop(); } catch {}
     }
     setScanning(false);
   }, []);
@@ -128,8 +132,65 @@ export function SearchPage() {
     if (!error) {
       setAddedMessage(`${selectedProduct.product_name} añadido`);
       setSelectedProduct(null);
+      fetchRecentFoods(user.id); // Refresh recents
       setTimeout(() => setAddedMessage(null), 2000);
     }
+  };
+
+  // Quick add from recent foods
+  const handleQuickAdd = async (food: RecentFood) => {
+    if (!user) return;
+    const ratio = food.last_serving_g / 100;
+    
+    const { error } = await addEntry({
+      user_id: user.id,
+      date: selectedDate,
+      meal_type: mealType,
+      food_name: food.food_name,
+      barcode: food.barcode,
+      brand: food.brand,
+      serving_size_g: food.last_serving_g,
+      calories: Math.round(food.calories_per_100g * ratio),
+      protein_g: Math.round(food.protein_per_100g * ratio * 10) / 10,
+      carbs_g: Math.round(food.carbs_per_100g * ratio * 10) / 10,
+      fat_g: Math.round(food.fat_per_100g * ratio * 10) / 10,
+      fiber_g: Math.round(food.fiber_per_100g * ratio * 10) / 10,
+      sugar_g: Math.round(food.sugar_per_100g * ratio * 10) / 10,
+      saturated_fat_g: Math.round(food.saturated_fat_per_100g * ratio * 10) / 10,
+      sodium_mg: Math.round(food.sodium_per_100g * ratio * 10),
+      is_vegan: food.is_vegan,
+      image_url: food.image_url,
+    });
+
+    if (!error) {
+      setAddedMessage(`${food.food_name} añadido`);
+      setTimeout(() => setAddedMessage(null), 2000);
+    }
+  };
+
+  // Convert RecentFood to OpenFoodFactsProduct for detail view
+  const openRecentDetail = (food: RecentFood) => {
+    setSelectedProduct({
+      code: food.barcode || '',
+      product_name: food.food_name,
+      brands: food.brand || '',
+      image_front_url: food.image_url || '',
+      categories_tags: [],
+      labels_tags: food.is_vegan ? ['en:vegan'] : [],
+      nutriments: {
+        'energy-kcal_100g': food.calories_per_100g,
+        proteins_100g: food.protein_per_100g,
+        carbohydrates_100g: food.carbs_per_100g,
+        fat_100g: food.fat_per_100g,
+        fiber_100g: food.fiber_per_100g,
+        sugars_100g: food.sugar_per_100g,
+        'saturated-fat_100g': food.saturated_fat_per_100g,
+        sodium_100g: food.sodium_per_100g / 1000,
+      },
+      serving_size: `${food.last_serving_g}g`,
+      serving_quantity: food.last_serving_g,
+    });
+    setServingGrams(food.last_serving_g);
   };
 
   // Product detail / add modal
@@ -182,6 +243,22 @@ export function SearchPage() {
                     1 porción ({selectedProduct.serving_quantity}g)
                   </button>
                 )}
+              </div>
+              {/* Quick gram buttons */}
+              <div className="flex gap-2 mt-2">
+                {[50, 100, 150, 200].map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => setServingGrams(g)}
+                    className={`flex-1 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                      servingGrams === g
+                        ? 'border-brand-500 bg-brand-50 text-brand-700'
+                        : 'border-surface-200 text-surface-500 hover:border-surface-300'
+                    }`}
+                  >
+                    {g}g
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -254,11 +331,29 @@ export function SearchPage() {
         </div>
       )}
 
+      {/* Meal type selector (always visible) */}
+      <div className="flex gap-1.5 mb-4 overflow-x-auto no-scrollbar">
+        {MEAL_OPTIONS.map((m) => (
+          <button
+            key={m.value}
+            onClick={() => setMealType(m.value)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+              mealType === m.value
+                ? 'bg-brand-100 text-brand-700 border border-brand-200'
+                : 'bg-surface-100 text-surface-500 border border-surface-200'
+            }`}
+          >
+            <span>{m.icon}</span> {m.label}
+          </button>
+        ))}
+      </div>
+
       {/* Search bar */}
       <div className="flex gap-2 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
           <input
+            ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -267,7 +362,7 @@ export function SearchPage() {
           />
           {query && (
             <button
-              onClick={() => { setQuery(''); setResults([]); }}
+              onClick={() => { setQuery(''); setResults([]); inputRef.current?.focus(); }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
             >
               <X className="w-4 h-4" />
@@ -306,12 +401,8 @@ export function SearchPage() {
         </div>
       )}
 
-      {/* Loading */}
-      {searching && (
-        <div className="flex items-center justify-center py-12">
-          <Spinner className="text-brand-500 w-6 h-6" />
-        </div>
-      )}
+      {/* Loading skeleton */}
+      {searching && <SkeletonList count={5} />}
 
       {/* Results */}
       {!searching && results.length > 0 && (
@@ -352,7 +443,7 @@ export function SearchPage() {
         </div>
       )}
 
-      {/* Empty state */}
+      {/* Empty state for search */}
       {!searching && query.length >= 2 && results.length === 0 && (
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-surface-100 rounded-3xl flex items-center justify-center mx-auto mb-3">
@@ -363,8 +454,58 @@ export function SearchPage() {
         </div>
       )}
 
-      {/* Initial state */}
-      {!searching && !query && results.length === 0 && (
+      {/* Recent foods (shown when not searching) */}
+      {!searching && !query && recentFoods.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Clock className="w-4 h-4 text-surface-400" />
+            <h2 className="text-sm font-semibold text-surface-600">Recientes</h2>
+          </div>
+          <div className="space-y-2">
+            {recentFoods.map((food, i) => (
+              <div
+                key={food.food_name + i}
+                className="card p-3 flex items-center gap-3"
+              >
+                {food.image_url ? (
+                  <img src={food.image_url} alt="" className="w-10 h-10 rounded-xl object-cover bg-surface-100" />
+                ) : (
+                  <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
+                    <Leaf className="w-4 h-4 text-brand-300" />
+                  </div>
+                )}
+                <button
+                  onClick={() => openRecentDetail(food)}
+                  className="flex-1 min-w-0 text-left"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-surface-800 truncate">{food.food_name}</p>
+                    {food.is_vegan && (
+                      <span className="flex-shrink-0 w-4 h-4 bg-brand-100 rounded-full flex items-center justify-center">
+                        <Leaf className="w-2.5 h-2.5 text-brand-600" />
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-surface-400">
+                    {food.last_serving_g}g · {Math.round(food.calories_per_100g * food.last_serving_g / 100)} kcal
+                    {food.use_count > 1 && ` · ×${food.use_count}`}
+                  </p>
+                </button>
+                <button
+                  onClick={() => handleQuickAdd(food)}
+                  className="w-9 h-9 flex items-center justify-center rounded-xl bg-brand-50 text-brand-600 hover:bg-brand-100 transition-colors flex-shrink-0"
+                  title="Añadir rápido"
+                >
+                  <Plus className="w-4 h-4" strokeWidth={2.5} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Initial state (no recents, no query) */}
+      {!searching && !query && recentFoods.length === 0 && (
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-brand-50 rounded-3xl flex items-center justify-center mx-auto mb-3">
             <ScanBarcode className="w-7 h-7 text-brand-400" />
