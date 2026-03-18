@@ -46,8 +46,8 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
       .from('food_log')
       .insert(entry)
       .select()
-      .single()
-      .abortSignal(controller.signal);
+      .abortSignal(controller.signal)
+      .single();
 
     clearTimeout(timeoutId);
 

@@ -51,11 +51,12 @@ export function DashboardPage() {
     if (!user) return;
     const gen = ++loadGenRef.current;
     try {
-      const timeout = (ms: number) => new Promise<never>((_, r) => setTimeout(() => r(new Error('timeout')), ms));
-      await Promise.race([fetchEntries(user.id, selectedDate), timeout(10000)]);
-      const data = await Promise.race([getWeekData(user.id), timeout(10000)]) as DayData[];
+      const makeTimeout = (ms: number): Promise<never> =>
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms));
+      await Promise.race([fetchEntries(user.id, selectedDate), makeTimeout(10000)]);
+      const weekResult = await Promise.race([getWeekData(user.id), makeTimeout(10000)]);
       if (gen !== loadGenRef.current) return;
-      setWeekData(data);
+      setWeekData(weekResult);
     } catch (err) {
       console.error('Dashboard refresh error:', err);
     }
