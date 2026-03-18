@@ -22,7 +22,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loading: false,
   initialized: false,
 
-  initialize: async () => {
+initialize: async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
       set({ user: session.user });
@@ -36,6 +36,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         await get().fetchProfile();
       } else {
         set({ profile: null });
+      }
+    });
+
+    // Refresh session when app comes back to foreground
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible') {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          set({ user: session.user });
+        }
       }
     });
   },
