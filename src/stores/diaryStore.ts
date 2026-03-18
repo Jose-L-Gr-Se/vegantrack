@@ -39,11 +39,17 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   },
 
   addEntry: async (entry) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
     const { data, error } = await supabase
       .from('food_log')
       .insert(entry)
       .select()
-      .single();
+      .single()
+      .abortSignal(controller.signal);
+
+    clearTimeout(timeoutId);
 
     if (!error && data) {
       set((state) => ({ entries: [...state.entries, data as FoodLogEntry] }));
