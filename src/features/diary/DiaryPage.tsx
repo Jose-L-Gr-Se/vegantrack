@@ -45,7 +45,7 @@ export function DiaryPage() {
 
   useEffect(() => {
     if (user) fetchEntries(user.id, selectedDate);
-  }, [user, selectedDate]);
+  }, [user?.id, selectedDate]);
 
   useEffect(() => {
     const handleVisibility = () => {
@@ -55,7 +55,7 @@ export function DiaryPage() {
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [user, selectedDate]);
+  }, [user?.id, selectedDate]);
 
   const summary = getDaySummary();
   const calorieTarget = profile?.calorie_target || 2000;
