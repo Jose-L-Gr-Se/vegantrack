@@ -47,6 +47,16 @@ export function DiaryPage() {
     if (user) fetchEntries(user.id, selectedDate);
   }, [user, selectedDate]);
 
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && user) {
+        fetchEntries(user.id, selectedDate);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [user, selectedDate]);
+
   const summary = getDaySummary();
   const calorieTarget = profile?.calorie_target || 2000;
 
