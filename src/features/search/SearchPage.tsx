@@ -531,7 +531,6 @@ export function SearchPage() {
           <div className="flex items-center gap-2 mb-3">
             <Clock className="w-4 h-4 text-surface-400" />
             <h2 className="text-sm font-semibold text-surface-600">Recientes</h2>
-            <span className="text-xs text-surface-400">· {MEAL_LABELS[mealType]}</span>
           </div>
           <div className="space-y-2">
             {recentsToShow.map((food, i) => (
