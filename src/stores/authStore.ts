@@ -31,21 +31,26 @@ initialize: async () => {
     set({ initialized: true });
 
     supabase.auth.onAuthStateChange(async (_event, session) => {
-      set({ user: session?.user ?? null });
-      if (session?.user) {
-        await get().fetchProfile();
-      } else {
-        set({ profile: null });
+      const currentId = get().user?.id;
+      if (session?.user?.id !== currentId) {
+        // User actually changed (sign in / sign out) — update state
+        set({ user: session?.user ?? null });
+        if (session?.user) {
+          await get().fetchProfile();
+        } else {
+          set({ profile: null });
+        }
       }
+      // Token refresh with same user: Supabase client handles it internally,
+      // no need to update user object (avoids cascading re-renders)
     });
 
     // Refresh session when app comes back to foreground
     document.addEventListener('visibilitychange', async () => {
       if (document.visibilityState === 'visible') {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          set({ user: session.user });
-        }
+        // Just validate the session is still alive — don't update user object
+        // to avoid triggering cascading re-renders across all pages
+        await supabase.auth.getSession();
       }
     });
   },

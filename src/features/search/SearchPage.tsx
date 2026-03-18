@@ -49,7 +49,7 @@ export function SearchPage() {
   // Load recent foods on mount
   useEffect(() => {
     if (user) fetchRecentFoods(user.id);
-  }, [user]);
+  }, [user?.id]);
 
   // Listen for meal type from diary page (locked — no selector shown)
   useEffect(() => {

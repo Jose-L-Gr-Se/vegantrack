@@ -28,14 +28,19 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
 
   fetchEntries: async (userId, date) => {
     set({ loading: true });
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('food_log')
       .select('*')
       .eq('user_id', userId)
       .eq('date', date)
       .order('created_at', { ascending: true });
 
-    set({ entries: (data ?? []) as FoodLogEntry[], loading: false });
+    if (!error) {
+      // Only update entries on success — never wipe existing data on network error
+      set({ entries: (data ?? []) as FoodLogEntry[], loading: false });
+    } else {
+      set({ loading: false });
+    }
   },
 
   addEntry: async (entry) => {

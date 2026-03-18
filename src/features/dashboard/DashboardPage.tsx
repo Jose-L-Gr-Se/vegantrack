@@ -67,7 +67,7 @@ export function DashboardPage() {
   useEffect(() => {
     if (!user) return;
     loadData();
-  }, [user, selectedDate]);
+  }, [user?.id, selectedDate]);
 
   useEffect(() => {
     const handleVisibility = () => {
@@ -79,7 +79,7 @@ export function DashboardPage() {
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [user, selectedDate]);
+  }, [user?.id, selectedDate]);
 
   const calorieTarget = profile?.calorie_target || 2000;
   const maxCalInWeek = Math.max(...weekData.map(d => d.calories), calorieTarget);
