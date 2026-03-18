@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDiaryStore } from '@/stores/diaryStore';
 import { ProgressRing } from '@/components/ui/ProgressRing';
@@ -28,18 +28,39 @@ export function DashboardPage() {
   const [weekData, setWeekData] = useState<DayData[]>([]);
   const [loading, setLoading] = useState(true);
   const summary = getDaySummary();
+  // Generation counter: ensures stale/hung requests never overwrite fresh data
+  const loadGenRef = useRef(0);
 
   const loadData = async () => {
     if (!user) return;
+    const gen = ++loadGenRef.current;
     setLoading(true);
     try {
       await fetchEntries(user.id, selectedDate);
       const data = await getWeekData(user.id);
+      if (gen !== loadGenRef.current) return;
       setWeekData(data);
     } catch (err) {
       console.error('Dashboard load error:', err);
     }
-    setLoading(false);
+    if (gen === loadGenRef.current) setLoading(false);
+  };
+
+  // Silent refresh: no skeleton, always clears loading (even if stuck), 10s timeout
+  const refreshSilent = async () => {
+    if (!user) return;
+    const gen = ++loadGenRef.current;
+    try {
+      const timeout = (ms: number) => new Promise<never>((_, r) => setTimeout(() => r(new Error('timeout')), ms));
+      await Promise.race([fetchEntries(user.id, selectedDate), timeout(10000)]);
+      const data = await Promise.race([getWeekData(user.id), timeout(10000)]) as DayData[];
+      if (gen !== loadGenRef.current) return;
+      setWeekData(data);
+    } catch (err) {
+      console.error('Dashboard refresh error:', err);
+    }
+    // Always clear loading — this is the key: removes any stuck skeleton
+    if (gen === loadGenRef.current) setLoading(false);
   };
 
   useEffect(() => {
@@ -49,7 +70,11 @@ export function DashboardPage() {
 
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') loadData();
+      if (document.visibilityState === 'visible') {
+        // Immediately clear any stuck skeleton, then refresh data silently
+        setLoading(false);
+        refreshSilent();
+      }
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
