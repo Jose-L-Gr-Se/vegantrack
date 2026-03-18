@@ -24,20 +24,16 @@ interface DayData {
 
 export function DashboardPage() {
   const { user, profile } = useAuthStore();
-  const { getDaySummary, getWeekData, selectedDate } = useDiaryStore();
+  const { getDaySummary, getWeekData, fetchEntries, selectedDate } = useDiaryStore();
   const [weekData, setWeekData] = useState<DayData[]>([]);
   const [loading, setLoading] = useState(true);
   const summary = getDaySummary();
 
-  useEffect(() => {
-    if (!user) return;
-    loadData();
-  }, [user, selectedDate]);
-
-const loadData = async () => {
+  const loadData = async () => {
     if (!user) return;
     setLoading(true);
     try {
+      await fetchEntries(user.id, selectedDate);
       const data = await getWeekData(user.id);
       setWeekData(data);
     } catch (err) {
@@ -45,6 +41,19 @@ const loadData = async () => {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    if (!user) return;
+    loadData();
+  }, [user, selectedDate]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') loadData();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [user, selectedDate]);
 
   const calorieTarget = profile?.calorie_target || 2000;
   const maxCalInWeek = Math.max(...weekData.map(d => d.calories), calorieTarget);

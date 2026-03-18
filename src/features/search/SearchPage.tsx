@@ -125,6 +125,25 @@ export function SearchPage() {
     setScanning(false);
   }, []);
 
+  // Stop scanner when app goes to background; reset stuck adding state on resume
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        stopScanner();
+      } else if (document.visibilityState === 'visible' && adding) {
+        setAdding(false);
+        setAddError('La operación fue interrumpida. Inténtalo de nuevo.');
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [adding, stopScanner]);
+
+  // Stop scanner on unmount
+  useEffect(() => {
+    return () => { stopScanner(); };
+  }, [stopScanner]);
+
   const handleAddFood = async () => {
     if (!selectedProduct || !user || adding) return;
     if (servingGrams <= 0) {
