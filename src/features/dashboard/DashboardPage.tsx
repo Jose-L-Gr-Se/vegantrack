@@ -24,7 +24,7 @@ interface DayData {
 
 export function DashboardPage() {
   const { user, profile } = useAuthStore();
-  const { getDaySummary, getWeekData } = useDiaryStore();
+  const { getDaySummary, getWeekData, selectedDate } = useDiaryStore();
   const [weekData, setWeekData] = useState<DayData[]>([]);
   const [loading, setLoading] = useState(true);
   const summary = getDaySummary();
@@ -32,13 +32,17 @@ export function DashboardPage() {
   useEffect(() => {
     if (!user) return;
     loadData();
-  }, [user]);
+  }, [user, selectedDate]);
 
-  const loadData = async () => {
+const loadData = async () => {
     if (!user) return;
     setLoading(true);
-    const data = await getWeekData(user.id);
-    setWeekData(data);
+    try {
+      const data = await getWeekData(user.id);
+      setWeekData(data);
+    } catch (err) {
+      console.error('Dashboard load error:', err);
+    }
     setLoading(false);
   };
 
