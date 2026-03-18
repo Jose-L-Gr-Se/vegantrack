@@ -317,12 +317,16 @@ function EditEntryModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" onClick={onClose}>
+<div className="fixed inset-0 z-[60] bg-black/40 flex items-stretch justify-center" onClick={onClose}>
       <div
-        className="bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-md max-h-[85vh] overflow-y-auto"
+        className="bg-white w-full mt-8 rounded-t-3xl overflow-y-auto pb-24"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-5 space-y-4">
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-white rounded-t-3xl">
+          <div className="w-10 h-1 bg-surface-300 rounded-full" />
+        </div>
+        <div className="px-5 pb-5 space-y-4">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -437,12 +441,16 @@ function MacroDetailModal({
   }).filter(m => m.count > 0);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" onClick={onClose}>
+<div className="fixed inset-0 z-[60] bg-black/40 flex items-stretch justify-center" onClick={onClose}>
       <div
-        className="bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-md max-h-[85vh] overflow-y-auto"
+        className="bg-white w-full mt-8 rounded-t-3xl overflow-y-auto pb-24"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-5 space-y-5">
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-white rounded-t-3xl">
+          <div className="w-10 h-1 bg-surface-300 rounded-full" />
+        </div>
+        <div className="px-5 pb-5 space-y-5">
           {/* Header */}
           <div className="flex items-center justify-between">
             <h3 className="font-display text-lg font-bold">Detalle nutricional</h3>
