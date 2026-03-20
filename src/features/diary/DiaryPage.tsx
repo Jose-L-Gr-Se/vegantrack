@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useBackHandler } from '@/hooks/useBackHandler';
 import { useAuthStore } from '@/stores/authStore';
 import { useDiaryStore } from '@/stores/diaryStore';
 import { supabase } from '@/lib/supabase';
@@ -304,6 +305,7 @@ function EditEntryModal({
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
+  useBackHandler(true, onClose);
 
   const grams = Math.max(1, parseInt(gramsInput) || 0);
   const ratio = grams / 100;
@@ -441,6 +443,7 @@ function MacroDetailModal({
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
+  useBackHandler(true, onClose);
 
   const calorieTarget = profile?.calorie_target || 2000;
   const proteinTarget = profile?.protein_target_g || 120;
