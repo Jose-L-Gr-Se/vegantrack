@@ -300,6 +300,11 @@ function EditEntryModal({
   const [gramsInput, setGramsInput] = useState(String(entry.serving_size_g));
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   const grams = Math.max(1, parseInt(gramsInput) || 0);
   const ratio = grams / 100;
 
@@ -432,6 +437,11 @@ function MacroDetailModal({
   entries: FoodLogEntry[];
   onClose: () => void;
 }) {
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   const calorieTarget = profile?.calorie_target || 2000;
   const proteinTarget = profile?.protein_target_g || 120;
   const carbsTarget = profile?.carbs_target_g || 250;
