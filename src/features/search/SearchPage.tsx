@@ -39,6 +39,7 @@ export function SearchPage() {
   const [lockedMealType, setLockedMealType] = useState<MealType | null>(null); // When coming from diary
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const [showAllRecents, setShowAllRecents] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -93,13 +94,51 @@ export function SearchPage() {
 
   const startScanner = useCallback(async () => {
     setScanning(true);
+    setScanError(null);
     try {
-      const { Html5Qrcode } = await import('html5-qrcode');
-      const scanner = new Html5Qrcode('scanner-container');
+      const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
+
+      // Limit to food product barcode formats only — scanning fewer formats
+      // is significantly faster, especially on iOS where JS decode is slower.
+      const formatsToSupport = [
+        Html5QrcodeSupportedFormats.EAN_13,   // most European food products
+        Html5QrcodeSupportedFormats.EAN_8,    // short European barcodes
+        Html5QrcodeSupportedFormats.UPC_A,    // most US food products
+        Html5QrcodeSupportedFormats.UPC_E,    // compressed UPC
+        Html5QrcodeSupportedFormats.CODE_128, // some products / logistics
+        Html5QrcodeSupportedFormats.ITF,      // some packaged goods
+      ];
+
+      const scanner = new Html5Qrcode('scanner-container', {
+        formatsToSupport,
+        // Use native BarcodeDetector API when available (Android Chrome) —
+        // falls back to JS decoder on iOS automatically.
+        useBarCodeDetectorIfSupported: true,
+        verbose: false,
+      });
       scannerRef.current = scanner;
+
+      // Responsive scan box: 88% of viewfinder width, 55% of that as height.
+      // Barcodes are wider than tall, so a low-profile box guides the user better.
+      const qrbox = (vw: number, vh: number) => ({
+        width:  Math.floor(vw * 0.88),
+        height: Math.floor(Math.min(vw * 0.88 * 0.55, vh * 0.55)),
+      });
+
+      // Explicit resolution hints improve detection quality on iOS Safari.
+      // Using `ideal` values never throws OverconstrainedError — iOS uses the
+      // best available resolution it can, Android gets 720p minimum.
       await scanner.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 150 } },
+        {
+          facingMode: { ideal: 'environment' },
+          width:  { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        {
+          fps: 8,
+          qrbox,
+          aspectRatio: 16 / 9,
+        },
         async (decodedText) => {
           await scanner.stop();
           setScanning(false);
@@ -114,11 +153,20 @@ export function SearchPage() {
           }
           setSearching(false);
         },
-        () => {}
+        () => {} // per-frame decode errors are normal — ignore them
       );
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Scanner error:', err);
       setScanning(false);
+      const name = (err as any)?.name ?? '';
+      const msg  = (err as any)?.message ?? '';
+      if (name === 'NotAllowedError' || msg.toLowerCase().includes('permission')) {
+        setScanError('Permiso de cámara denegado. Actívalo en los ajustes del navegador.');
+      } else if (name === 'NotFoundError') {
+        setScanError('No se encontró cámara trasera en este dispositivo.');
+      } else {
+        setScanError('No se pudo iniciar la cámara. Comprueba los permisos e inténtalo de nuevo.');
+      }
     }
   }, []);
 
@@ -492,6 +540,14 @@ export function SearchPage() {
           <p className="text-center text-sm text-surface-500 py-2 bg-surface-50">
             Enfoca el código de barras
           </p>
+        </div>
+      )}
+
+      {/* Camera permission / init error */}
+      {scanError && (
+        <div className="mb-4 bg-red-50 text-red-600 text-sm px-4 py-3 rounded-2xl border border-red-100 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <span>{scanError}</span>
         </div>
       )}
 
