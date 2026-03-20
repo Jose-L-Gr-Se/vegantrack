@@ -2,9 +2,9 @@ import { useRef, useCallback } from 'react';
 
 export interface SwipeToDismissHandlers {
   /** Attach to the scrollable bottom-sheet element */
-  sheetRef: React.RefObject<HTMLDivElement | null>;
+  sheetRef: React.RefObject<HTMLDivElement>;
   /** Attach to the backdrop element — drives opacity fade during drag */
-  backdropRef: React.RefObject<HTMLDivElement | null>;
+  backdropRef: React.RefObject<HTMLDivElement>;
   onTouchStart: (e: React.TouchEvent<HTMLDivElement>) => void;
   onTouchMove: (e: React.TouchEvent<HTMLDivElement>) => void;
   onTouchEnd: () => void;
@@ -43,8 +43,8 @@ export function useSwipeToDismiss({
   /** Velocity in px/ms to trigger dismiss on fast fling. Default: 0.5 */
   velocityThreshold?: number;
 }): SwipeToDismissHandlers {
-  const sheetRef = useRef<HTMLDivElement | null>(null);
-  const backdropRef = useRef<HTMLDivElement | null>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
 
   // Stable ref so handlers never go stale
   const onDismissRef = useRef(onDismiss);
