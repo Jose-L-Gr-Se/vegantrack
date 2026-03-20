@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useBackHandler } from '@/hooks/useBackHandler';
 import { searchProducts, getProductByBarcode, isProductVegan } from '@/lib/openfoodfacts';
 import { useAuthStore } from '@/stores/authStore';
 import { useDiaryStore } from '@/stores/diaryStore';
@@ -68,6 +69,9 @@ export function SearchPage() {
     setSelectedProduct(null);
     setAddError(null);
   };
+
+  // Intercept Android/iOS system back when product detail is open
+  useBackHandler(selectedProduct !== null, clearProduct);
 
   // Debounced search
   useEffect(() => {
