@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useBackHandler } from '@/hooks/useBackHandler';
+import { useSwipeToDismiss } from '@/hooks/useSwipeToDismiss';
 import { useAuthStore } from '@/stores/authStore';
 import { useDiaryStore } from '@/stores/diaryStore';
 import { supabase } from '@/lib/supabase';
@@ -306,6 +307,7 @@ function EditEntryModal({
     return () => { document.body.style.overflow = ''; };
   }, []);
   useBackHandler(true, onClose);
+  const { sheetRef: editSheetRef, backdropRef: editBackdropRef, onTouchStart, onTouchMove, onTouchEnd } = useSwipeToDismiss({ onDismiss: onClose });
 
   const grams = Math.max(1, parseInt(gramsInput) || 0);
   const ratio = grams / 100;
@@ -334,10 +336,14 @@ function EditEntryModal({
   };
 
   return (
-<div className="fixed inset-0 z-[60] bg-black/40 flex items-stretch justify-center" onClick={onClose}>
+<div ref={editBackdropRef} className="fixed inset-0 z-[60] bg-black/40 flex items-stretch justify-center" onClick={onClose}>
       <div
+        ref={editSheetRef}
         className="bg-white w-full mt-8 rounded-t-3xl overflow-y-auto pb-24"
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-white rounded-t-3xl">
@@ -444,6 +450,7 @@ function MacroDetailModal({
     return () => { document.body.style.overflow = ''; };
   }, []);
   useBackHandler(true, onClose);
+  const { sheetRef: macroSheetRef, backdropRef: macroBackdropRef, onTouchStart: macroTouchStart, onTouchMove: macroTouchMove, onTouchEnd: macroTouchEnd } = useSwipeToDismiss({ onDismiss: onClose });
 
   const calorieTarget = profile?.calorie_target || 2000;
   const proteinTarget = profile?.protein_target_g || 120;
@@ -464,10 +471,14 @@ function MacroDetailModal({
   }).filter(m => m.count > 0);
 
   return (
-<div className="fixed inset-0 z-[60] bg-black/40 flex items-stretch justify-center" onClick={onClose}>
+<div ref={macroBackdropRef} className="fixed inset-0 z-[60] bg-black/40 flex items-stretch justify-center" onClick={onClose}>
       <div
+        ref={macroSheetRef}
         className="bg-white w-full mt-8 rounded-t-3xl overflow-y-auto pb-24"
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={macroTouchStart}
+        onTouchMove={macroTouchMove}
+        onTouchEnd={macroTouchEnd}
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-white rounded-t-3xl">
