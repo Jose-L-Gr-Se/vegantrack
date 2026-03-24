@@ -32,6 +32,12 @@ export interface FoodLogEntry {
   sugar_g: number;
   saturated_fat_g: number;
   sodium_mg: number;
+  vitamin_b12_mcg: number;
+  iron_mg: number;
+  zinc_mg: number;
+  calcium_mg: number;
+  omega3_g: number;
+  vitamin_d_mcg: number;
   is_vegan: boolean;
   image_url: string | null;
   created_at: string;
@@ -65,6 +71,12 @@ export interface NutrientSummary {
   carbs_g: number;
   fat_g: number;
   fiber_g: number;
+  vitamin_b12_mcg: number;
+  iron_mg: number;
+  zinc_mg: number;
+  calcium_mg: number;
+  omega3_g: number;
+  vitamin_d_mcg: number;
 }
 
 export interface MealGroup {
@@ -88,6 +100,12 @@ export interface RecentFood {
   sugar_per_100g: number;
   saturated_fat_per_100g: number;
   sodium_per_100g: number;
+  vitamin_b12_mcg_per_100g: number;
+  iron_mg_per_100g: number;
+  zinc_mg_per_100g: number;
+  calcium_mg_per_100g: number;
+  omega3_g_per_100g: number;
+  vitamin_d_mcg_per_100g: number;
   is_vegan: boolean;
   last_serving_g: number;
   use_count: number;
