@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useBackHandler } from '@/hooks/useBackHandler';
-import { searchProducts, getProductByBarcode, isProductVegan } from '@/lib/openfoodfacts';
+import { searchProducts, getProductByBarcode, isProductVegan, findVeganAlternatives } from '@/lib/openfoodfacts';
 import { useAuthStore } from '@/stores/authStore';
 import { useDiaryStore } from '@/stores/diaryStore';
 import { useCustomFoodStore } from '@/stores/customFoodStore';
@@ -47,6 +47,8 @@ export function SearchPage() {
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const [showAllRecents, setShowAllRecents] = useState(false);
   const [showCustomFoodModal, setShowCustomFoodModal] = useState(false);
+  const [alternatives, setAlternatives] = useState<OpenFoodFactsProduct[]>([]);
+  const [loadingAlternatives, setLoadingAlternatives] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const scannerRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -78,6 +80,25 @@ export function SearchPage() {
 
   // Intercept Android/iOS system back when product detail is open
   useBackHandler(selectedProduct !== null, clearProduct);
+
+  // Fetch vegan alternatives when a non-vegan product with categories is selected
+  useEffect(() => {
+    setAlternatives([]);
+    if (!selectedProduct) return;
+    if (isProductVegan(selectedProduct)) return;
+    const cats = selectedProduct.categories_tags;
+    if (!cats || cats.length === 0) return;
+
+    let cancelled = false;
+    setLoadingAlternatives(true);
+    findVeganAlternatives(cats[0]).then((results) => {
+      if (cancelled) return;
+      setAlternatives(results.filter((p) => p.code !== selectedProduct.code));
+      setLoadingAlternatives(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [selectedProduct?.code]);
 
   // Debounced search — custom foods instantly, OpenFoodFacts after debounce
   useEffect(() => {
@@ -457,6 +478,65 @@ export function SearchPage() {
                 </div>
               ))}
             </div>
+
+            {/* Vegan alternatives (only for non-vegan products with categories) */}
+            {!vegan && selectedProduct.categories_tags.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Leaf className="w-4 h-4 text-brand-500" />
+                  <h3 className="text-sm font-semibold text-surface-700">Alternativas veganas</h3>
+                </div>
+
+                {loadingAlternatives && (
+                  <div className="flex gap-3 overflow-hidden">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="min-w-[160px] h-[140px] rounded-2xl bg-surface-100 animate-pulse" />
+                    ))}
+                  </div>
+                )}
+
+                {!loadingAlternatives && alternatives.length === 0 && (
+                  <p className="text-xs text-surface-400 py-3">
+                    No se encontraron alternativas veganas en esta categoría
+                  </p>
+                )}
+
+                {!loadingAlternatives && alternatives.length > 0 && (
+                  <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-4 px-4 pb-1">
+                    {alternatives.slice(0, 3).map((alt) => (
+                      <button
+                        key={alt.code}
+                        onClick={() => {
+                          setSelectedProduct(alt);
+                          setServingInput(String(alt.serving_quantity || 100));
+                        }}
+                        className="min-w-[160px] max-w-[160px] snap-start rounded-2xl border border-brand-200 bg-brand-50/30 p-3 text-left flex flex-col gap-2 hover:border-brand-400 transition-colors flex-shrink-0"
+                      >
+                        {alt.image_front_url ? (
+                          <img src={alt.image_front_url} alt="" className="w-full h-20 object-contain rounded-xl bg-white" />
+                        ) : (
+                          <div className="w-full h-20 rounded-xl bg-brand-50 flex items-center justify-center">
+                            <Leaf className="w-6 h-6 text-brand-300" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-surface-800 truncate">{alt.product_name}</p>
+                          <p className="text-[10px] text-surface-400 truncate">{alt.brands || 'Sin marca'}</p>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs font-semibold text-surface-700">
+                            {Math.round(alt.nutriments['energy-kcal_100g'])} <span className="text-[10px] font-normal text-surface-400">kcal</span>
+                          </span>
+                          <span className="inline-flex items-center gap-0.5 bg-brand-100 text-brand-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                            <Leaf className="w-2.5 h-2.5" /> Vegano
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Meal selector — ONLY shown when NOT coming from diary (no lockedMealType) */}
             {lockedMealType ? (
