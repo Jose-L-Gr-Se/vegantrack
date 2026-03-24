@@ -123,6 +123,12 @@ function normalizeProduct(raw: any): OpenFoodFactsProduct {
       sugars_100g: n.sugars_100g || 0,
       'saturated-fat_100g': n['saturated-fat_100g'] || 0,
       sodium_100g: n.sodium_100g || 0,
+      // Micros — OFF stores everything in grams
+      'vitamin-b12_100g': n['vitamin-b12_100g'] || 0,
+      'iron_100g': n['iron_100g'] || 0,
+      'zinc_100g': n['zinc_100g'] || 0,
+      'calcium_100g': n['calcium_100g'] || 0,
+      'vitamin-d_100g': n['vitamin-d_100g'] || 0,
     },
     serving_size: raw.serving_size || '',
     serving_quantity: raw.serving_quantity || 0,

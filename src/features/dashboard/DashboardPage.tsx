@@ -249,7 +249,7 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Micronutrient alerts */}
+      {/* Micronutrient tracking */}
       <div className="card p-5">
         <div className="flex items-center gap-2 mb-4">
           <Zap className="w-4 h-4 text-amber-500" />
@@ -257,26 +257,39 @@ export function DashboardPage() {
         </div>
 
         <div className="space-y-3">
-          {Object.entries(MICRO_RDA).map(([key, info]) => (
-            <div key={key} className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {info.critical && <AlertTriangle className="w-3 h-3 text-amber-400" />}
-                <span className="text-sm text-surface-700">{info.label}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-1.5 w-16 bg-surface-100 rounded-full overflow-hidden">
-                  <div className="h-full w-0 bg-amber-400 rounded-full" />
+          {Object.entries(MICRO_RDA).map(([key, info]) => {
+            const value = summary[key as keyof typeof summary] as number || 0;
+            const pct = info.rda > 0 ? Math.min((value / info.rda) * 100, 100) : 0;
+            const barColor = pct >= 90 ? 'bg-brand-500' : pct >= 50 ? 'bg-amber-400' : 'bg-red-400';
+            const textColor = pct >= 90 ? 'text-brand-600' : pct >= 50 ? 'text-amber-600' : 'text-red-500';
+
+            return (
+              <div key={key}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    {pct < 50 && <AlertTriangle className="w-3 h-3 text-red-400" />}
+                    <span className="text-sm text-surface-700">{info.label}</span>
+                  </div>
+                  <span className={`text-xs font-mono ${textColor}`}>
+                    {value < 10 ? value.toFixed(1) : Math.round(value)} / {info.rda} {info.unit}
+                  </span>
                 </div>
-                <span className="text-xs text-surface-400 font-mono w-16 text-right">
-                  0 / {info.rda} {info.unit}
-                </span>
+                <div className="h-1.5 bg-surface-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${barColor}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <div className="flex justify-end mt-0.5">
+                  <span className={`text-[10px] font-mono ${textColor}`}>{Math.round(pct)}%</span>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <p className="text-xs text-surface-400 mt-3 text-center">
-          Tracking de micros detallado próximamente
+          Datos de micronutrientes según OpenFoodFacts · Omega-3 no disponible aún
         </p>
       </div>
     </div>

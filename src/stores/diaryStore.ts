@@ -76,8 +76,14 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
         carbs_g: acc.carbs_g + (e.carbs_g || 0),
         fat_g: acc.fat_g + (e.fat_g || 0),
         fiber_g: acc.fiber_g + (e.fiber_g || 0),
+        vitamin_b12_mcg: acc.vitamin_b12_mcg + (e.vitamin_b12_mcg || 0),
+        iron_mg: acc.iron_mg + (e.iron_mg || 0),
+        zinc_mg: acc.zinc_mg + (e.zinc_mg || 0),
+        calcium_mg: acc.calcium_mg + (e.calcium_mg || 0),
+        omega3_g: acc.omega3_g + (e.omega3_g || 0),
+        vitamin_d_mcg: acc.vitamin_d_mcg + (e.vitamin_d_mcg || 0),
       }),
-      { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 }
+      { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0, vitamin_b12_mcg: 0, iron_mg: 0, zinc_mg: 0, calcium_mg: 0, omega3_g: 0, vitamin_d_mcg: 0 }
     );
   },
 
@@ -85,7 +91,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
     // Get last 50 log entries, deduplicate by food_name, rank by frequency
     const { data } = await supabase
       .from('food_log')
-      .select('food_name, barcode, brand, image_url, calories, protein_g, carbs_g, fat_g, fiber_g, sugar_g, saturated_fat_g, sodium_mg, is_vegan, serving_size_g')
+      .select('food_name, barcode, brand, image_url, calories, protein_g, carbs_g, fat_g, fiber_g, sugar_g, saturated_fat_g, sodium_mg, vitamin_b12_mcg, iron_mg, zinc_mg, calcium_mg, omega3_g, vitamin_d_mcg, is_vegan, serving_size_g')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(100);
@@ -113,6 +119,12 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
           sugar_per_100g: Math.round((entry.sugar_g || 0) * ratio * 10) / 10,
           saturated_fat_per_100g: Math.round((entry.saturated_fat_g || 0) * ratio * 10) / 10,
           sodium_per_100g: Math.round((entry.sodium_mg || 0) * ratio * 10) / 10,
+          vitamin_b12_mcg_per_100g: Math.round((entry.vitamin_b12_mcg || 0) * ratio * 100) / 100,
+          iron_mg_per_100g: Math.round((entry.iron_mg || 0) * ratio * 10) / 10,
+          zinc_mg_per_100g: Math.round((entry.zinc_mg || 0) * ratio * 10) / 10,
+          calcium_mg_per_100g: Math.round((entry.calcium_mg || 0) * ratio * 10) / 10,
+          omega3_g_per_100g: Math.round((entry.omega3_g || 0) * ratio * 1000) / 1000,
+          vitamin_d_mcg_per_100g: Math.round((entry.vitamin_d_mcg || 0) * ratio * 100) / 100,
           is_vegan: entry.is_vegan,
           last_serving_g: entry.serving_size_g,
           use_count: 1,
