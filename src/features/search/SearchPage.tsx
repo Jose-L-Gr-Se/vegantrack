@@ -98,72 +98,92 @@ export function SearchPage() {
     try {
       const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
 
-      // Limit to food product barcode formats only — scanning fewer formats
-      // is significantly faster, especially on iOS where JS decode is slower.
       const formatsToSupport = [
-        Html5QrcodeSupportedFormats.EAN_13,   // most European food products
-        Html5QrcodeSupportedFormats.EAN_8,    // short European barcodes
-        Html5QrcodeSupportedFormats.UPC_A,    // most US food products
-        Html5QrcodeSupportedFormats.UPC_E,    // compressed UPC
-        Html5QrcodeSupportedFormats.CODE_128, // some products / logistics
-        Html5QrcodeSupportedFormats.ITF,      // some packaged goods
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.CODE_128,
       ];
 
       const scanner = new Html5Qrcode('scanner-container', {
         formatsToSupport,
-        // Use native BarcodeDetector API when available (Android Chrome) —
-        // falls back to JS decoder on iOS automatically.
-        useBarCodeDetectorIfSupported: true,
         verbose: false,
       });
       scannerRef.current = scanner;
 
-      // Responsive scan box: 88% of viewfinder width, 55% of that as height.
-      // Barcodes are wider than tall, so a low-profile box guides the user better.
       const qrbox = (vw: number, vh: number) => ({
-        width:  Math.floor(vw * 0.88),
-        height: Math.floor(Math.min(vw * 0.88 * 0.55, vh * 0.55)),
+        width: Math.floor(vw * 0.85),
+        height: Math.floor(Math.min(vw * 0.85 * 0.55, vh * 0.5)),
       });
 
-      // Explicit resolution hints improve detection quality on iOS Safari.
-      // Using `ideal` values never throws OverconstrainedError — iOS uses the
-      // best available resolution it can, Android gets 720p minimum.
-      await scanner.start(
-        {
-          facingMode: { ideal: 'environment' },
-          width:  { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        {
-          fps: 8,
-          qrbox,
-          aspectRatio: 16 / 9,
-        },
-        async (decodedText) => {
-          await scanner.stop();
-          setScanning(false);
-          setSearching(true);
-          const product = await getProductByBarcode(decodedText);
-          if (product) {
-            setSelectedProduct(product);
-            setServingInput(String(product.serving_quantity || 100));
-          } else {
-            setResults([]);
-            setQuery(`Código: ${decodedText} (no encontrado)`);
-          }
-          setSearching(false);
-        },
-        () => {} // per-frame decode errors are normal — ignore them
-      );
+      const onScanSuccess = async (decodedText: string) => {
+        try { await scanner.stop(); } catch {}
+        setScanning(false);
+        setSearching(true);
+        const product = await getProductByBarcode(decodedText);
+        if (product) {
+          setSelectedProduct(product);
+          setServingInput(String(product.serving_quantity || 100));
+        } else {
+          setResults([]);
+          setQuery(`Código: ${decodedText} (no encontrado)`);
+        }
+        setSearching(false);
+      };
+
+      // Intento 1: constraint simple (funciona en iOS y Android)
+      try {
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 6, qrbox },
+          onScanSuccess,
+          () => {}
+        );
+        return; // Éxito, salimos
+      } catch (firstErr) {
+        console.warn('Scanner start attempt 1 failed:', firstErr);
+      }
+
+      // Intento 2: fallback con facingMode ideal (por si el exacto falla)
+      try {
+        await scanner.start(
+          { facingMode: { ideal: 'environment' } },
+          { fps: 5, qrbox },
+          onScanSuccess,
+          () => {}
+        );
+        return;
+      } catch (secondErr) {
+        console.warn('Scanner start attempt 2 failed:', secondErr);
+      }
+
+      // Intento 3: cualquier cámara disponible
+      const devices = await Html5Qrcode.getCameras();
+      if (devices && devices.length > 0) {
+        const backCam = devices.find(d => d.label.toLowerCase().includes('back'))
+          || devices[devices.length - 1];
+        await scanner.start(
+          backCam.id,
+          { fps: 5, qrbox },
+          onScanSuccess,
+          () => {}
+        );
+        return;
+      }
+
+      throw new Error('No cameras available');
     } catch (err: unknown) {
       console.error('Scanner error:', err);
       setScanning(false);
       const name = (err as any)?.name ?? '';
-      const msg  = (err as any)?.message ?? '';
+      const msg = (err as any)?.message ?? '';
       if (name === 'NotAllowedError' || msg.toLowerCase().includes('permission')) {
         setScanError('Permiso de cámara denegado. Actívalo en los ajustes del navegador.');
-      } else if (name === 'NotFoundError') {
-        setScanError('No se encontró cámara trasera en este dispositivo.');
+      } else if (name === 'NotFoundError' || msg.includes('No cameras')) {
+        setScanError('No se encontró cámara en este dispositivo.');
+      } else if (name === 'OverconstrainedError') {
+        setScanError('La cámara no soporta la configuración solicitada. Inténtalo de nuevo.');
       } else {
         setScanError('No se pudo iniciar la cámara. Comprueba los permisos e inténtalo de nuevo.');
       }
