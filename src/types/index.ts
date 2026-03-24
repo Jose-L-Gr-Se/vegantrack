@@ -93,4 +93,20 @@ export interface RecentFood {
   use_count: number;
 }
 
+export interface CustomFood {
+  id: string;
+  user_id: string;
+  name: string;
+  brand: string | null;
+  image_url: string | null;
+  calories_per_100g: number;
+  protein_per_100g: number;
+  carbs_per_100g: number;
+  fat_per_100g: number;
+  fiber_per_100g: number;
+  is_vegan: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export type MealType = FoodLogEntry['meal_type'];

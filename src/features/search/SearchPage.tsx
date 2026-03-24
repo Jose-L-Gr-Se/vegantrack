@@ -3,10 +3,12 @@ import { useBackHandler } from '@/hooks/useBackHandler';
 import { searchProducts, getProductByBarcode, isProductVegan } from '@/lib/openfoodfacts';
 import { useAuthStore } from '@/stores/authStore';
 import { useDiaryStore } from '@/stores/diaryStore';
+import { useCustomFoodStore } from '@/stores/customFoodStore';
+import { CustomFoodModal } from './CustomFoodModal';
 import { Spinner } from '@/components/ui/Spinner';
 import { SkeletonList } from '@/components/ui/Skeleton';
-import { Search, ScanBarcode, X, Leaf, Plus, Clock, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
-import type { OpenFoodFactsProduct, MealType, RecentFood } from '@/types';
+import { Search, ScanBarcode, X, Leaf, Plus, Clock, ChevronDown, ChevronUp, AlertCircle, Star } from 'lucide-react';
+import type { OpenFoodFactsProduct, MealType, RecentFood, CustomFood } from '@/types';
 
 const MEAL_OPTIONS: { value: MealType; label: string; icon: string }[] = [
   { value: 'breakfast', label: 'Desayuno', icon: '🌅' },
@@ -28,8 +30,10 @@ const ADD_TIMEOUT = 15000;
 export function SearchPage() {
   const { user } = useAuthStore();
   const { addEntry, selectedDate, recentFoods, fetchRecentFoods } = useDiaryStore();
+  const { searchCustomFoods } = useCustomFoodStore();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<OpenFoodFactsProduct[]>([]);
+  const [customResults, setCustomResults] = useState<CustomFood[]>([]);
   const [searching, setSearching] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [veganOnly, setVeganOnly] = useState(false);
@@ -42,6 +46,7 @@ export function SearchPage() {
   const [scanError, setScanError] = useState<string | null>(null);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const [showAllRecents, setShowAllRecents] = useState(false);
+  const [showCustomFoodModal, setShowCustomFoodModal] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const scannerRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -74,14 +79,21 @@ export function SearchPage() {
   // Intercept Android/iOS system back when product detail is open
   useBackHandler(selectedProduct !== null, clearProduct);
 
-  // Debounced search
+  // Debounced search — custom foods instantly, OpenFoodFacts after debounce
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (selectedProduct) return;
     if (!query.trim() || query.length < 2) {
       setResults([]);
+      setCustomResults([]);
       return;
     }
+
+    // Instant: search custom foods locally
+    const localResults = searchCustomFoods(query);
+    setCustomResults(veganOnly ? localResults.filter((f) => f.is_vegan) : localResults);
+
+    // Debounced: search OpenFoodFacts API
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
       const res = await searchProducts(query, 1, veganOnly);
@@ -323,6 +335,31 @@ export function SearchPage() {
       serving_quantity: food.last_serving_g,
     });
     setServingInput(String(food.last_serving_g));
+  };
+
+  // Convert CustomFood to product for detail view
+  const openCustomFoodDetail = (food: CustomFood) => {
+    setSelectedProduct({
+      code: '',
+      product_name: food.name,
+      brands: food.brand || '',
+      image_front_url: food.image_url || '',
+      categories_tags: [],
+      labels_tags: food.is_vegan ? ['en:vegan'] : [],
+      nutriments: {
+        'energy-kcal_100g': food.calories_per_100g,
+        proteins_100g: food.protein_per_100g,
+        carbohydrates_100g: food.carbs_per_100g,
+        fat_100g: food.fat_per_100g,
+        fiber_100g: food.fiber_per_100g,
+        sugars_100g: 0,
+        'saturated-fat_100g': 0,
+        sodium_100g: 0,
+      },
+      serving_size: '100g',
+      serving_quantity: 100,
+    });
+    setServingInput('100');
   };
 
   // ==================== PRODUCT DETAIL VIEW ====================
@@ -571,65 +608,145 @@ export function SearchPage() {
         </div>
       )}
 
-      {/* Loading skeleton */}
-      {searching && <SkeletonList count={5} />}
+      {/* Custom food modal */}
+      {showCustomFoodModal && (
+        <CustomFoodModal
+          onClose={() => setShowCustomFoodModal(false)}
+          onSaved={(food) => {
+            setShowCustomFoodModal(false);
+            setAddedMessage(`"${food.name}" creado correctamente`);
+            setTimeout(() => setAddedMessage(null), 2500);
+          }}
+        />
+      )}
 
-      {/* Results */}
-      {!searching && results.length > 0 && (
-        <div className="space-y-2">
-          {results.map((product) => (
-            <button
-              key={product.code}
-              onClick={() => {
-                setSelectedProduct(product);
-                setServingInput(String(product.serving_quantity || 100));
-              }}
-              className="w-full card p-3 flex items-center gap-3 text-left hover:border-brand-200 transition-colors"
-            >
-              {product.image_front_url ? (
-                <img src={product.image_front_url} alt="" className="w-12 h-12 rounded-xl object-cover bg-surface-100" />
-              ) : (
-                <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
-                  <Leaf className="w-5 h-5 text-brand-300" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-medium text-surface-800 truncate">{product.product_name}</p>
-                  {isProductVegan(product) && (
-                    <span className="flex-shrink-0 w-4 h-4 bg-brand-100 rounded-full flex items-center justify-center">
-                      <Leaf className="w-2.5 h-2.5 text-brand-600" />
+      {/* Custom food results (instant, shown above OFF results) */}
+      {!searching && customResults.length > 0 && query.length >= 2 && (
+        <div className="mb-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Star className="w-3.5 h-3.5 text-amber-500" />
+            <span className="text-xs font-semibold text-surface-500 uppercase tracking-wide">Mis alimentos</span>
+          </div>
+          <div className="space-y-2">
+            {customResults.map((food) => (
+              <button
+                key={food.id}
+                onClick={() => openCustomFoodDetail(food)}
+                className="w-full card p-3 flex items-center gap-3 text-left hover:border-brand-200 transition-colors border-amber-100"
+              >
+                {food.image_url ? (
+                  <img src={food.image_url} alt="" className="w-12 h-12 rounded-xl object-cover bg-surface-100" />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                    <Star className="w-5 h-5 text-amber-300" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-surface-800 truncate">{food.name}</p>
+                    <span className="flex-shrink-0 inline-flex items-center gap-0.5 bg-amber-100 text-amber-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                      <Star className="w-2.5 h-2.5" /> Propio
                     </span>
-                  )}
+                    {food.is_vegan && (
+                      <span className="flex-shrink-0 w-4 h-4 bg-brand-100 rounded-full flex items-center justify-center">
+                        <Leaf className="w-2.5 h-2.5 text-brand-600" />
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-surface-400 truncate">{food.brand || 'Sin marca'}</p>
                 </div>
-                <p className="text-xs text-surface-400 truncate">{product.brands}</p>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-sm font-semibold font-mono">{Math.round(product.nutriments['energy-kcal_100g'])}</p>
-                <p className="text-[10px] text-surface-400">kcal/100g</p>
-              </div>
-            </button>
-          ))}
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-semibold font-mono">{Math.round(food.calories_per_100g)}</p>
+                  <p className="text-[10px] text-surface-400">kcal/100g</p>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Empty state for search */}
-      {!searching && query.length >= 2 && results.length === 0 && (
+      {/* Loading skeleton */}
+      {searching && <SkeletonList count={5} />}
+
+      {/* OpenFoodFacts results */}
+      {!searching && results.length > 0 && (
+        <div>
+          {customResults.length > 0 && query.length >= 2 && (
+            <div className="flex items-center gap-2 mb-2">
+              <Search className="w-3.5 h-3.5 text-surface-400" />
+              <span className="text-xs font-semibold text-surface-500 uppercase tracking-wide">OpenFoodFacts</span>
+            </div>
+          )}
+          <div className="space-y-2">
+            {results.map((product) => (
+              <button
+                key={product.code}
+                onClick={() => {
+                  setSelectedProduct(product);
+                  setServingInput(String(product.serving_quantity || 100));
+                }}
+                className="w-full card p-3 flex items-center gap-3 text-left hover:border-brand-200 transition-colors"
+              >
+                {product.image_front_url ? (
+                  <img src={product.image_front_url} alt="" className="w-12 h-12 rounded-xl object-cover bg-surface-100" />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
+                    <Leaf className="w-5 h-5 text-brand-300" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-surface-800 truncate">{product.product_name}</p>
+                    {isProductVegan(product) && (
+                      <span className="flex-shrink-0 w-4 h-4 bg-brand-100 rounded-full flex items-center justify-center">
+                        <Leaf className="w-2.5 h-2.5 text-brand-600" />
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-surface-400 truncate">{product.brands}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-semibold font-mono">{Math.round(product.nutriments['energy-kcal_100g'])}</p>
+                  <p className="text-[10px] text-surface-400">kcal/100g</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state for search — with create custom food button */}
+      {!searching && query.length >= 2 && results.length === 0 && customResults.length === 0 && (
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-surface-100 rounded-3xl flex items-center justify-center mx-auto mb-3">
             <Search className="w-7 h-7 text-surface-300" />
           </div>
           <p className="text-surface-500">No se encontraron resultados</p>
-          <p className="text-sm text-surface-400 mt-1">Prueba con otro término de búsqueda</p>
+          <p className="text-sm text-surface-400 mt-1 mb-4">Prueba con otro término o crea tu propio alimento</p>
+          <button
+            onClick={() => setShowCustomFoodModal(true)}
+            className="btn-primary inline-flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> Crear alimento personalizado
+          </button>
         </div>
       )}
 
       {/* Recent foods (shown when not searching) — limited with "show more" */}
       {!searching && !query && recentFoods.length > 0 && (
         <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Clock className="w-4 h-4 text-surface-400" />
-            <h2 className="text-sm font-semibold text-surface-600">Recientes</h2>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-surface-400" />
+              <h2 className="text-sm font-semibold text-surface-600">Recientes</h2>
+            </div>
+            <button
+              onClick={() => setShowCustomFoodModal(true)}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 px-2.5 py-1.5 rounded-xl transition-colors"
+              title="Crear alimento personalizado"
+            >
+              <Plus className="w-3 h-3" strokeWidth={2.5} /> Crear propio
+            </button>
           </div>
           <div className="space-y-2">
             {recentsToShow.map((food, i) => (
@@ -693,7 +810,13 @@ export function SearchPage() {
             <ScanBarcode className="w-7 h-7 text-brand-400" />
           </div>
           <p className="text-surface-600 font-medium">Escanea o busca un alimento</p>
-          <p className="text-sm text-surface-400 mt-1">Datos de OpenFoodFacts</p>
+          <p className="text-sm text-surface-400 mt-1 mb-4">Datos de OpenFoodFacts</p>
+          <button
+            onClick={() => setShowCustomFoodModal(true)}
+            className="btn-secondary inline-flex items-center gap-2 text-sm"
+          >
+            <Plus className="w-4 h-4" /> Crear alimento personalizado
+          </button>
         </div>
       )}
     </div>
