@@ -144,7 +144,7 @@ export function CustomFoodModal({ onClose, onSaved, editFood }: CustomFoodModalP
             <h3 className="font-display text-lg font-bold">
               {editFood ? 'Editar alimento' : 'Crear alimento personalizado'}
             </h3>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-100">
+            <button onClick={onClose} aria-label="Cerrar" className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-100">
               <X className="w-4 h-4 text-surface-500" />
             </button>
           </div>

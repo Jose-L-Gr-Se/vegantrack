@@ -125,6 +125,7 @@ export function ProfilePage() {
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={() => setEditingFood(food)}
+                      aria-label={`Editar ${food.name}`}
                       className="w-8 h-8 flex items-center justify-center rounded-xl text-surface-400 hover:text-brand-600 hover:bg-brand-50 transition-all"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -132,6 +133,7 @@ export function ProfilePage() {
                     {deletingId === food.id ? (
                       <button
                         onClick={() => handleDeleteFood(food.id)}
+                        aria-label="Confirmar eliminación"
                         className="w-8 h-8 flex items-center justify-center rounded-xl text-red-600 bg-red-50 transition-all"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -140,6 +142,7 @@ export function ProfilePage() {
                       <button
                         onClick={() => setDeletingId(food.id)}
                         onBlur={() => setTimeout(() => setDeletingId(null), 2000)}
+                        aria-label="Eliminar"
                         className="w-8 h-8 flex items-center justify-center rounded-xl text-surface-300 hover:text-red-500 hover:bg-red-50 transition-all"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

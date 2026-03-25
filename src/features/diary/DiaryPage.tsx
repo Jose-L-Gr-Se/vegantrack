@@ -113,6 +113,7 @@ export function DiaryPage() {
         <div className="flex items-center justify-between">
           <button
             onClick={() => setDate(shiftDate(selectedDate, -1))}
+            aria-label="Día anterior"
             className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-100 transition-colors"
           >
             <ChevronLeft className="w-5 h-5 text-surface-500" />
@@ -126,6 +127,7 @@ export function DiaryPage() {
           </button>
           <button
             onClick={() => setDate(shiftDate(selectedDate, 1))}
+            aria-label="Día siguiente"
             className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-100 transition-colors"
           >
             <ChevronRight className="w-5 h-5 text-surface-500" />
@@ -140,6 +142,7 @@ export function DiaryPage() {
           <div className="flex items-center justify-between mt-3 px-1">
             <button
               onClick={() => setDate(shiftDate(weekDays[0], -7))}
+              aria-label="Semana anterior"
               className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-100 transition-colors flex-shrink-0"
             >
               <ChevronLeft className="w-3.5 h-3.5 text-surface-400" />
@@ -188,6 +191,7 @@ export function DiaryPage() {
 
             <button
               onClick={() => setDate(shiftDate(weekDays[6], 1))}
+              aria-label="Semana siguiente"
               className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-100 transition-colors flex-shrink-0"
             >
               <ChevronRight className="w-3.5 h-3.5 text-surface-400" />
@@ -288,6 +292,7 @@ export function DiaryPage() {
                   onClick={() => {
                     window.dispatchEvent(new CustomEvent('navigate-search', { detail: meal.type }));
                   }}
+                  aria-label={`Añadir a ${meal.label}`}
                   className="w-8 h-8 flex items-center justify-center rounded-xl bg-brand-50 text-brand-600 hover:bg-brand-100 transition-colors"
                 >
                   <Plus className="w-4 h-4" strokeWidth={2.5} />
@@ -371,6 +376,7 @@ function FoodEntry({
       {confirming ? (
         <button
           onClick={() => { onDelete(entry.id); setConfirming(false); }}
+          aria-label="Confirmar eliminación"
           className="w-8 h-8 flex items-center justify-center rounded-xl text-red-600 bg-red-50 transition-all flex-shrink-0"
         >
           <Trash2 className="w-3.5 h-3.5" />
@@ -379,6 +385,7 @@ function FoodEntry({
         <button
           onClick={() => setConfirming(true)}
           onBlur={() => setTimeout(() => setConfirming(false), 2000)}
+          aria-label="Eliminar"
           className="w-8 h-8 flex items-center justify-center rounded-xl text-surface-300 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0"
         >
           <Trash2 className="w-3.5 h-3.5" />
@@ -475,7 +482,7 @@ function EditEntryModal({
                 {entry.brand && <p className="text-xs text-surface-400">{entry.brand}</p>}
               </div>
             </div>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-100">
+            <button onClick={onClose} aria-label="Cerrar" className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-100">
               <X className="w-4 h-4 text-surface-500" />
             </button>
           </div>
@@ -598,7 +605,7 @@ function MacroDetailModal({
           {/* Header */}
           <div className="flex items-center justify-between">
             <h3 className="font-display text-lg font-bold">Detalle nutricional</h3>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-100">
+            <button onClick={onClose} aria-label="Cerrar" className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-100">
               <X className="w-4 h-4 text-surface-500" />
             </button>
           </div>

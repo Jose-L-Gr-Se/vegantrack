@@ -457,7 +457,7 @@ export function SearchPage() {
 
     return (
       <div className="pb-28 px-4 pt-6">
-        <button onClick={clearProduct} className="flex items-center gap-1 text-sm text-surface-500 mb-4 hover:text-surface-700">
+        <button onClick={clearProduct} aria-label="Volver a búsqueda" className="flex items-center gap-1 text-sm text-surface-500 mb-4 hover:text-surface-700">
           <X className="w-4 h-4" /> Volver a búsqueda
         </button>
 
@@ -710,6 +710,7 @@ export function SearchPage() {
           {query && (
             <button
               onClick={() => { setQuery(''); setResults([]); setCustomResults([]); inputRef.current?.focus(); }}
+              aria-label="Limpiar búsqueda"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
             >
               <X className="w-4 h-4" />
@@ -718,6 +719,7 @@ export function SearchPage() {
         </div>
         <button
           onClick={scanning ? stopScanner : startScanner}
+          aria-label={scanning ? "Detener escáner" : "Escanear código de barras"}
           className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-colors flex-shrink-0 ${
             scanning ? 'bg-red-100 text-red-600' : 'bg-brand-50 text-brand-600 hover:bg-brand-100'
           }`}
@@ -930,6 +932,7 @@ export function SearchPage() {
                 </button>
                 <button
                   onClick={() => handleQuickAdd(food)}
+                  aria-label={`Añadir ${food.food_name}`}
                   className="w-9 h-9 flex items-center justify-center rounded-xl bg-brand-50 text-brand-600 hover:bg-brand-100 transition-colors flex-shrink-0"
                   title="Añadir rápido"
                 >

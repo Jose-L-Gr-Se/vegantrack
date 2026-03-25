@@ -66,12 +66,12 @@ export default function App() {
   // Main app
   return (
     <div className="min-h-dvh bg-surface-50">
-      <div className="max-w-lg mx-auto">
+      <main className="max-w-lg mx-auto">
         {activeTab === 'diary' && <DiaryPage />}
         {activeTab === 'search' && <SearchPage />}
         {activeTab === 'dashboard' && <DashboardPage />}
         {activeTab === 'profile' && <ProfilePage />}
-      </div>
+      </main>
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );
