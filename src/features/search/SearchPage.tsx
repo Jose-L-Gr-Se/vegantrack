@@ -82,19 +82,17 @@ export function SearchPage() {
   // Intercept Android/iOS system back when product detail is open
   useBackHandler(selectedProduct !== null, clearProduct);
 
-  // Fetch vegan alternatives when a non-vegan product with categories is selected
+  // Fetch vegan alternatives when a non-vegan product is selected
   useEffect(() => {
     setAlternatives([]);
     if (!selectedProduct) return;
     if (isProductVegan(selectedProduct)) return;
-    const cats = selectedProduct.categories_tags;
-    if (!cats || cats.length === 0) return;
 
     let cancelled = false;
     setLoadingAlternatives(true);
-    findVeganAlternatives(cats[0]).then((results) => {
+    findVeganAlternatives(selectedProduct).then((results) => {
       if (cancelled) return;
-      setAlternatives(results.filter((p) => p.code !== selectedProduct.code));
+      setAlternatives(results);
       setLoadingAlternatives(false);
     });
 
@@ -548,7 +546,7 @@ export function SearchPage() {
             </div>
 
             {/* Vegan alternatives (only for non-vegan products with categories) */}
-            {!vegan && selectedProduct.categories_tags.length > 0 && (
+            {!vegan && (
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Leaf className="w-4 h-4 text-brand-500" />
