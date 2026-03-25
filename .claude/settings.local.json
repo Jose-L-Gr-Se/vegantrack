@@ -14,7 +14,10 @@
       "WebFetch(domain:world.openfoodfacts.org)",
       "WebFetch(domain:static.openfoodfacts.org)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(./node_modules/.bin/tsc -b)",
+      "Bash(node node_modules/typescript/bin/tsc -b)",
+      "Bash(npm ls:*)"
     ]
   }
 }
