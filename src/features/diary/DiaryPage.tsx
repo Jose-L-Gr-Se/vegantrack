@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useBackHandler } from '@/hooks/useBackHandler';
 import { useSwipeToDismiss } from '@/hooks/useSwipeToDismiss';
 import { useAuthStore } from '@/stores/authStore';
@@ -6,7 +6,7 @@ import { useDiaryStore } from '@/stores/diaryStore';
 import { supabase } from '@/lib/supabase';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { MacroBar } from '@/components/ui/MacroBar';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Leaf, X, Save, Info } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Leaf, X, Save, Info, ChevronDown } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import type { FoodLogEntry, MealType } from '@/types';
 
@@ -39,11 +39,53 @@ function shiftDate(dateStr: string, days: number): string {
   return `${y}-${m}-${dd}`;
 }
 
+/** Return the Monday–Sunday date strings for the week containing `dateStr`. */
+function getWeekDays(dateStr: string): string[] {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const dow = date.getDay(); // 0=Sun … 6=Sat
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+  const monday = new Date(y, m - 1, d + mondayOffset);
+  const days: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const cur = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+    days.push(
+      `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`,
+    );
+  }
+  return days;
+}
+
+const DAY_INITIALS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
 export function DiaryPage() {
   const { user, profile } = useAuthStore();
   const { entries, selectedDate, setDate, fetchEntries, deleteEntry, getDaySummary } = useDiaryStore();
   const [editingEntry, setEditingEntry] = useState<FoodLogEntry | null>(null);
   const [showMacroDetail, setShowMacroDetail] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [datesWithData, setDatesWithData] = useState<Set<string>>(new Set());
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const weekDays = getWeekDays(selectedDate);
+
+  // Fetch which days of the visible week have food_log entries (lightweight query)
+  const fetchWeekDates = useCallback(async (week: string[]) => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('food_log')
+      .select('date')
+      .eq('user_id', user.id)
+      .gte('date', week[0])
+      .lte('date', week[6]);
+    if (data) {
+      setDatesWithData(new Set(data.map((r: { date: string }) => r.date)));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (showCalendar) fetchWeekDates(weekDays);
+  }, [showCalendar, weekDays[0], user?.id]);
 
   useEffect(() => {
     if (user) fetchEntries(user.id, selectedDate);
@@ -67,23 +109,91 @@ export function DiaryPage() {
   return (
     <div className="pb-28 px-4 pt-6">
       {/* Date selector */}
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={() => setDate(shiftDate(selectedDate, -1))}
-          className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-100 transition-colors"
-        >
-          <ChevronLeft className="w-5 h-5 text-surface-500" />
-        </button>
-        <div className="text-center">
-          <h1 className="font-display text-xl font-bold capitalize">{formatDate(selectedDate)}</h1>
-          <p className="text-xs text-surface-400">{selectedDate}</p>
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setDate(shiftDate(selectedDate, -1))}
+            className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-100 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-surface-500" />
+          </button>
+          <button onClick={() => setShowCalendar((v) => !v)} className="text-center">
+            <h1 className="font-display text-xl font-bold capitalize flex items-center gap-1 justify-center">
+              {formatDate(selectedDate)}
+              <ChevronDown className={`w-4 h-4 text-surface-400 transition-transform ${showCalendar ? 'rotate-180' : ''}`} />
+            </h1>
+            <p className="text-xs text-surface-400">{selectedDate}</p>
+          </button>
+          <button
+            onClick={() => setDate(shiftDate(selectedDate, 1))}
+            className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-100 transition-colors"
+          >
+            <ChevronRight className="w-5 h-5 text-surface-500" />
+          </button>
         </div>
-        <button
-          onClick={() => setDate(shiftDate(selectedDate, 1))}
-          className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-100 transition-colors"
+
+        {/* Week calendar strip */}
+        <div
+          className="overflow-hidden transition-all duration-300 ease-in-out"
+          style={{ maxHeight: showCalendar ? '80px' : '0px', opacity: showCalendar ? 1 : 0 }}
         >
-          <ChevronRight className="w-5 h-5 text-surface-500" />
-        </button>
+          <div className="flex items-center justify-between mt-3 px-1">
+            <button
+              onClick={() => setDate(shiftDate(weekDays[0], -7))}
+              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-100 transition-colors flex-shrink-0"
+            >
+              <ChevronLeft className="w-3.5 h-3.5 text-surface-400" />
+            </button>
+
+            <div className="flex gap-1 flex-1 justify-around">
+              {weekDays.map((day, i) => {
+                const dayNum = parseInt(day.split('-')[2]);
+                const isSelected = day === selectedDate;
+                const isToday = day === todayStr;
+                const hasData = datesWithData.has(day);
+
+                return (
+                  <button
+                    key={day}
+                    onClick={() => setDate(day)}
+                    className="flex flex-col items-center gap-0.5 py-1.5 px-1 min-w-[32px] rounded-xl transition-colors"
+                  >
+                    <span className={`text-[10px] font-semibold ${isSelected ? 'text-brand-600' : 'text-surface-400'}`}>
+                      {DAY_INITIALS[i]}
+                    </span>
+                    <span
+                      className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                        isSelected
+                          ? 'bg-brand-500 text-white'
+                          : isToday
+                            ? 'bg-brand-50 text-brand-700'
+                            : 'text-surface-700 hover:bg-surface-100'
+                      }`}
+                    >
+                      {dayNum}
+                    </span>
+                    {/* Dot indicator */}
+                    <span className="h-1 flex items-center justify-center">
+                      {isToday && !isSelected && (
+                        <span className="w-1 h-1 rounded-full bg-brand-500" />
+                      )}
+                      {hasData && !isSelected && !isToday && (
+                        <span className="w-1 h-1 rounded-full bg-surface-300" />
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => setDate(shiftDate(weekDays[6], 1))}
+              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-100 transition-colors flex-shrink-0"
+            >
+              <ChevronRight className="w-3.5 h-3.5 text-surface-400" />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Summary card — clickable for detail */}
