@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/joseg/Documents/GitHub/vegantrack -name *supabase* -o -name *sql*)",
+      "Bash(npx tsc:*)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(npx -p typescript tsc --noEmit)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(curl -s \"https://world.openfoodfacts.org/cgi/search.pl?search_terms=tofu&search_simple=1&action=process&json=1&page_size=1&fields=nutriments\")",
+      "WebSearch",
+      "WebFetch(domain:wiki.openfoodfacts.org)",
+      "WebFetch(domain:openfoodfacts.github.io)",
+      "WebFetch(domain:world.openfoodfacts.org)",
+      "WebFetch(domain:static.openfoodfacts.org)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(./node_modules/.bin/tsc -b)",
+      "Bash(node node_modules/typescript/bin/tsc -b)",
+      "Bash(npm ls:*)"
+    ]
+  }
+}
