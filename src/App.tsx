@@ -20,6 +20,15 @@ export default function App() {
     initialize();
   }, []);
 
+  // Reload page when a new service worker takes control (autoUpdate)
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        window.location.reload();
+      });
+    }
+  }, []);
+
   // Fetch custom foods when user is available
   useEffect(() => {
     if (user) fetchCustomFoods(user.id);
