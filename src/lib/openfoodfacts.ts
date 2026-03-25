@@ -73,24 +73,225 @@ export async function searchProducts(query: string, page = 1, veganOnly = false)
   }
 }
 
+// ─── VEGAN ALTERNATIVES SYSTEM (Mapping + Text Fallback) ────────────────────
+
 /**
- * Search for vegan alternatives in the same category
+ * Manual mapping: keywords found in categories_tags or product_name
+ * → specific vegan search queries that actually return results on OFF.
+ *
+ * Each entry can have multiple keywords (matched against lowercase categories
+ * and product name) and one or more search queries to try in order.
  */
-export async function findVeganAlternatives(categoryTag: string): Promise<OpenFoodFactsProduct[]> {
-  const { signal, clear } = createTimeout();
-  try {
-    const res = await fetch(
-      `${BASE_URL}/cgi/search.pl?tagtype_0=categories&tag_contains_0=contains&tag_0=${encodeURIComponent(categoryTag)}&tagtype_1=labels&tag_contains_1=contains&tag_1=en:vegan&json=1&page_size=5&fields=code,product_name,brands,image_front_url,nutriments,labels_tags,categories_tags`,
-      { signal }
-    );
-    clear();
-    if (!res.ok) return [];
-    const data = await res.json();
-    return (data.products || []).map(normalizeProduct).filter((p: OpenFoodFactsProduct) => p.product_name);
-  } catch {
-    clear();
-    return [];
+const VEGAN_ALTERNATIVES_MAP: {
+  keywords: string[];
+  queries: string[];
+}[] = [
+  // ── Lácteos ──────────────────────────────────────────────────────────────
+  {
+    keywords: ['yogurt', 'yogur', 'yoghurt', 'yaourt', 'fromage-blanc'],
+    queries: ['yogur vegetal', 'yogur soja', 'yogur avena'],
+  },
+  {
+    keywords: ['cheese', 'queso', 'fromage', 'käse', 'mozzarella', 'cheddar', 'gouda', 'emmental', 'brie', 'camembert', 'manchego', 'parmigiano', 'parmesan'],
+    queries: ['queso vegano', 'queso vegetal'],
+  },
+  {
+    keywords: ['milk', 'leche', 'lait', 'milch', 'whole-milk', 'semi-skimmed-milk', 'skimmed-milk'],
+    queries: ['bebida vegetal', 'leche avena', 'leche soja', 'leche almendra'],
+  },
+  {
+    keywords: ['cream', 'nata', 'crème', 'crema-de-leche', 'heavy-cream', 'whipping-cream'],
+    queries: ['nata vegetal', 'crema vegetal cocina'],
+  },
+  {
+    keywords: ['butter', 'mantequilla', 'beurre', 'margarina'],
+    queries: ['margarina vegetal', 'mantequilla vegana'],
+  },
+  {
+    keywords: ['ice-cream', 'helado', 'glace', 'gelato'],
+    queries: ['helado vegano', 'helado vegetal'],
+  },
+  // ── Carnes y embutidos ───────────────────────────────────────────────────
+  {
+    keywords: ['ham', 'jamón', 'jamon', 'jambon', 'prosciutto'],
+    queries: ['fiambre vegetal', 'jamón vegano', 'embutido vegetal'],
+  },
+  {
+    keywords: ['sausage', 'salchicha', 'chorizo', 'saucisse', 'frankfurter', 'wurst', 'hot-dog'],
+    queries: ['salchicha vegetal', 'salchicha vegana'],
+  },
+  {
+    keywords: ['burger', 'hamburguesa', 'patty', 'steak-hache'],
+    queries: ['hamburguesa vegetal', 'burger vegana'],
+  },
+  {
+    keywords: ['chicken', 'pollo', 'poulet', 'nugget', 'escalope'],
+    queries: ['pollo vegetal', 'nuggets vegetales', 'heura'],
+  },
+  {
+    keywords: ['meat', 'carne', 'viande', 'beef', 'ternera', 'cerdo', 'pork', 'porc'],
+    queries: ['carne vegetal', 'proteína vegetal', 'seitán'],
+  },
+  {
+    keywords: ['bacon', 'panceta', 'tocino'],
+    queries: ['bacon vegano', 'bacon vegetal'],
+  },
+  // ── Pescado y marisco ────────────────────────────────────────────────────
+  {
+    keywords: ['tuna', 'atún', 'atun', 'thon'],
+    queries: ['atún vegano', 'atún vegetal'],
+  },
+  {
+    keywords: ['fish', 'pescado', 'poisson', 'salmon', 'salmón', 'sardine', 'anchoa', 'anchovy'],
+    queries: ['pescado vegano', 'pescado vegetal'],
+  },
+  {
+    keywords: ['shrimp', 'prawn', 'gamba', 'crevette', 'marisco', 'seafood'],
+    queries: ['marisco vegano', 'alternativa marisco vegetal'],
+  },
+  // ── Huevos ───────────────────────────────────────────────────────────────
+  {
+    keywords: ['egg', 'huevo', 'oeuf', 'eier'],
+    queries: ['huevo vegano', 'sustituto huevo vegetal'],
+  },
+  // ── Otros comunes ────────────────────────────────────────────────────────
+  {
+    keywords: ['mayonnaise', 'mayonesa', 'mayo'],
+    queries: ['mayonesa vegana', 'veganesa'],
+  },
+  {
+    keywords: ['chocolate-milk', 'batido', 'milkshake', 'cacao-milk'],
+    queries: ['batido vegetal', 'batido avena cacao'],
+  },
+  {
+    keywords: ['pizza'],
+    queries: ['pizza vegana', 'pizza vegetal'],
+  },
+];
+
+/**
+ * Try to find a mapped search query for the product.
+ * Checks against categories_tags and product_name (both lowercased).
+ */
+function findMappedQueries(product: OpenFoodFactsProduct): string[] | null {
+  const haystack = [
+    ...product.categories_tags.map((t) => t.toLowerCase()),
+    product.product_name.toLowerCase(),
+  ].join(' ');
+
+  for (const mapping of VEGAN_ALTERNATIVES_MAP) {
+    for (const kw of mapping.keywords) {
+      if (haystack.includes(kw)) {
+        return mapping.queries;
+      }
+    }
   }
+  return null;
+}
+
+/**
+ * Extract a generic product term from the name for text fallback.
+ * e.g. "Danone Yogur Natural" → "yogur"
+ *      "Queso Tierno García Baquero" → "queso"
+ */
+function extractGenericTerm(productName: string): string | null {
+  const name = productName.toLowerCase();
+
+  // Common generic food terms in Spanish and English
+  const genericTerms = [
+    'yogur', 'yogurt', 'queso', 'leche', 'nata', 'crema', 'mantequilla',
+    'helado', 'jamón', 'jamon', 'salchicha', 'chorizo', 'hamburguesa',
+    'burger', 'nugget', 'pollo', 'carne', 'atún', 'atun', 'pescado',
+    'salmón', 'salmon', 'huevo', 'mayonesa', 'pizza', 'bacon',
+    'embutido', 'fiambre', 'salami', 'mortadela', 'paté', 'pate',
+    'mozzarella', 'cheddar', 'batido',
+    // English
+    'cheese', 'milk', 'cream', 'butter', 'chicken', 'meat', 'fish',
+    'tuna', 'egg', 'sausage', 'ham', 'ice cream',
+  ];
+
+  for (const term of genericTerms) {
+    if (name.includes(term)) {
+      return term;
+    }
+  }
+  return null;
+}
+
+/**
+ * Search for vegan alternatives to a non-vegan product.
+ *
+ * Strategy:
+ *   1. Check the mapping table for a known category → specific vegan search queries
+ *   2. If no mapping found, extract a generic term from the product name and search "[term] vegano/vegetal"
+ *   3. Search using text (search_terms) instead of category+label filter for much better results
+ *   4. Filter results to prioritize products with vegan labels but don't require it
+ */
+export async function findVeganAlternatives(product: OpenFoodFactsProduct): Promise<OpenFoodFactsProduct[]> {
+  // Layer 1: Mapping table
+  const mappedQueries = findMappedQueries(product);
+
+  // Layer 2: Text fallback
+  const fallbackQueries: string[] = [];
+  if (!mappedQueries) {
+    const generic = extractGenericTerm(product.product_name);
+    if (generic) {
+      fallbackQueries.push(`${generic} vegano`, `${generic} vegetal`);
+    }
+  }
+
+  const queries = mappedQueries || fallbackQueries;
+  if (queries.length === 0) return [];
+
+  // Try queries in order, stop as soon as we get decent results
+  const allResults: OpenFoodFactsProduct[] = [];
+  const seenCodes = new Set<string>();
+
+  for (const q of queries) {
+    if (allResults.length >= 5) break; // We have enough
+
+    const { signal, clear } = createTimeout(8000);
+    try {
+      const res = await fetch(
+        `${BASE_URL}/cgi/search.pl?search_terms=${encodeURIComponent(q)}&json=1&page_size=10&fields=code,product_name,brands,image_front_url,nutriments,labels_tags,categories_tags,serving_size,serving_quantity`,
+        { signal }
+      );
+      clear();
+      if (!res.ok) continue;
+      const data = await res.json();
+
+      const products: OpenFoodFactsProduct[] = (data.products || [])
+        .map(normalizeProduct)
+        .filter((p: OpenFoodFactsProduct) => {
+          if (!p.product_name) return false;
+          if (p.code === product.code) return false; // Exclude the original product
+          if (seenCodes.has(p.code)) return false;   // Deduplicate
+          return true;
+        });
+
+      for (const p of products) {
+        seenCodes.add(p.code);
+        allResults.push(p);
+      }
+    } catch {
+      clear();
+      continue;
+    }
+  }
+
+  // Sort: products with vegan label first, then by kcal similarity to original
+  const originalKcal = product.nutriments['energy-kcal_100g'] || 0;
+  allResults.sort((a, b) => {
+    const aVegan = isProductVegan(a) ? 0 : 1;
+    const bVegan = isProductVegan(b) ? 0 : 1;
+    if (aVegan !== bVegan) return aVegan - bVegan;
+    // Secondary: closer kcal profile
+    const aDiff = Math.abs(a.nutriments['energy-kcal_100g'] - originalKcal);
+    const bDiff = Math.abs(b.nutriments['energy-kcal_100g'] - originalKcal);
+    return aDiff - bDiff;
+  });
+
+  return allResults.slice(0, 5);
 }
 
 /**
