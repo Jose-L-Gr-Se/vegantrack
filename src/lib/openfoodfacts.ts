@@ -1,6 +1,40 @@
 import type { OpenFoodFactsProduct } from '@/types';
+import { supabase } from '@/lib/supabase';
 
 const BASE_URL = 'https://world.openfoodfacts.net';
+const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+async function getCachedProduct(barcode: string): Promise<OpenFoodFactsProduct | null> {
+  try {
+    const { data } = await supabase
+      .from('food_cache')
+      .select('data, fetched_at')
+      .eq('barcode', barcode)
+      .single();
+
+    if (!data) return null;
+
+    const age = Date.now() - new Date(data.fetched_at).getTime();
+    if (age > CACHE_MAX_AGE_MS) return null;
+
+    return normalizeProduct(data.data);
+  } catch {
+    return null;
+  }
+}
+
+async function cacheProduct(barcode: string, rawData: any): Promise<void> {
+  try {
+    await supabase
+      .from('food_cache')
+      .upsert(
+        { barcode, data: rawData, fetched_at: new Date().toISOString() },
+        { onConflict: 'barcode' }
+      );
+  } catch (err) {
+    console.warn('Failed to cache product:', err);
+  }
+}
 
 export interface SearchResult {
   products: OpenFoodFactsProduct[];
@@ -15,6 +49,11 @@ function createTimeout(ms = 10000): { signal: AbortSignal; clear: () => void } {
 }
 
 export async function getProductByBarcode(barcode: string): Promise<OpenFoodFactsProduct | null> {
+  // 1. Check cache first
+  const cached = await getCachedProduct(barcode);
+  if (cached) return cached;
+
+  // 2. Fetch from OpenFoodFacts
   const { signal, clear } = createTimeout();
   try {
     const res = await fetch(
@@ -24,7 +63,11 @@ export async function getProductByBarcode(barcode: string): Promise<OpenFoodFact
     clear();
     if (!res.ok) return null;
     const data = await res.json();
-    if (data.status === 1 && data.product) return normalizeProduct(data.product);
+    if (data.status === 1 && data.product) {
+      // 3. Cache in background (fire-and-forget)
+      cacheProduct(barcode, data.product);
+      return normalizeProduct(data.product);
+    }
     return null;
   } catch (err) {
     clear();
