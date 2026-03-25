@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { useCustomFoodStore } from '@/stores/customFoodStore';
 import { calculateTargets } from '@/utils/nutrition';
+import { CustomFoodModal } from '@/features/search/CustomFoodModal';
 import { Spinner } from '@/components/ui/Spinner';
-import { LogOut, Save, User, Calculator } from 'lucide-react';
-import type { Profile } from '@/types';
+import { LogOut, Save, User, Calculator, Star, Pencil, Trash2, Plus } from 'lucide-react';
+import type { Profile, CustomFood } from '@/types';
 
 const ACTIVITY_LABELS: Record<string, string> = {
   sedentary: 'Sedentario',
@@ -20,9 +22,17 @@ const GOAL_LABELS: Record<string, string> = {
 };
 
 export function ProfilePage() {
-  const { profile, updateProfile, signOut, loading } = useAuthStore();
+  const { profile, user, updateProfile, signOut, loading } = useAuthStore();
+  const { customFoods, fetchCustomFoods, deleteCustomFood } = useCustomFoodStore();
   const [form, setForm] = useState<Partial<Profile>>({ ...profile });
   const [saved, setSaved] = useState(false);
+  const [editingFood, setEditingFood] = useState<CustomFood | null>(null);
+  const [showCreateFood, setShowCreateFood] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) fetchCustomFoods(user.id);
+  }, [user?.id]);
 
   if (!profile) return null;
 
@@ -51,6 +61,11 @@ export function ProfilePage() {
     }
   };
 
+  const handleDeleteFood = async (id: string) => {
+    await deleteCustomFood(id);
+    setDeletingId(null);
+  };
+
   return (
     <div className="pb-28 px-4 pt-6">
       {/* Header */}
@@ -65,10 +80,95 @@ export function ProfilePage() {
       </div>
 
       <div className="space-y-4">
+        {/* My custom foods */}
+        <div className="card p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-surface-700 text-sm uppercase tracking-wide">Mis alimentos</h2>
+              <span className="bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                {customFoods.length}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowCreateFood(true)}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 px-2.5 py-1.5 rounded-xl transition-colors"
+            >
+              <Plus className="w-3 h-3" strokeWidth={2.5} /> Nuevo
+            </button>
+          </div>
+
+          {customFoods.length === 0 ? (
+            <div className="text-center py-6">
+              <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-2">
+                <Star className="w-5 h-5 text-amber-300" />
+              </div>
+              <p className="text-sm text-surface-500">No tienes alimentos personalizados</p>
+              <p className="text-xs text-surface-400 mt-1">Crea uno desde la pestaña de búsqueda</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {customFoods.map((food) => (
+                <div key={food.id} className="flex items-center gap-3 bg-surface-50 rounded-2xl p-3">
+                  {food.image_url ? (
+                    <img src={food.image_url} alt="" className="w-10 h-10 rounded-xl object-cover bg-surface-100" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                      <Star className="w-4 h-4 text-amber-300" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-surface-800 truncate">{food.name}</p>
+                    <p className="text-xs text-surface-400">
+                      {food.brand || 'Sin marca'} · <span className="font-mono">{food.calories_per_100g}</span> kcal/100g
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      onClick={() => setEditingFood(food)}
+                      className="w-8 h-8 flex items-center justify-center rounded-xl text-surface-400 hover:text-brand-600 hover:bg-brand-50 transition-all"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    {deletingId === food.id ? (
+                      <button
+                        onClick={() => handleDeleteFood(food.id)}
+                        className="w-8 h-8 flex items-center justify-center rounded-xl text-red-600 bg-red-50 transition-all"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setDeletingId(food.id)}
+                        onBlur={() => setTimeout(() => setDeletingId(null), 2000)}
+                        className="w-8 h-8 flex items-center justify-center rounded-xl text-surface-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Edit/Create food modal */}
+        {(editingFood || showCreateFood) && (
+          <CustomFoodModal
+            editFood={editingFood}
+            onClose={() => { setEditingFood(null); setShowCreateFood(false); }}
+            onSaved={() => {
+              setEditingFood(null);
+              setShowCreateFood(false);
+              if (user) fetchCustomFoods(user.id);
+            }}
+          />
+        )}
+
         {/* Basic info */}
         <div className="card p-4 space-y-4">
           <h2 className="font-semibold text-surface-700 text-sm uppercase tracking-wide">Datos básicos</h2>
-          
+
           <div>
             <label className="label">Nombre</label>
             <input
@@ -160,7 +260,7 @@ export function ProfilePage() {
         {/* Targets */}
         <div className="card p-4 space-y-4">
           <h2 className="font-semibold text-surface-700 text-sm uppercase tracking-wide">Objetivos diarios</h2>
-          
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Calorías (kcal)</label>

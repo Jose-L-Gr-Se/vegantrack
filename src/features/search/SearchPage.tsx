@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useBackHandler } from '@/hooks/useBackHandler';
-import { searchProducts, getProductByBarcode, isProductVegan } from '@/lib/openfoodfacts';
+import { searchProducts, getProductByBarcode, isProductVegan, findVeganAlternatives } from '@/lib/openfoodfacts';
 import { useAuthStore } from '@/stores/authStore';
 import { useDiaryStore } from '@/stores/diaryStore';
+import { useCustomFoodStore } from '@/stores/customFoodStore';
+import { CustomFoodModal } from './CustomFoodModal';
 import { Spinner } from '@/components/ui/Spinner';
 import { SkeletonList } from '@/components/ui/Skeleton';
-import { Search, ScanBarcode, X, Leaf, Plus, Clock, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
-import type { OpenFoodFactsProduct, MealType, RecentFood } from '@/types';
+import { Search, ScanBarcode, X, Leaf, Plus, Clock, ChevronDown, ChevronUp, AlertCircle, Star } from 'lucide-react';
+import type { OpenFoodFactsProduct, MealType, RecentFood, CustomFood } from '@/types';
 
 const MEAL_OPTIONS: { value: MealType; label: string; icon: string }[] = [
   { value: 'breakfast', label: 'Desayuno', icon: '🌅' },
@@ -28,8 +30,10 @@ const ADD_TIMEOUT = 15000;
 export function SearchPage() {
   const { user } = useAuthStore();
   const { addEntry, selectedDate, recentFoods, fetchRecentFoods } = useDiaryStore();
+  const { searchCustomFoods } = useCustomFoodStore();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<OpenFoodFactsProduct[]>([]);
+  const [customResults, setCustomResults] = useState<CustomFood[]>([]);
   const [searching, setSearching] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [veganOnly, setVeganOnly] = useState(false);
@@ -42,6 +46,10 @@ export function SearchPage() {
   const [scanError, setScanError] = useState<string | null>(null);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const [showAllRecents, setShowAllRecents] = useState(false);
+  const [showCustomFoodModal, setShowCustomFoodModal] = useState(false);
+  const [alternatives, setAlternatives] = useState<OpenFoodFactsProduct[]>([]);
+  const [debouncePending, setDebouncePending] = useState(false);
+  const [loadingAlternatives, setLoadingAlternatives] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const scannerRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -74,22 +82,59 @@ export function SearchPage() {
   // Intercept Android/iOS system back when product detail is open
   useBackHandler(selectedProduct !== null, clearProduct);
 
-  // Debounced search
+  // Fetch vegan alternatives when a non-vegan product with categories is selected
+  useEffect(() => {
+    setAlternatives([]);
+    if (!selectedProduct) return;
+    if (isProductVegan(selectedProduct)) return;
+    const cats = selectedProduct.categories_tags;
+    if (!cats || cats.length === 0) return;
+
+    let cancelled = false;
+    setLoadingAlternatives(true);
+    findVeganAlternatives(cats[0]).then((results) => {
+      if (cancelled) return;
+      setAlternatives(results.filter((p) => p.code !== selectedProduct.code));
+      setLoadingAlternatives(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [selectedProduct?.code]);
+
+  // Debounced search — custom foods instantly, OpenFoodFacts after 300ms debounce
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (selectedProduct) return;
-    if (!query.trim() || query.length < 2) {
-      setResults([]);
+    if (selectedProduct) {
+      setDebouncePending(false);
       return;
     }
+    if (!query.trim() || query.length < 2) {
+      setResults([]);
+      setCustomResults([]);
+      setDebouncePending(false);
+      return;
+    }
+
+    // Instant: search custom foods locally
+    const localResults = searchCustomFoods(query);
+    setCustomResults(veganOnly ? localResults.filter((f) => f.is_vegan) : localResults);
+
+    // Show pending indicator immediately while debounce waits
+    setDebouncePending(true);
+
+    // Debounced: search OpenFoodFacts API
     debounceRef.current = setTimeout(async () => {
+      setDebouncePending(false);
       setSearching(true);
       const res = await searchProducts(query, 1, veganOnly);
       setResults(res.products);
       setSearching(false);
-    }, 500);
+    }, 300);
 
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      setDebouncePending(false);
+    };
   }, [query, veganOnly, selectedProduct]);
 
   const startScanner = useCallback(async () => {
@@ -112,10 +157,44 @@ export function SearchPage() {
       });
       scannerRef.current = scanner;
 
+      const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+
+      // iOS: tighter scan box (70%) + higher fps for more decode attempts
+      // Android: wider box (85%) is fine, fps 6 saves battery
+      const boxRatio = isIOS ? 0.70 : 0.85;
+      const scanFps = isIOS ? 10 : 6;
+
       const qrbox = (vw: number, vh: number) => ({
-        width: Math.floor(vw * 0.85),
-        height: Math.floor(Math.min(vw * 0.85 * 0.55, vh * 0.5)),
+        width: Math.floor(vw * boxRatio),
+        height: Math.floor(Math.min(vw * boxRatio * 0.55, vh * 0.5)),
       });
+
+      // After scanner starts, apply advanced constraints for continuous
+      // autofocus on iOS — without this, iOS camera stays blurry on barcodes.
+      const applyAdvancedConstraints = async () => {
+        try {
+          const videoEl = document.querySelector('#scanner-container video') as HTMLVideoElement | null;
+          if (!videoEl) return;
+          const stream = videoEl.srcObject as MediaStream | null;
+          const track = stream?.getVideoTracks()[0];
+          if (!track) return;
+          const capabilities = (track as any).getCapabilities?.();
+          if (!capabilities) return;
+          const advanced: Record<string, unknown> = {};
+          if (capabilities.focusMode?.includes('continuous')) {
+            advanced.focusMode = 'continuous';
+          }
+          if (capabilities.zoom) {
+            advanced.zoom = capabilities.zoom.min;
+          }
+          if (Object.keys(advanced).length > 0) {
+            await track.applyConstraints({ advanced: [advanced] } as any);
+          }
+        } catch (e) {
+          // Non-critical — some browsers don't support advanced constraints
+          console.warn('Could not apply advanced camera constraints:', e);
+        }
+      };
 
       const onScanSuccess = async (decodedText: string) => {
         try { await scanner.stop(); } catch {}
@@ -136,10 +215,11 @@ export function SearchPage() {
       try {
         await scanner.start(
           { facingMode: 'environment' },
-          { fps: 6, qrbox },
+          { fps: scanFps, qrbox },
           onScanSuccess,
           () => {}
         );
+        await applyAdvancedConstraints();
         return; // Éxito, salimos
       } catch (firstErr) {
         console.warn('Scanner start attempt 1 failed:', firstErr);
@@ -149,10 +229,11 @@ export function SearchPage() {
       try {
         await scanner.start(
           { facingMode: { ideal: 'environment' } },
-          { fps: 5, qrbox },
+          { fps: scanFps, qrbox },
           onScanSuccess,
           () => {}
         );
+        await applyAdvancedConstraints();
         return;
       } catch (secondErr) {
         console.warn('Scanner start attempt 2 failed:', secondErr);
@@ -165,10 +246,11 @@ export function SearchPage() {
           || devices[devices.length - 1];
         await scanner.start(
           backCam.id,
-          { fps: 5, qrbox },
+          { fps: scanFps, qrbox },
           onScanSuccess,
           () => {}
         );
+        await applyAdvancedConstraints();
         return;
       }
 
@@ -250,6 +332,13 @@ export function SearchPage() {
       sugar_g: Math.round(n.sugars_100g * ratio * 10) / 10,
       saturated_fat_g: Math.round(n['saturated-fat_100g'] * ratio * 10) / 10,
       sodium_mg: Math.round(n.sodium_100g * ratio * 1000),
+      // Micros — OFF stores all values in grams; convert to target units
+      vitamin_b12_mcg: Math.round((n['vitamin-b12_100g'] || 0) * ratio * 1e6 * 100) / 100,
+      iron_mg: Math.round((n['iron_100g'] || 0) * ratio * 1000 * 10) / 10,
+      zinc_mg: Math.round((n['zinc_100g'] || 0) * ratio * 1000 * 10) / 10,
+      calcium_mg: Math.round((n['calcium_100g'] || 0) * ratio * 1000 * 10) / 10,
+      omega3_g: 0,
+      vitamin_d_mcg: Math.round((n['vitamin-d_100g'] || 0) * ratio * 1e6 * 100) / 100,
       is_vegan: isProductVegan(selectedProduct),
       image_url: selectedProduct.image_front_url || null,
     });
@@ -290,6 +379,12 @@ export function SearchPage() {
       sugar_g: Math.round(food.sugar_per_100g * ratio * 10) / 10,
       saturated_fat_g: Math.round(food.saturated_fat_per_100g * ratio * 10) / 10,
       sodium_mg: Math.round(food.sodium_per_100g * ratio * 10),
+      vitamin_b12_mcg: Math.round((food.vitamin_b12_mcg_per_100g || 0) * ratio * 100) / 100,
+      iron_mg: Math.round((food.iron_mg_per_100g || 0) * ratio * 10) / 10,
+      zinc_mg: Math.round((food.zinc_mg_per_100g || 0) * ratio * 10) / 10,
+      calcium_mg: Math.round((food.calcium_mg_per_100g || 0) * ratio * 10) / 10,
+      omega3_g: Math.round((food.omega3_g_per_100g || 0) * ratio * 1000) / 1000,
+      vitamin_d_mcg: Math.round((food.vitamin_d_mcg_per_100g || 0) * ratio * 100) / 100,
       is_vegan: food.is_vegan,
       image_url: food.image_url,
     });
@@ -318,11 +413,42 @@ export function SearchPage() {
         sugars_100g: food.sugar_per_100g,
         'saturated-fat_100g': food.saturated_fat_per_100g,
         sodium_100g: food.sodium_per_100g / 1000,
+        // Micros — stored in target units per 100g, convert back to grams for OFF format
+        'vitamin-b12_100g': (food.vitamin_b12_mcg_per_100g || 0) / 1e6,
+        'iron_100g': (food.iron_mg_per_100g || 0) / 1000,
+        'zinc_100g': (food.zinc_mg_per_100g || 0) / 1000,
+        'calcium_100g': (food.calcium_mg_per_100g || 0) / 1000,
+        'vitamin-d_100g': (food.vitamin_d_mcg_per_100g || 0) / 1e6,
       },
       serving_size: `${food.last_serving_g}g`,
       serving_quantity: food.last_serving_g,
     });
     setServingInput(String(food.last_serving_g));
+  };
+
+  // Convert CustomFood to product for detail view
+  const openCustomFoodDetail = (food: CustomFood) => {
+    setSelectedProduct({
+      code: '',
+      product_name: food.name,
+      brands: food.brand || '',
+      image_front_url: food.image_url || '',
+      categories_tags: [],
+      labels_tags: food.is_vegan ? ['en:vegan'] : [],
+      nutriments: {
+        'energy-kcal_100g': food.calories_per_100g,
+        proteins_100g: food.protein_per_100g,
+        carbohydrates_100g: food.carbs_per_100g,
+        fat_100g: food.fat_per_100g,
+        fiber_100g: food.fiber_per_100g,
+        sugars_100g: 0,
+        'saturated-fat_100g': 0,
+        sodium_100g: 0,
+      },
+      serving_size: '100g',
+      serving_quantity: 100,
+    });
+    setServingInput('100');
   };
 
   // ==================== PRODUCT DETAIL VIEW ====================
@@ -421,6 +547,65 @@ export function SearchPage() {
               ))}
             </div>
 
+            {/* Vegan alternatives (only for non-vegan products with categories) */}
+            {!vegan && selectedProduct.categories_tags.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Leaf className="w-4 h-4 text-brand-500" />
+                  <h3 className="text-sm font-semibold text-surface-700">Alternativas veganas</h3>
+                </div>
+
+                {loadingAlternatives && (
+                  <div className="flex gap-3 overflow-hidden">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="min-w-[160px] h-[140px] rounded-2xl bg-surface-100 animate-pulse" />
+                    ))}
+                  </div>
+                )}
+
+                {!loadingAlternatives && alternatives.length === 0 && (
+                  <p className="text-xs text-surface-400 py-3">
+                    No se encontraron alternativas veganas en esta categoría
+                  </p>
+                )}
+
+                {!loadingAlternatives && alternatives.length > 0 && (
+                  <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-4 px-4 pb-1">
+                    {alternatives.slice(0, 3).map((alt) => (
+                      <button
+                        key={alt.code}
+                        onClick={() => {
+                          setSelectedProduct(alt);
+                          setServingInput(String(alt.serving_quantity || 100));
+                        }}
+                        className="min-w-[160px] max-w-[160px] snap-start rounded-2xl border border-brand-200 bg-brand-50/30 p-3 text-left flex flex-col gap-2 hover:border-brand-400 transition-colors flex-shrink-0"
+                      >
+                        {alt.image_front_url ? (
+                          <img src={alt.image_front_url} alt="" className="w-full h-20 object-contain rounded-xl bg-white" />
+                        ) : (
+                          <div className="w-full h-20 rounded-xl bg-brand-50 flex items-center justify-center">
+                            <Leaf className="w-6 h-6 text-brand-300" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-surface-800 truncate">{alt.product_name}</p>
+                          <p className="text-[10px] text-surface-400 truncate">{alt.brands || 'Sin marca'}</p>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs font-semibold text-surface-700">
+                            {Math.round(alt.nutriments['energy-kcal_100g'])} <span className="text-[10px] font-normal text-surface-400">kcal</span>
+                          </span>
+                          <span className="inline-flex items-center gap-0.5 bg-brand-100 text-brand-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                            <Leaf className="w-2.5 h-2.5" /> Vegano
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Meal selector — ONLY shown when NOT coming from diary (no lockedMealType) */}
             {lockedMealType ? (
               <div className="bg-surface-50 rounded-2xl px-4 py-3 flex items-center gap-2">
@@ -511,7 +696,11 @@ export function SearchPage() {
       {/* Search bar */}
       <div className="flex gap-2 mb-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+          {(debouncePending || searching) ? (
+            <Spinner className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-500" />
+          ) : (
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+          )}
           <input
             ref={inputRef}
             type="text"
@@ -522,7 +711,7 @@ export function SearchPage() {
           />
           {query && (
             <button
-              onClick={() => { setQuery(''); setResults([]); inputRef.current?.focus(); }}
+              onClick={() => { setQuery(''); setResults([]); setCustomResults([]); inputRef.current?.focus(); }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
             >
               <X className="w-4 h-4" />
@@ -571,65 +760,145 @@ export function SearchPage() {
         </div>
       )}
 
-      {/* Loading skeleton */}
-      {searching && <SkeletonList count={5} />}
+      {/* Custom food modal */}
+      {showCustomFoodModal && (
+        <CustomFoodModal
+          onClose={() => setShowCustomFoodModal(false)}
+          onSaved={(food) => {
+            setShowCustomFoodModal(false);
+            setAddedMessage(`"${food.name}" creado correctamente`);
+            setTimeout(() => setAddedMessage(null), 2500);
+          }}
+        />
+      )}
 
-      {/* Results */}
-      {!searching && results.length > 0 && (
-        <div className="space-y-2">
-          {results.map((product) => (
-            <button
-              key={product.code}
-              onClick={() => {
-                setSelectedProduct(product);
-                setServingInput(String(product.serving_quantity || 100));
-              }}
-              className="w-full card p-3 flex items-center gap-3 text-left hover:border-brand-200 transition-colors"
-            >
-              {product.image_front_url ? (
-                <img src={product.image_front_url} alt="" className="w-12 h-12 rounded-xl object-cover bg-surface-100" />
-              ) : (
-                <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
-                  <Leaf className="w-5 h-5 text-brand-300" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-medium text-surface-800 truncate">{product.product_name}</p>
-                  {isProductVegan(product) && (
-                    <span className="flex-shrink-0 w-4 h-4 bg-brand-100 rounded-full flex items-center justify-center">
-                      <Leaf className="w-2.5 h-2.5 text-brand-600" />
+      {/* Custom food results (instant, shown above OFF results) */}
+      {!searching && customResults.length > 0 && query.length >= 2 && (
+        <div className="mb-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Star className="w-3.5 h-3.5 text-amber-500" />
+            <span className="text-xs font-semibold text-surface-500 uppercase tracking-wide">Mis alimentos</span>
+          </div>
+          <div className="space-y-2">
+            {customResults.map((food) => (
+              <button
+                key={food.id}
+                onClick={() => openCustomFoodDetail(food)}
+                className="w-full card p-3 flex items-center gap-3 text-left hover:border-brand-200 transition-colors border-amber-100"
+              >
+                {food.image_url ? (
+                  <img src={food.image_url} alt="" className="w-12 h-12 rounded-xl object-cover bg-surface-100" />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                    <Star className="w-5 h-5 text-amber-300" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-surface-800 truncate">{food.name}</p>
+                    <span className="flex-shrink-0 inline-flex items-center gap-0.5 bg-amber-100 text-amber-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                      <Star className="w-2.5 h-2.5" /> Propio
                     </span>
-                  )}
+                    {food.is_vegan && (
+                      <span className="flex-shrink-0 w-4 h-4 bg-brand-100 rounded-full flex items-center justify-center">
+                        <Leaf className="w-2.5 h-2.5 text-brand-600" />
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-surface-400 truncate">{food.brand || 'Sin marca'}</p>
                 </div>
-                <p className="text-xs text-surface-400 truncate">{product.brands}</p>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-sm font-semibold font-mono">{Math.round(product.nutriments['energy-kcal_100g'])}</p>
-                <p className="text-[10px] text-surface-400">kcal/100g</p>
-              </div>
-            </button>
-          ))}
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-semibold font-mono">{Math.round(food.calories_per_100g)}</p>
+                  <p className="text-[10px] text-surface-400">kcal/100g</p>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Empty state for search */}
-      {!searching && query.length >= 2 && results.length === 0 && (
+      {/* Loading skeleton */}
+      {searching && <SkeletonList count={5} />}
+
+      {/* OpenFoodFacts results */}
+      {!searching && results.length > 0 && (
+        <div>
+          {customResults.length > 0 && query.length >= 2 && (
+            <div className="flex items-center gap-2 mb-2">
+              <Search className="w-3.5 h-3.5 text-surface-400" />
+              <span className="text-xs font-semibold text-surface-500 uppercase tracking-wide">OpenFoodFacts</span>
+            </div>
+          )}
+          <div className="space-y-2">
+            {results.map((product) => (
+              <button
+                key={product.code}
+                onClick={() => {
+                  setSelectedProduct(product);
+                  setServingInput(String(product.serving_quantity || 100));
+                }}
+                className="w-full card p-3 flex items-center gap-3 text-left hover:border-brand-200 transition-colors"
+              >
+                {product.image_front_url ? (
+                  <img src={product.image_front_url} alt="" className="w-12 h-12 rounded-xl object-cover bg-surface-100" />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
+                    <Leaf className="w-5 h-5 text-brand-300" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-surface-800 truncate">{product.product_name}</p>
+                    {isProductVegan(product) && (
+                      <span className="flex-shrink-0 w-4 h-4 bg-brand-100 rounded-full flex items-center justify-center">
+                        <Leaf className="w-2.5 h-2.5 text-brand-600" />
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-surface-400 truncate">{product.brands}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-semibold font-mono">{Math.round(product.nutriments['energy-kcal_100g'])}</p>
+                  <p className="text-[10px] text-surface-400">kcal/100g</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state for search — with create custom food button */}
+      {!searching && query.length >= 2 && results.length === 0 && customResults.length === 0 && (
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-surface-100 rounded-3xl flex items-center justify-center mx-auto mb-3">
             <Search className="w-7 h-7 text-surface-300" />
           </div>
           <p className="text-surface-500">No se encontraron resultados</p>
-          <p className="text-sm text-surface-400 mt-1">Prueba con otro término de búsqueda</p>
+          <p className="text-sm text-surface-400 mt-1 mb-4">Prueba con otro término o crea tu propio alimento</p>
+          <button
+            onClick={() => setShowCustomFoodModal(true)}
+            className="btn-primary inline-flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> Crear alimento personalizado
+          </button>
         </div>
       )}
 
       {/* Recent foods (shown when not searching) — limited with "show more" */}
       {!searching && !query && recentFoods.length > 0 && (
         <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Clock className="w-4 h-4 text-surface-400" />
-            <h2 className="text-sm font-semibold text-surface-600">Recientes</h2>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-surface-400" />
+              <h2 className="text-sm font-semibold text-surface-600">Recientes</h2>
+            </div>
+            <button
+              onClick={() => setShowCustomFoodModal(true)}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 px-2.5 py-1.5 rounded-xl transition-colors"
+              title="Crear alimento personalizado"
+            >
+              <Plus className="w-3 h-3" strokeWidth={2.5} /> Crear propio
+            </button>
           </div>
           <div className="space-y-2">
             {recentsToShow.map((food, i) => (
@@ -693,7 +962,13 @@ export function SearchPage() {
             <ScanBarcode className="w-7 h-7 text-brand-400" />
           </div>
           <p className="text-surface-600 font-medium">Escanea o busca un alimento</p>
-          <p className="text-sm text-surface-400 mt-1">Datos de OpenFoodFacts</p>
+          <p className="text-sm text-surface-400 mt-1 mb-4">Datos de OpenFoodFacts</p>
+          <button
+            onClick={() => setShowCustomFoodModal(true)}
+            className="btn-secondary inline-flex items-center gap-2 text-sm"
+          >
+            <Plus className="w-4 h-4" /> Crear alimento personalizado
+          </button>
         </div>
       )}
     </div>

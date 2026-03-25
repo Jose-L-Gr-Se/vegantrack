@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { useCustomFoodStore } from '@/stores/customFoodStore';
 import { AuthPage } from '@/features/auth/AuthPage';
 import { OnboardingPage } from '@/features/profile/OnboardingPage';
 import { DiaryPage } from '@/features/diary/DiaryPage';
@@ -12,11 +13,17 @@ import { Leaf } from 'lucide-react';
 
 export default function App() {
   const { user, profile, initialized, initialize } = useAuthStore();
+  const { fetchCustomFoods } = useCustomFoodStore();
   const [activeTab, setActiveTab] = useState('diary');
 
   useEffect(() => {
     initialize();
   }, []);
+
+  // Fetch custom foods when user is available
+  useEffect(() => {
+    if (user) fetchCustomFoods(user.id);
+  }, [user?.id]);
 
   // Listen for search navigation from diary
   useEffect(() => {
