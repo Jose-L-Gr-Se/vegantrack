@@ -48,6 +48,7 @@ export function SearchPage() {
   const [showAllRecents, setShowAllRecents] = useState(false);
   const [showCustomFoodModal, setShowCustomFoodModal] = useState(false);
   const [alternatives, setAlternatives] = useState<OpenFoodFactsProduct[]>([]);
+  const [debouncePending, setDebouncePending] = useState(false);
   const [loadingAlternatives, setLoadingAlternatives] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const scannerRef = useRef<any>(null);
@@ -100,13 +101,17 @@ export function SearchPage() {
     return () => { cancelled = true; };
   }, [selectedProduct?.code]);
 
-  // Debounced search — custom foods instantly, OpenFoodFacts after debounce
+  // Debounced search — custom foods instantly, OpenFoodFacts after 300ms debounce
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (selectedProduct) return;
+    if (selectedProduct) {
+      setDebouncePending(false);
+      return;
+    }
     if (!query.trim() || query.length < 2) {
       setResults([]);
       setCustomResults([]);
+      setDebouncePending(false);
       return;
     }
 
@@ -114,15 +119,22 @@ export function SearchPage() {
     const localResults = searchCustomFoods(query);
     setCustomResults(veganOnly ? localResults.filter((f) => f.is_vegan) : localResults);
 
+    // Show pending indicator immediately while debounce waits
+    setDebouncePending(true);
+
     // Debounced: search OpenFoodFacts API
     debounceRef.current = setTimeout(async () => {
+      setDebouncePending(false);
       setSearching(true);
       const res = await searchProducts(query, 1, veganOnly);
       setResults(res.products);
       setSearching(false);
-    }, 500);
+    }, 300);
 
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      setDebouncePending(false);
+    };
   }, [query, veganOnly, selectedProduct]);
 
   const startScanner = useCallback(async () => {
@@ -145,10 +157,44 @@ export function SearchPage() {
       });
       scannerRef.current = scanner;
 
+      const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+
+      // iOS: tighter scan box (70%) + higher fps for more decode attempts
+      // Android: wider box (85%) is fine, fps 6 saves battery
+      const boxRatio = isIOS ? 0.70 : 0.85;
+      const scanFps = isIOS ? 10 : 6;
+
       const qrbox = (vw: number, vh: number) => ({
-        width: Math.floor(vw * 0.85),
-        height: Math.floor(Math.min(vw * 0.85 * 0.55, vh * 0.5)),
+        width: Math.floor(vw * boxRatio),
+        height: Math.floor(Math.min(vw * boxRatio * 0.55, vh * 0.5)),
       });
+
+      // After scanner starts, apply advanced constraints for continuous
+      // autofocus on iOS — without this, iOS camera stays blurry on barcodes.
+      const applyAdvancedConstraints = async () => {
+        try {
+          const videoEl = document.querySelector('#scanner-container video') as HTMLVideoElement | null;
+          if (!videoEl) return;
+          const stream = videoEl.srcObject as MediaStream | null;
+          const track = stream?.getVideoTracks()[0];
+          if (!track) return;
+          const capabilities = (track as any).getCapabilities?.();
+          if (!capabilities) return;
+          const advanced: Record<string, unknown> = {};
+          if (capabilities.focusMode?.includes('continuous')) {
+            advanced.focusMode = 'continuous';
+          }
+          if (capabilities.zoom) {
+            advanced.zoom = capabilities.zoom.min;
+          }
+          if (Object.keys(advanced).length > 0) {
+            await track.applyConstraints({ advanced: [advanced] } as any);
+          }
+        } catch (e) {
+          // Non-critical — some browsers don't support advanced constraints
+          console.warn('Could not apply advanced camera constraints:', e);
+        }
+      };
 
       const onScanSuccess = async (decodedText: string) => {
         try { await scanner.stop(); } catch {}
@@ -169,10 +215,11 @@ export function SearchPage() {
       try {
         await scanner.start(
           { facingMode: 'environment' },
-          { fps: 6, qrbox },
+          { fps: scanFps, qrbox },
           onScanSuccess,
           () => {}
         );
+        await applyAdvancedConstraints();
         return; // Éxito, salimos
       } catch (firstErr) {
         console.warn('Scanner start attempt 1 failed:', firstErr);
@@ -182,10 +229,11 @@ export function SearchPage() {
       try {
         await scanner.start(
           { facingMode: { ideal: 'environment' } },
-          { fps: 5, qrbox },
+          { fps: scanFps, qrbox },
           onScanSuccess,
           () => {}
         );
+        await applyAdvancedConstraints();
         return;
       } catch (secondErr) {
         console.warn('Scanner start attempt 2 failed:', secondErr);
@@ -198,10 +246,11 @@ export function SearchPage() {
           || devices[devices.length - 1];
         await scanner.start(
           backCam.id,
-          { fps: 5, qrbox },
+          { fps: scanFps, qrbox },
           onScanSuccess,
           () => {}
         );
+        await applyAdvancedConstraints();
         return;
       }
 
@@ -647,7 +696,11 @@ export function SearchPage() {
       {/* Search bar */}
       <div className="flex gap-2 mb-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+          {(debouncePending || searching) ? (
+            <Spinner className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-500" />
+          ) : (
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+          )}
           <input
             ref={inputRef}
             type="text"
@@ -658,7 +711,7 @@ export function SearchPage() {
           />
           {query && (
             <button
-              onClick={() => { setQuery(''); setResults([]); inputRef.current?.focus(); }}
+              onClick={() => { setQuery(''); setResults([]); setCustomResults([]); inputRef.current?.focus(); }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
             >
               <X className="w-4 h-4" />
