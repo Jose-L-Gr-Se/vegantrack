@@ -6,12 +6,12 @@ import { MacroBar } from '@/components/ui/MacroBar';
 import { TrendingUp, Flame, Zap, AlertTriangle, Target } from 'lucide-react';
 
 const MICRO_RDA = {
-  vitamin_b12_mcg: { label: 'Vitamina B12', rda: 2.4, unit: 'μg', critical: true },
-  iron_mg: { label: 'Hierro', rda: 18, unit: 'mg', critical: true },
-  zinc_mg: { label: 'Zinc', rda: 11, unit: 'mg', critical: true },
-  calcium_mg: { label: 'Calcio', rda: 1000, unit: 'mg', critical: true },
-  omega3_g: { label: 'Omega-3', rda: 1.6, unit: 'g', critical: true },
-  vitamin_d_mcg: { label: 'Vitamina D', rda: 15, unit: 'μg', critical: true },
+  vitamin_b12_mcg: { label: 'Vitamina B12', rda: 2.4, unit: 'μg', critical: true, hasData: true },
+  iron_mg: { label: 'Hierro', rda: 18, unit: 'mg', critical: true, hasData: true },
+  zinc_mg: { label: 'Zinc', rda: 11, unit: 'mg', critical: true, hasData: true },
+  calcium_mg: { label: 'Calcio', rda: 1000, unit: 'mg', critical: true, hasData: true },
+  vitamin_d_mcg: { label: 'Vitamina D', rda: 15, unit: 'μg', critical: true, hasData: true },
+  omega3_g: { label: 'Omega-3', rda: 1.6, unit: 'g', critical: true, hasData: false },
 };
 
 interface DayData {
@@ -258,6 +258,23 @@ export function DashboardPage() {
 
         <div className="space-y-3">
           {Object.entries(MICRO_RDA).map(([key, info]) => {
+            // Omega-3 y otros sin datos reales de OpenFoodFacts
+            if (!info.hasData) {
+              return (
+                <div key={key} className="flex items-center justify-between py-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-surface-500">{info.label}</span>
+                    <span className="text-[10px] bg-surface-100 text-surface-400 px-1.5 py-0.5 rounded-full font-medium">
+                      sin datos
+                    </span>
+                  </div>
+                  <span className="text-xs text-surface-400 font-mono">
+                    RDA: {info.rda} {info.unit}
+                  </span>
+                </div>
+              );
+            }
+
             const value = summary[key as keyof typeof summary] as number || 0;
             const pct = info.rda > 0 ? Math.min((value / info.rda) * 100, 100) : 0;
             const barColor = pct >= 90 ? 'bg-brand-500' : pct >= 50 ? 'bg-amber-400' : 'bg-red-400';
@@ -289,7 +306,7 @@ export function DashboardPage() {
         </div>
 
         <p className="text-xs text-surface-400 mt-3 text-center">
-          Datos de micronutrientes según OpenFoodFacts · Omega-3 no disponible aún
+          Datos según OpenFoodFacts · <span className="text-surface-300">Omega-3 no disponible en la mayoría de productos</span>
         </p>
       </div>
     </div>

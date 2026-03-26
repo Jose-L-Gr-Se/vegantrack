@@ -73,7 +73,7 @@ export default function App() {
     }
     return (
       <div className="min-h-dvh bg-surface-50">
-        <main className="max-w-lg mx-auto">
+        <main className="max-w-lg mx-auto" role="main" aria-label="Contenido principal">
           {activeTab === 'diary' && (
           <DiaryPage
             successMessage={diaryMessage}
