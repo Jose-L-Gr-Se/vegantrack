@@ -6,7 +6,7 @@ import { useDiaryStore } from '@/stores/diaryStore';
 import { supabase } from '@/lib/supabase';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { MacroBar } from '@/components/ui/MacroBar';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Leaf, X, Save, Info, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Leaf, X, Save, Info, ChevronDown, Flame } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import type { FoodLogEntry, MealType } from '@/types';
 
@@ -133,6 +133,24 @@ export function DiaryPage() {
             <ChevronRight className="w-5 h-5 text-surface-500" />
           </button>
         </div>
+
+        {/* Streak badge */}
+        {profile && profile.streak_count > 0 && (
+          <div className="flex justify-center mt-2">
+            <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+              profile.streak_count >= 7
+                ? 'bg-orange-100 text-orange-700'
+                : profile.streak_count >= 3
+                ? 'bg-amber-100 text-amber-700'
+                : 'bg-surface-100 text-surface-600'
+            }`}>
+              <Flame className="w-3.5 h-3.5" />
+              {profile.streak_count === 1
+                ? '¡Primer día!'
+                : `${profile.streak_count} días seguidos`}
+            </div>
+          </div>
+        )}
 
         {/* Week calendar strip */}
         <div

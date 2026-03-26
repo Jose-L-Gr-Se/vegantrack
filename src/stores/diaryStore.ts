@@ -58,6 +58,27 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
 
     if (!error && data) {
       set((state) => ({ entries: [...state.entries, data as FoodLogEntry] }));
+
+      // Actualizar racha — fire and forget, no bloquea la UI
+      supabase.rpc('update_streak', {
+        p_user_id: entry.user_id,
+        p_date: entry.date,
+      }).then(({ data: newStreak }) => {
+        if (newStreak !== null) {
+          // Actualizar el perfil en authStore con la racha nueva
+          const { useAuthStore } = require('@/stores/authStore');
+          const profile = useAuthStore.getState().profile;
+          if (profile) {
+            useAuthStore.setState({
+              profile: {
+                ...profile,
+                streak_count: newStreak,
+                last_log_date: entry.date,
+              }
+            });
+          }
+        }
+      });
     }
     return { error: error?.message ?? null };
   },

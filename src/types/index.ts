@@ -11,6 +11,8 @@ export interface Profile {
   protein_target_g: number | null;
   carbs_target_g: number | null;
   fat_target_g: number | null;
+  streak_count: number;
+  last_log_date: string | null;
   created_at: string;
   updated_at: string;
 }
