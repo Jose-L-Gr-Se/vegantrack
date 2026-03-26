@@ -63,10 +63,10 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
       supabase.rpc('update_streak', {
         p_user_id: entry.user_id,
         p_date: entry.date,
-      }).then(({ data: newStreak }) => {
+      }).then(async ({ data: newStreak }) => {
         if (newStreak !== null) {
           // Actualizar el perfil en authStore con la racha nueva
-          const { useAuthStore } = require('@/stores/authStore');
+          const { useAuthStore } = await import('@/stores/authStore');
           const profile = useAuthStore.getState().profile;
           if (profile) {
             useAuthStore.setState({

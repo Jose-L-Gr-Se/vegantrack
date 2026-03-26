@@ -347,12 +347,13 @@ export function SearchPage() {
     if (result.error) {
       setAddError(result.error);
     } else {
-      setAddedMessage(`${selectedProduct.product_name} añadido a ${MEAL_LABELS[mealType]}`);
       setSelectedProduct(null);
       setLockedMealType(null);
       setAddError(null);
       fetchRecentFoods(user.id);
-      setTimeout(() => setAddedMessage(null), 2500);
+      window.dispatchEvent(new CustomEvent('navigate-diary', {
+        detail: { message: `${selectedProduct.product_name} añadido a ${MEAL_LABELS[mealType]}` }
+      }));
     }
   };
 
@@ -388,8 +389,9 @@ export function SearchPage() {
     });
 
     if (!error) {
-      setAddedMessage(`${food.food_name} añadido a ${MEAL_LABELS[mealType]}`);
-      setTimeout(() => setAddedMessage(null), 2500);
+      window.dispatchEvent(new CustomEvent('navigate-diary', {
+        detail: { message: `${food.food_name} añadido a ${MEAL_LABELS[mealType]}` }
+      }));
     }
   };
 

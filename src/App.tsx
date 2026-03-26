@@ -17,6 +17,7 @@ export default function App() {
   const { fetchCustomFoods } = useCustomFoodStore();
   const [activeTab, setActiveTab] = useState('diary');
   const [showLanding, setShowLanding] = useState(true);
+  const [diaryMessage, setDiaryMessage] = useState<string | null>(null);
 
   useEffect(() => {
     initialize();
@@ -43,6 +44,16 @@ export default function App() {
     return () => window.removeEventListener('navigate-search', handler);
   }, []);
 
+  // Volver al Diario tras añadir un alimento desde Search
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      setActiveTab('diary');
+      setDiaryMessage(e.detail?.message ?? null);
+    };
+    window.addEventListener('navigate-diary', handler as EventListener);
+    return () => window.removeEventListener('navigate-diary', handler as EventListener);
+  }, []);
+
   // Loading screen
   if (!initialized) {
     return (
@@ -63,7 +74,12 @@ export default function App() {
     return (
       <div className="min-h-dvh bg-surface-50">
         <main className="max-w-lg mx-auto">
-          {activeTab === 'diary' && <DiaryPage />}
+          {activeTab === 'diary' && (
+          <DiaryPage
+            successMessage={diaryMessage}
+            onMessageShown={() => setDiaryMessage(null)}
+          />
+        )}
           {activeTab === 'search' && <SearchPage />}
           {activeTab === 'dashboard' && <DashboardPage />}
           {activeTab === 'profile' && <ProfilePage />}

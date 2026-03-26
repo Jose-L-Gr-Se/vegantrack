@@ -58,7 +58,12 @@ function getWeekDays(dateStr: string): string[] {
 
 const DAY_INITIALS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
-export function DiaryPage() {
+interface DiaryPageProps {
+  successMessage?: string | null;
+  onMessageShown?: () => void;
+}
+
+export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
   const { user, profile } = useAuthStore();
   const { entries, selectedDate, setDate, fetchEntries, deleteEntry, getDaySummary } = useDiaryStore();
   const [editingEntry, setEditingEntry] = useState<FoodLogEntry | null>(null);
@@ -101,6 +106,13 @@ export function DiaryPage() {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [user?.id, selectedDate]);
 
+  useEffect(() => {
+    if (successMessage && onMessageShown) {
+      const t = setTimeout(onMessageShown, 3000);
+      return () => clearTimeout(t);
+    }
+  }, [successMessage]);
+
   const summary = getDaySummary();
   const calorieTarget = profile?.calorie_target || 2000;
 
@@ -108,6 +120,13 @@ export function DiaryPage() {
 
   return (
     <div className="pb-28 px-4 pt-6">
+      {/* Success message from Search */}
+      {successMessage && (
+        <div className="mb-4 bg-brand-50 text-brand-700 text-sm px-4 py-3 rounded-2xl border border-brand-100 flex items-center gap-2">
+          <Leaf className="w-4 h-4 flex-shrink-0" />
+          <span>{successMessage}</span>
+        </div>
+      )}
       {/* Date selector */}
       <div className="mb-6">
         <div className="flex items-center justify-between">
