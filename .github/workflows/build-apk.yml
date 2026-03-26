@@ -32,6 +32,7 @@ jobs:
         run: |
           mkdir -p twa-app/app/src/main/res/values
           mkdir -p twa-app/app/src/main/res/drawable
+          mkdir -p twa-app/app/src/main/res/xml
           mkdir -p twa-app/app/src/main/res/mipmap-anydpi-v26
           mkdir -p twa-app/app/src/main/res/mipmap-hdpi
           mkdir -p twa-app/app/src/main/res/mipmap-mdpi
@@ -120,6 +121,16 @@ jobs:
                   android:roundIcon="@mipmap/ic_launcher"
                   android:supportsRtl="true"
                   android:theme="@style/AppTheme">
+                  <provider
+                      android:name="androidx.core.content.FileProvider"
+                      android:authorities="com.vegantrack.app.fileprovider"
+                      android:exported="false"
+                      android:grantUriPermissions="true">
+                      <meta-data
+                          android:name="android.support.FILE_PROVIDER_PATHS"
+                          android:resource="@xml/file_paths" />
+                  </provider>
+
                   <activity
                       android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
                       android:exported="true">
@@ -177,6 +188,13 @@ jobs:
           <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
               <item android:drawable="@color/backgroundColor" />
           </layer-list>
+          EOF
+
+          cat > twa-app/app/src/main/res/xml/file_paths.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <paths>
+              <files-path name="twa_splash" path="twa_splash/" />
+          </paths>
           EOF
 
           cp public/icon-192.png twa-app/app/src/main/res/mipmap-mdpi/ic_launcher.png
