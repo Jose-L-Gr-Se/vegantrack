@@ -1,0 +1,45 @@
+# .github/workflows/build-apk.yml
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Initialize Bubblewrap project
+        run: |
+          mkdir apk-build && cd apk-build
+          bubblewrap init --manifest=https://vegantrack.vercel.app/manifest.json \
+            --directory=. \
+            --packageId=com.vegantrack.app \
+            --name="VeganTrack" \
+            --launcherName="VeganTrack" \
+            --themeColor=#16a34a \
+            --backgroundColor=#f8fafc \
+            --startUrl="/" \
+            --iconUrl=https://vegantrack.vercel.app/icon-512.png \
+            --maskableIconUrl=https://vegantrack.vercel.app/icon-512.png \
+            --appVersionCode=1 \
+            --appVersionName="1.0.0"
+
+      - name: Build APK
+        run: cd apk-build && bubblewrap build
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vegantrack-apk
+          path: apk-build/app-release-unsigned.apk
+          retention-days: 7
