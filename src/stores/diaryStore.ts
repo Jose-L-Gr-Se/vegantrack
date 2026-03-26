@@ -63,21 +63,9 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
       supabase.rpc('update_streak', {
         p_user_id: entry.user_id,
         p_date: entry.date,
-      }).then(async ({ data: newStreak }) => {
-        if (newStreak !== null) {
-          // Actualizar el perfil en authStore con la racha nueva
-          const { useAuthStore } = await import('@/stores/authStore');
-          const profile = useAuthStore.getState().profile;
-          if (profile) {
-            useAuthStore.setState({
-              profile: {
-                ...profile,
-                streak_count: newStreak,
-                last_log_date: entry.date,
-              }
-            });
-          }
-        }
+      }).then(async () => {
+        const { useAuthStore } = await import('@/stores/authStore');
+        await useAuthStore.getState().fetchProfile();
       });
     }
     return { error: error?.message ?? null };
