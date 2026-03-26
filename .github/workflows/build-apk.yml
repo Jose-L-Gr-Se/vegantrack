@@ -19,71 +19,178 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Bubblewrap and answer JDK prompt
+      - name: Install Android build tools
         run: |
-          npm install -g @bubblewrap/cli
-          # Pre-configure bubblewrap to skip JDK install prompt
-          mkdir -p ~/.bubblewrap
-          cat > ~/.bubblewrap/config.json << 'EOF'
-          {
-            "jdkPath": "/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.0-0/x64",
-            "androidSdkPath": "/usr/local/lib/android/sdk"
+          sdkmanager "build-tools;34.0.0" "platforms;android-34"
+
+      - name: Create TWA Android project
+        run: |
+          mkdir -p twa-app/app/src/main/res/values
+          mkdir -p twa-app/app/src/main/res/drawable
+          mkdir -p twa-app/app/src/main/java/com/vegantrack/app
+
+          # settings.gradle
+          cat > twa-app/settings.gradle << 'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "VeganTrack"
+          include ':app'
+          EOF
+
+          # build.gradle (root)
+          cat > twa-app/build.gradle << 'EOF'
+          plugins {
+              id 'com.android.application' version '8.2.0' apply false
           }
           EOF
 
-      - name: Find actual JDK path
-        run: |
-          JDK_PATH=$(dirname $(dirname $(readlink -f $(which java))))
-          SDK_PATH=$ANDROID_SDK_ROOT
-          echo "JDK: $JDK_PATH"
-          echo "SDK: $SDK_PATH"
-          # Update config with real paths
-          cat > ~/.bubblewrap/config.json << EOF
-          {
-            "jdkPath": "$JDK_PATH",
-            "androidSdkPath": "$SDK_PATH"
+          # app/build.gradle
+          cat > twa-app/app/build.gradle << 'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+          android {
+              namespace 'com.vegantrack.app'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.vegantrack.app"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0.0"
+              }
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                      signingConfig signingConfigs.debug
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_1_8
+                  targetCompatibility JavaVersion.VERSION_1_8
+              }
+          }
+          dependencies {
+              implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
           }
           EOF
-          cat ~/.bubblewrap/config.json
 
-      - name: Init Bubblewrap with config
-        run: |
-          mkdir -p apk-build && cd apk-build
-          bubblewrap init \
-            --manifest=https://vegantrack.vercel.app/manifest.json \
-            --directory=.
+          # AndroidManifest.xml
+          cat > twa-app/app/src/main/AndroidManifest.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <application
+                  android:label="VeganTrack"
+                  android:icon="@mipmap/ic_launcher"
+                  android:theme="@style/AppTheme"
+                  android:allowBackup="true">
+                  <activity
+                      android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
+                      android:exported="true">
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.DEFAULT_URL"
+                          android:value="https://vegantrack.vercel.app/" />
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
+                          android:resource="@color/colorPrimary" />
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.SPLASH_IMAGE_DRAWABLE"
+                          android:resource="@drawable/splash" />
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.SPLASH_SCREEN_BACKGROUND_COLOR"
+                          android:resource="@color/backgroundColor" />
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY"
+                          android:value="com.vegantrack.app.fileprovider" />
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                      <intent-filter android:autoVerify="true">
+                          <action android:name="android.intent.action.VIEW"/>
+                          <category android:name="android.intent.category.DEFAULT"/>
+                          <category android:name="android.intent.category.BROWSABLE"/>
+                          <data android:scheme="https" android:host="vegantrack.vercel.app"/>
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
 
-      - name: Generate keystore
+          # colors.xml
+          cat > twa-app/app/src/main/res/values/colors.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="colorPrimary">#16a34a</color>
+              <color name="backgroundColor">#f8fafc</color>
+          </resources>
+          EOF
+
+          # styles.xml
+          cat > twa-app/app/src/main/res/values/styles.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+                  <item name="colorPrimary">@color/colorPrimary</item>
+              </style>
+          </resources>
+          EOF
+
+          # splash drawable
+          cat > twa-app/app/src/main/res/drawable/splash.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:drawable="@color/backgroundColor"/>
+          </layer-list>
+          EOF
+
+          # Download icon
+          curl -L https://vegantrack.vercel.app/icon-192.png \
+            -o twa-app/app/src/main/res/drawable/ic_launcher.png
+
+          # Create mipmap dirs and copy icon
+          for size in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            mkdir -p twa-app/app/src/main/res/mipmap-$size
+            cp twa-app/app/src/main/res/drawable/ic_launcher.png \
+               twa-app/app/src/main/res/mipmap-$size/ic_launcher.png
+          done
+
+          # gradle wrapper
+          mkdir -p twa-app/gradle/wrapper
+          cat > twa-app/gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.2-bin.zip
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          EOF
+
+      - name: Setup Gradle wrapper
         run: |
-          keytool -genkey -v \
-            -keystore apk-build/android.keystore \
-            -alias android \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass android -keypass android \
-            -dname "CN=VeganTrack,O=VeganTrack,C=ES"
-          # Update twa-manifest.json with keystore info
-          cd apk-build
-          node -e "
-            const fs = require('fs');
-            const m = JSON.parse(fs.readFileSync('twa-manifest.json','utf8'));
-            m.signingKey = { path: '../android.keystore', alias: 'android' };
-            fs.writeFileSync('twa-manifest.json', JSON.stringify(m, null, 2));
-          "
+          cd twa-app
+          gradle wrapper --gradle-version=8.2
 
       - name: Build APK
         run: |
-          cd apk-build
-          bubblewrap build
-        env:
-          BUBBLEWRAP_KEYSTORE_PASSWORD: android
-          BUBBLEWRAP_KEY_PASSWORD: android
-
-      - name: Find and upload APK
-        run: find apk-build -name "*.apk" | head -5
+          cd twa-app
+          ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: vegantrack-apk
-          path: apk-build/**/*.apk
+          path: twa-app/app/build/outputs/apk/release/app-release*.apk
           retention-days: 30
