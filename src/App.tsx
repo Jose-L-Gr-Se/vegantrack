@@ -7,6 +7,7 @@ import { DiaryPage } from '@/features/diary/DiaryPage';
 import { SearchPage } from '@/features/search/SearchPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
+import { LandingPage } from '@/features/landing/LandingPage';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { Spinner } from '@/components/ui/Spinner';
 import { Leaf } from 'lucide-react';
@@ -15,6 +16,7 @@ export default function App() {
   const { user, profile, initialized, initialize } = useAuthStore();
   const { fetchCustomFoods } = useCustomFoodStore();
   const [activeTab, setActiveTab] = useState('diary');
+  const [showLanding, setShowLanding] = useState(true);
 
   useEffect(() => {
     initialize();
@@ -53,26 +55,28 @@ export default function App() {
     );
   }
 
-  // Not logged in
-  if (!user) {
-    return <AuthPage />;
+  // Usuario logueado → va directo a la app, sin landing
+  if (user) {
+    if (profile && !profile.calorie_target) {
+      return <OnboardingPage />;
+    }
+    return (
+      <div className="min-h-dvh bg-surface-50">
+        <main className="max-w-lg mx-auto">
+          {activeTab === 'diary' && <DiaryPage />}
+          {activeTab === 'search' && <SearchPage />}
+          {activeTab === 'dashboard' && <DashboardPage />}
+          {activeTab === 'profile' && <ProfilePage />}
+        </main>
+        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
+    );
   }
 
-  // No profile data yet (needs onboarding)
-  if (profile && !profile.calorie_target) {
-    return <OnboardingPage />;
+  // Usuario no logueado → landing o auth
+  if (showLanding) {
+    return <LandingPage onEnter={() => setShowLanding(false)} />;
   }
 
-  // Main app
-  return (
-    <div className="min-h-dvh bg-surface-50">
-      <main className="max-w-lg mx-auto">
-        {activeTab === 'diary' && <DiaryPage />}
-        {activeTab === 'search' && <SearchPage />}
-        {activeTab === 'dashboard' && <DashboardPage />}
-        {activeTab === 'profile' && <ProfilePage />}
-      </main>
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
-    </div>
-  );
+  return <AuthPage />;
 }
