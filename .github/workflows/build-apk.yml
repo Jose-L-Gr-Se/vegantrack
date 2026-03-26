@@ -31,8 +31,7 @@ jobs:
       - name: Create Android project
         run: |
           mkdir -p twa-app/app/src/main/res/values
-          mkdir -p twa-app/app/src/main/res/drawable
-          mkdir -p twa-app/app/src/main/res/xml
+                    mkdir -p twa-app/app/src/main/java/com/vegantrack/app
           mkdir -p twa-app/app/src/main/res/mipmap-anydpi-v26
           mkdir -p twa-app/app/src/main/res/mipmap-hdpi
           mkdir -p twa-app/app/src/main/res/mipmap-mdpi
@@ -101,11 +100,105 @@ jobs:
                   sourceCompatibility JavaVersion.VERSION_17
                   targetCompatibility JavaVersion.VERSION_17
               }
+
+              buildFeatures {
+                  buildConfig true
+              }
           }
 
           dependencies {
               implementation 'androidx.appcompat:appcompat:1.6.1'
-              implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+              implementation 'androidx.webkit:webkit:1.11.0'
+          }
+          EOF
+
+          cat > twa-app/app/src/main/java/com/vegantrack/app/MainActivity.java <<'EOF'
+          package com.vegantrack.app;
+
+          import android.annotation.SuppressLint;
+          import android.graphics.Bitmap;
+          import android.os.Bundle;
+          import android.view.ViewGroup;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+
+          import androidx.annotation.NonNull;
+          import androidx.appcompat.app.AppCompatActivity;
+
+          public class MainActivity extends AppCompatActivity {
+              private static final String START_URL = "https://vegantrack.vercel.app/";
+              private WebView webView;
+
+              @SuppressLint("SetJavaScriptEnabled")
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  webView = new WebView(this);
+                  webView.setLayoutParams(new ViewGroup.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT,
+                          ViewGroup.LayoutParams.MATCH_PARENT));
+                  setContentView(webView);
+
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setDatabaseEnabled(true);
+                  settings.setAllowFileAccess(false);
+                  settings.setAllowContentAccess(false);
+                  settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+                  settings.setMediaPlaybackRequiresUserGesture(false);
+                  settings.setBuiltInZoomControls(false);
+                  settings.setDisplayZoomControls(false);
+                  settings.setLoadWithOverviewMode(true);
+                  settings.setUseWideViewPort(true);
+
+                  webView.setWebViewClient(new VeganTrackWebViewClient());
+
+                  if (savedInstanceState != null) {
+                      webView.restoreState(savedInstanceState);
+                  } else {
+                      webView.loadUrl(START_URL);
+                  }
+              }
+
+              @Override
+              protected void onSaveInstanceState(@NonNull Bundle outState) {
+                  super.onSaveInstanceState(outState);
+                  webView.saveState(outState);
+              }
+
+              @Override
+              public void onBackPressed() {
+                  if (webView.canGoBack()) {
+                      webView.goBack();
+                      return;
+                  }
+                  super.onBackPressed();
+              }
+
+              @Override
+              protected void onDestroy() {
+                  if (webView != null) {
+                      webView.destroy();
+                  }
+                  super.onDestroy();
+              }
+
+              private static class VeganTrackWebViewClient extends WebViewClient {
+                  @Override
+                  public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                      view.loadUrl(request.getUrl().toString());
+                      return true;
+                  }
+
+                  @Override
+                  public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                      super.onPageStarted(view, url, favicon);
+                  }
+              }
           }
           EOF
 
@@ -113,6 +206,7 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
               <application
                   android:allowBackup="true"
@@ -121,45 +215,12 @@ jobs:
                   android:roundIcon="@mipmap/ic_launcher"
                   android:supportsRtl="true"
                   android:theme="@style/AppTheme">
-                  <provider
-                      android:name="androidx.core.content.FileProvider"
-                      android:authorities="com.vegantrack.app.fileprovider"
-                      android:exported="false"
-                      android:grantUriPermissions="true">
-                      <meta-data
-                          android:name="android.support.FILE_PROVIDER_PATHS"
-                          android:resource="@xml/file_paths" />
-                  </provider>
-
                   <activity
-                      android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
+                      android:name=".MainActivity"
                       android:exported="true">
-                      <meta-data
-                          android:name="android.support.customtabs.trusted.DEFAULT_URL"
-                          android:value="https://vegantrack.vercel.app/" />
-                      <meta-data
-                          android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
-                          android:resource="@color/colorPrimary" />
-                      <meta-data
-                          android:name="android.support.customtabs.trusted.SPLASH_IMAGE_DRAWABLE"
-                          android:resource="@drawable/splash" />
-                      <meta-data
-                          android:name="android.support.customtabs.trusted.SPLASH_SCREEN_BACKGROUND_COLOR"
-                          android:resource="@color/backgroundColor" />
-                      <meta-data
-                          android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY"
-                          android:value="com.vegantrack.app.fileprovider" />
-
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-
-                      <intent-filter android:autoVerify="true">
-                          <action android:name="android.intent.action.VIEW" />
-                          <category android:name="android.intent.category.DEFAULT" />
-                          <category android:name="android.intent.category.BROWSABLE" />
-                          <data android:scheme="https" android:host="vegantrack.vercel.app" />
                       </intent-filter>
                   </activity>
               </application>
@@ -181,20 +242,6 @@ jobs:
                   <item name="colorPrimary">@color/colorPrimary</item>
               </style>
           </resources>
-          EOF
-
-          cat > twa-app/app/src/main/res/drawable/splash.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-              <item android:drawable="@color/backgroundColor" />
-          </layer-list>
-          EOF
-
-          cat > twa-app/app/src/main/res/xml/file_paths.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <paths>
-              <files-path name="twa_splash" path="twa_splash/" />
-          </paths>
           EOF
 
           cp public/icon-192.png twa-app/app/src/main/res/mipmap-mdpi/ic_launcher.png
