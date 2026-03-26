@@ -15,31 +15,93 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
-      - name: Initialize Bubblewrap project
+      - name: Create Bubblewrap config
         run: |
-          mkdir apk-build && cd apk-build
-          bubblewrap init --manifest=https://vegantrack.vercel.app/manifest.json \
-            --directory=. \
-            --packageId=com.vegantrack.app \
-            --name="VeganTrack" \
-            --launcherName="VeganTrack" \
-            --themeColor=#16a34a \
-            --backgroundColor=#f8fafc \
-            --startUrl="/" \
-            --iconUrl=https://vegantrack.vercel.app/icon-512.png \
-            --maskableIconUrl=https://vegantrack.vercel.app/icon-512.png \
-            --appVersionCode=1 \
-            --appVersionName="1.0.0"
+          mkdir -p apk-build
+          cat > apk-build/twa-manifest.json << 'EOF'
+          {
+            "packageId": "com.vegantrack.app",
+            "host": "vegantrack.vercel.app",
+            "name": "VeganTrack",
+            "launcherName": "VeganTrack",
+            "display": "standalone",
+            "orientation": "portrait",
+            "themeColor": "#16a34a",
+            "backgroundColor": "#f8fafc",
+            "startUrl": "/",
+            "iconUrl": "https://vegantrack.vercel.app/icon-512.png",
+            "maskableIconUrl": "https://vegantrack.vercel.app/icon-512.png",
+            "appVersion": "1",
+            "appVersionName": "1.0.0",
+            "signingKey": {
+              "path": "android.keystore",
+              "alias": "android"
+            },
+            "minSdkVersion": 21,
+            "targetSdkVersion": 34,
+            "navigationColor": "#16a34a",
+            "navigationColorDark": "#16a34a",
+            "navigationDividerColor": "#16a34a",
+            "navigationDividerColorDark": "#16a34a",
+            "enableNotifications": false,
+            "shortcuts": [],
+            "generatorApp": "bubblewrap-cli",
+            "webManifestUrl": "https://vegantrack.vercel.app/manifest.json",
+            "isChromeOSOnly": false,
+            "isMetaQuest": false,
+            "fullScopeUrl": "https://vegantrack.vercel.app/",
+            "minimalUiColor": "#16a34a",
+            "enableSiteSettingsShortcut": true,
+            "fingerprints": [],
+            "retainedBundles": [],
+            "playBilling": {"enabled": false},
+            "alphaDependencies": {"enabled": false},
+            "features": {"locationDelegation": {"enabled": false}, "playBilling": {"enabled": false}},
+            "additionalTrustedOrigins": [],
+            "fallbackType": "customtabs",
+            "serviceAccountJsonFile": ""
+          }
+          EOF
 
-      - name: Build APK
-        run: cd apk-build && bubblewrap build
+      - name: Generate keystore
+        run: |
+          keytool -genkey -v \
+            -keystore apk-build/android.keystore \
+            -alias android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass android \
+            -keypass android \
+            -dname "CN=VeganTrack, OU=App, O=VeganTrack, L=Madrid, S=Madrid, C=ES"
 
-      - name: Upload APK artifact
+      - name: Build APK with Bubblewrap
+        run: |
+          cd apk-build
+          bubblewrap build \
+            --skipPwaValidation \
+            --manifest=./twa-manifest.json
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: android
+          BUBBLEWRAP_KEY_PASSWORD: android
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: vegantrack-apk
-          path: apk-build/app-release-unsigned.apk
-          retention-days: 7
+          path: |
+            apk-build/app-release-signed.apk
+            apk-build/app-release-unsigned.apk
+          retention-days: 30
