@@ -1,45 +1,196 @@
-# .github/workflows/build-apk.yml
 name: Build Android APK
 
 on:
-    workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
+  build:
+    runs-on: ubuntu-latest
 
-            - name: Setup Node.js
-                uses: actions/setup-node@v4
-                with:
-                    node-version: '20'
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Install Bubblewrap
-                run: npm install -g @bubblewrap/cli
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-            - name: Initialize Bubblewrap project
-                run: |
-                    mkdir apk-build && cd apk-build
-                    bubblewrap init --manifest=https://vegantrack.vercel.app/manifest.json \
-                        --directory=. \
-                        --packageId=com.vegantrack.app \
-                        --name="VeganTrack" \
-                        --launcherName="VeganTrack" \
-                        --themeColor=#16a34a \
-                        --backgroundColor=#f8fafc \
-                        --startUrl="/" \
-                        --iconUrl=https://vegantrack.vercel.app/icon-512.png \
-                        --maskableIconUrl=https://vegantrack.vercel.app/icon-512.png \
-                        --appVersionCode=1 \
-                        --appVersionName="1.0.0"
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-            - name: Build APK
-                run: cd apk-build && bubblewrap build
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-            - name: Upload APK artifact
-                uses: actions/upload-artifact@v4
-                with:
-                    name: vegantrack-apk
-                    path: apk-build/app-release-unsigned.apk
-                    retention-days: 7
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Create Android project
+        run: |
+          mkdir -p twa-app/app/src/main/res/values
+          mkdir -p twa-app/app/src/main/res/drawable
+          mkdir -p twa-app/app/src/main/res/mipmap-anydpi-v26
+          mkdir -p twa-app/app/src/main/res/mipmap-hdpi
+          mkdir -p twa-app/app/src/main/res/mipmap-mdpi
+          mkdir -p twa-app/app/src/main/res/mipmap-xhdpi
+          mkdir -p twa-app/app/src/main/res/mipmap-xxhdpi
+          mkdir -p twa-app/app/src/main/res/mipmap-xxxhdpi
+
+          cat > twa-app/settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          rootProject.name = "VeganTrack"
+          include ':app'
+          EOF
+
+          cat > twa-app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.2.2' apply false
+          }
+          EOF
+
+          cat > twa-app/app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.vegantrack.app'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId "com.vegantrack.app"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0.0"
+              }
+
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                      signingConfig signingConfigs.debug
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.7.0'
+              implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+          }
+          EOF
+
+          cat > twa-app/app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="VeganTrack"
+                  android:roundIcon="@mipmap/ic_launcher"
+                  android:supportsRtl="true"
+                  android:theme="@style/AppTheme">
+                  <activity
+                      android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
+                      android:exported="true">
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.DEFAULT_URL"
+                          android:value="https://vegantrack.vercel.app/" />
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
+                          android:resource="@color/colorPrimary" />
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.SPLASH_IMAGE_DRAWABLE"
+                          android:resource="@drawable/splash" />
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.SPLASH_SCREEN_BACKGROUND_COLOR"
+                          android:resource="@color/backgroundColor" />
+                      <meta-data
+                          android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY"
+                          android:value="com.vegantrack.app.fileprovider" />
+
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+
+                      <intent-filter android:autoVerify="true">
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="https" android:host="vegantrack.vercel.app" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > twa-app/app/src/main/res/values/colors.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="colorPrimary">#16a34a</color>
+              <color name="backgroundColor">#f8fafc</color>
+          </resources>
+          EOF
+
+          cat > twa-app/app/src/main/res/values/styles.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+                  <item name="colorPrimary">@color/colorPrimary</item>
+              </style>
+          </resources>
+          EOF
+
+          cat > twa-app/app/src/main/res/drawable/splash.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:drawable="@color/backgroundColor" />
+          </layer-list>
+          EOF
+
+          cp public/icon-192.png twa-app/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          cp public/icon-192.png twa-app/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp public/icon-192.png twa-app/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp public/icon-512.png twa-app/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp public/icon-512.png twa-app/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+          cat > twa-app/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/backgroundColor" />
+              <foreground android:drawable="@mipmap/ic_launcher" />
+          </adaptive-icon>
+          EOF
+
+      - name: Build APK
+        run: gradle -p twa-app :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vegantrack-apk
+          path: twa-app/app/build/outputs/apk/release/*.apk
+          retention-days: 7
