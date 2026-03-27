@@ -157,15 +157,18 @@ export function SearchPage() {
 
       const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
 
-      // iOS: tighter scan box (70%) + higher fps for more decode attempts
-      // Android: wider box (85%) is fine, fps 6 saves battery
-      const boxRatio = isIOS ? 0.70 : 0.85;
-      const scanFps = isIOS ? 10 : 6;
+      // iOS: full-frame scanning improves 1D barcode decoding reliability in Safari.
+      // Android: keep a wider box for performance/battery balance.
+      const boxRatio = 0.85;
+      const scanFps = isIOS ? 12 : 6;
 
       const qrbox = (vw: number, vh: number) => ({
         width: Math.floor(vw * boxRatio),
         height: Math.floor(Math.min(vw * boxRatio * 0.55, vh * 0.5)),
       });
+      const scannerConfig = isIOS
+        ? { fps: scanFps, disableFlip: true }
+        : { fps: scanFps, qrbox, disableFlip: true };
 
       // After scanner starts, apply advanced constraints for continuous
       // autofocus on iOS — without this, iOS camera stays blurry on barcodes.
@@ -182,8 +185,13 @@ export function SearchPage() {
           if (capabilities.focusMode?.includes('continuous')) {
             advanced.focusMode = 'continuous';
           }
-          if (capabilities.zoom) {
-            advanced.zoom = capabilities.zoom.min;
+          // On iPhone, forcing minimum zoom can switch to ultra-wide lens and hurt barcode decoding.
+          // Prefer a moderate zoom when available to keep barcodes sharp and readable.
+          if (capabilities.zoom && isIOS) {
+            const minZoom = capabilities.zoom.min ?? 1;
+            const maxZoom = capabilities.zoom.max ?? minZoom;
+            const preferredZoom = Math.min(maxZoom, Math.max(minZoom, 2));
+            advanced.zoom = preferredZoom;
           }
           if (Object.keys(advanced).length > 0) {
             await track.applyConstraints({ advanced: [advanced] } as any);
@@ -213,7 +221,7 @@ export function SearchPage() {
       try {
         await scanner.start(
           { facingMode: 'environment' },
-          { fps: scanFps, qrbox },
+          scannerConfig,
           onScanSuccess,
           () => {}
         );
@@ -227,7 +235,7 @@ export function SearchPage() {
       try {
         await scanner.start(
           { facingMode: { ideal: 'environment' } },
-          { fps: scanFps, qrbox },
+          scannerConfig,
           onScanSuccess,
           () => {}
         );
@@ -244,7 +252,7 @@ export function SearchPage() {
           || devices[devices.length - 1];
         await scanner.start(
           backCam.id,
-          { fps: scanFps, qrbox },
+          scannerConfig,
           onScanSuccess,
           () => {}
         );
