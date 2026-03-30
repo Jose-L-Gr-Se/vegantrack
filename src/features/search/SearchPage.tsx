@@ -149,29 +149,31 @@ export function SearchPage() {
         Html5QrcodeSupportedFormats.CODE_128,
       ];
 
-      const scanner = new Html5Qrcode('scanner-container', {
-        formatsToSupport,
-        verbose: false,
-      });
-      scannerRef.current = scanner;
-
       const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
 
-      // iOS: full-frame scanning improves 1D barcode decoding reliability in Safari.
-      // Android: keep a wider box for performance/battery balance.
       const boxRatio = 0.85;
-      const scanFps = isIOS ? 12 : 6;
+      // iOS Safari is less stable at high FPS; 10 is a reliable sweet spot.
+      const scanFps = isIOS ? 10 : 6;
 
       const qrbox = (vw: number, vh: number) => ({
         width: Math.floor(vw * boxRatio),
         height: Math.floor(Math.min(vw * boxRatio * 0.55, vh * 0.5)),
       });
-      const scannerConfig = isIOS
-        ? { fps: scanFps, disableFlip: true }
-        : { fps: scanFps, qrbox, disableFlip: true };
+      // Both platforms benefit from a defined scanning box for 1D barcode reliability.
+      const scannerConfig = { fps: scanFps, qrbox, disableFlip: true };
 
-      // After scanner starts, apply advanced constraints for continuous
-      // autofocus on iOS — without this, iOS camera stays blurry on barcodes.
+      // Creates a fresh Html5Qrcode instance with a clean DOM container.
+      // A new instance is required after each failed start() — reusing a
+      // partially-initialised instance causes silent failures, especially on iOS.
+      const createScanner = () => {
+        const container = document.getElementById('scanner-container');
+        if (container) container.innerHTML = '';
+        return new Html5Qrcode('scanner-container', { formatsToSupport, verbose: false });
+      };
+
+      // After scanner starts, request continuous autofocus.
+      // Zoom is intentionally kept conservative (1.5×) — higher values can
+      // shift focus distance and make thin barcode lines harder to resolve.
       const applyAdvancedConstraints = async () => {
         try {
           const videoEl = document.querySelector('#scanner-container video') as HTMLVideoElement | null;
@@ -185,13 +187,14 @@ export function SearchPage() {
           if (capabilities.focusMode?.includes('continuous')) {
             advanced.focusMode = 'continuous';
           }
-          // On iPhone, forcing minimum zoom can switch to ultra-wide lens and hurt barcode decoding.
-          // Prefer a moderate zoom when available to keep barcodes sharp and readable.
           if (capabilities.zoom && isIOS) {
             const minZoom = capabilities.zoom.min ?? 1;
             const maxZoom = capabilities.zoom.max ?? minZoom;
-            const preferredZoom = Math.min(maxZoom, Math.max(minZoom, 2));
-            advanced.zoom = preferredZoom;
+            // 1.5× avoids the ultra-wide lens while keeping a usable focus range.
+            const preferredZoom = Math.min(maxZoom, Math.max(minZoom, 1.5));
+            if (preferredZoom > minZoom) {
+              advanced.zoom = preferredZoom;
+            }
           }
           if (Object.keys(advanced).length > 0) {
             await track.applyConstraints({ advanced: [advanced] } as any);
@@ -202,8 +205,10 @@ export function SearchPage() {
         }
       };
 
+      // onScanSuccess captures the current scanner via closure after each attempt.
+      let activeScanner: InstanceType<typeof Html5Qrcode> | null = null;
       const onScanSuccess = async (decodedText: string) => {
-        try { await scanner.stop(); } catch {}
+        try { await activeScanner?.stop(); } catch {}
         setScanning(false);
         setSearching(true);
         const product = await getProductByBarcode(decodedText);
@@ -217,50 +222,52 @@ export function SearchPage() {
         setSearching(false);
       };
 
-      // Intento 1: constraint simple (funciona en iOS y Android)
-      try {
-        await scanner.start(
-          { facingMode: 'environment' },
-          scannerConfig,
-          onScanSuccess,
-          () => {}
-        );
-        await applyAdvancedConstraints();
-        return; // Éxito, salimos
-      } catch (firstErr) {
-        console.warn('Scanner start attempt 1 failed:', firstErr);
+      // iOS Safari rejects the exact facingMode constraint far more often than
+      // Android Chrome — start with `ideal` on iOS to avoid a guaranteed first
+      // failure that leaves the instance in a bad internal state.
+      const cameraConstraints = isIOS
+        ? [
+            { facingMode: { ideal: 'environment' } },
+            { facingMode: 'environment' },
+          ]
+        : [
+            { facingMode: 'environment' },
+            { facingMode: { ideal: 'environment' } },
+          ];
+
+      let lastErr: unknown;
+      for (const constraint of cameraConstraints) {
+        const scanner = createScanner();
+        activeScanner = scanner;
+        scannerRef.current = scanner;
+        try {
+          await scanner.start(constraint, scannerConfig, onScanSuccess, () => {});
+          await applyAdvancedConstraints();
+          return;
+        } catch (err) {
+          console.warn('Scanner start attempt failed:', err);
+          lastErr = err;
+          try { await scanner.stop(); } catch {}
+          try { (scanner as any).clear?.(); } catch {}
+          activeScanner = null;
+          scannerRef.current = null;
+        }
       }
 
-      // Intento 2: fallback con facingMode ideal (por si el exacto falla)
-      try {
-        await scanner.start(
-          { facingMode: { ideal: 'environment' } },
-          scannerConfig,
-          onScanSuccess,
-          () => {}
-        );
-        await applyAdvancedConstraints();
-        return;
-      } catch (secondErr) {
-        console.warn('Scanner start attempt 2 failed:', secondErr);
-      }
-
-      // Intento 3: cualquier cámara disponible
+      // Final fallback: pick a camera by device ID
       const devices = await Html5Qrcode.getCameras();
       if (devices && devices.length > 0) {
         const backCam = devices.find(d => d.label.toLowerCase().includes('back'))
           || devices[devices.length - 1];
-        await scanner.start(
-          backCam.id,
-          scannerConfig,
-          onScanSuccess,
-          () => {}
-        );
+        const scanner = createScanner();
+        activeScanner = scanner;
+        scannerRef.current = scanner;
+        await scanner.start(backCam.id, scannerConfig, onScanSuccess, () => {});
         await applyAdvancedConstraints();
         return;
       }
 
-      throw new Error('No cameras available');
+      throw lastErr ?? new Error('No cameras available');
     } catch (err: unknown) {
       console.error('Scanner error:', err);
       setScanning(false);
