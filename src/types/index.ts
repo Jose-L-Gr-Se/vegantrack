@@ -34,15 +34,24 @@ export interface FoodLogEntry {
   sugar_g: number;
   saturated_fat_g: number;
   sodium_mg: number;
-  vitamin_b12_mcg: number;
-  iron_mg: number;
-  zinc_mg: number;
-  calcium_mg: number;
-  omega3_g: number;
-  vitamin_d_mcg: number;
+  vitamin_b12_mcg: number | null;
+  iron_mg: number | null;
+  zinc_mg: number | null;
+  calcium_mg: number | null;
+  omega3_g: number | null;
+  vitamin_d_mcg: number | null;
+  vitamin_b12_known: boolean;
+  iron_known: boolean;
+  zinc_known: boolean;
+  calcium_known: boolean;
+  omega3_known: boolean;
+  vitamin_d_known: boolean;
+  source?: string | null;
+  source_ref?: string | null;
   is_vegan: boolean;
   image_url: string | null;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface OpenFoodFactsProduct {
@@ -53,6 +62,7 @@ export interface OpenFoodFactsProduct {
   categories_tags: string[];
   labels_tags: string[];
   nutriments: {
+    // Macros — always normalized to a number (0 when absent)
     'energy-kcal_100g': number;
     proteins_100g: number;
     carbohydrates_100g: number;
@@ -61,10 +71,22 @@ export interface OpenFoodFactsProduct {
     sugars_100g: number;
     'saturated-fat_100g': number;
     sodium_100g: number;
-    [key: string]: number;
+    // Micros — null means "not reported by this product"
+    'vitamin-b12_100g'?: number | null;
+    'iron_100g'?: number | null;
+    'zinc_100g'?: number | null;
+    'calcium_100g'?: number | null;
+    'vitamin-d_100g'?: number | null;
   };
   serving_size: string;
   serving_quantity: number;
+}
+
+export interface MicroAggregate {
+  value: number;
+  knownEntries: number;
+  totalEntries: number;
+  coverage: number;
 }
 
 export interface NutrientSummary {
@@ -73,12 +95,14 @@ export interface NutrientSummary {
   carbs_g: number;
   fat_g: number;
   fiber_g: number;
-  vitamin_b12_mcg: number;
-  iron_mg: number;
-  zinc_mg: number;
-  calcium_mg: number;
-  omega3_g: number;
-  vitamin_d_mcg: number;
+  micros: {
+    vitamin_b12_mcg: MicroAggregate;
+    iron_mg: MicroAggregate;
+    zinc_mg: MicroAggregate;
+    calcium_mg: MicroAggregate;
+    omega3_g: MicroAggregate;
+    vitamin_d_mcg: MicroAggregate;
+  };
 }
 
 export interface MealGroup {
@@ -102,12 +126,18 @@ export interface RecentFood {
   sugar_per_100g: number;
   saturated_fat_per_100g: number;
   sodium_per_100g: number;
-  vitamin_b12_mcg_per_100g: number;
-  iron_mg_per_100g: number;
-  zinc_mg_per_100g: number;
-  calcium_mg_per_100g: number;
-  omega3_g_per_100g: number;
-  vitamin_d_mcg_per_100g: number;
+  vitamin_b12_mcg_per_100g: number | null;
+  iron_mg_per_100g: number | null;
+  zinc_mg_per_100g: number | null;
+  calcium_mg_per_100g: number | null;
+  omega3_g_per_100g: number | null;
+  vitamin_d_mcg_per_100g: number | null;
+  vitamin_b12_known: boolean;
+  iron_known: boolean;
+  zinc_known: boolean;
+  calcium_known: boolean;
+  omega3_known: boolean;
+  vitamin_d_known: boolean;
   is_vegan: boolean;
   last_serving_g: number;
   use_count: number;

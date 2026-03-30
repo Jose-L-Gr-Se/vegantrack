@@ -27,6 +27,25 @@ const MEAL_LABELS: Record<MealType, string> = {
 // Timeout for add operation (15 seconds)
 const ADD_TIMEOUT = 15000;
 
+/**
+ * Scales a raw OFF nutriment value (in grams) to the target unit.
+ * Returns null when the value is missing, null, undefined, or NaN —
+ * so callers can distinguish "truly zero" from "not reported".
+ */
+const scaleOrNull = (
+  rawValue: unknown,
+  ratio: number,
+  unitMultiplier = 1,
+  decimals = 2,
+): number | null => {
+  if (rawValue === null || rawValue === undefined || Number.isNaN(Number(rawValue))) {
+    return null;
+  }
+  const scaled = Number(rawValue) * ratio * unitMultiplier;
+  const factor = 10 ** decimals;
+  return Math.round(scaled * factor) / factor;
+};
+
 export function SearchPage() {
   const { user } = useAuthStore();
   const { addEntry, selectedDate, recentFoods, fetchRecentFoods } = useDiaryStore();
@@ -324,6 +343,15 @@ export function SearchPage() {
     const n = selectedProduct.nutriments;
     const ratio = servingGrams / 100;
 
+    // Micros — OFF stores all values in grams; scaleOrNull converts and returns null when not reported
+    const vitaminB12 = scaleOrNull(n['vitamin-b12_100g'], ratio, 1e6, 2);
+    const iron       = scaleOrNull(n['iron_100g'],         ratio, 1000, 1);
+    const zinc       = scaleOrNull(n['zinc_100g'],         ratio, 1000, 1);
+    const calcium    = scaleOrNull(n['calcium_100g'],      ratio, 1000, 1);
+    const vitaminD   = scaleOrNull(n['vitamin-d_100g'],    ratio, 1e6, 2);
+    // Omega-3 not reliably reported in OFF
+    const omega3 = null;
+
     // Add with timeout
     const timeoutPromise = new Promise<{ error: string }>((resolve) =>
       setTimeout(() => resolve({ error: 'La operación tardó demasiado. Comprueba tu conexión e inténtalo de nuevo.' }), ADD_TIMEOUT)
@@ -345,13 +373,20 @@ export function SearchPage() {
       sugar_g: Math.round(n.sugars_100g * ratio * 10) / 10,
       saturated_fat_g: Math.round(n['saturated-fat_100g'] * ratio * 10) / 10,
       sodium_mg: Math.round(n.sodium_100g * ratio * 1000),
-      // Micros — OFF stores all values in grams; convert to target units
-      vitamin_b12_mcg: Math.round((n['vitamin-b12_100g'] || 0) * ratio * 1e6 * 100) / 100,
-      iron_mg: Math.round((n['iron_100g'] || 0) * ratio * 1000 * 10) / 10,
-      zinc_mg: Math.round((n['zinc_100g'] || 0) * ratio * 1000 * 10) / 10,
-      calcium_mg: Math.round((n['calcium_100g'] || 0) * ratio * 1000 * 10) / 10,
-      omega3_g: 0,
-      vitamin_d_mcg: Math.round((n['vitamin-d_100g'] || 0) * ratio * 1e6 * 100) / 100,
+      vitamin_b12_mcg: vitaminB12,
+      iron_mg:         iron,
+      zinc_mg:         zinc,
+      calcium_mg:      calcium,
+      omega3_g:        omega3,
+      vitamin_d_mcg:   vitaminD,
+      vitamin_b12_known: vitaminB12 !== null,
+      iron_known:        iron       !== null,
+      zinc_known:        zinc       !== null,
+      calcium_known:     calcium    !== null,
+      omega3_known:      false,
+      vitamin_d_known:   vitaminD   !== null,
+      source:     selectedProduct.code ? 'openfoodfacts' : 'manual',
+      source_ref: selectedProduct.code || null,
       is_vegan: isProductVegan(selectedProduct),
       image_url: selectedProduct.image_front_url || null,
     });
@@ -377,6 +412,19 @@ export function SearchPage() {
     if (!user) return;
     const ratio = food.last_serving_g / 100;
 
+    // Values in RecentFood are already in target units (mcg, mg, g) per 100 g —
+    // preserve null when the original was unknown.
+    const qB12     = food.vitamin_b12_known && food.vitamin_b12_mcg_per_100g !== null
+      ? Math.round(food.vitamin_b12_mcg_per_100g * ratio * 100) / 100 : null;
+    const qIron    = food.iron_known    && food.iron_mg_per_100g    !== null
+      ? Math.round(food.iron_mg_per_100g    * ratio * 10)  / 10  : null;
+    const qZinc    = food.zinc_known    && food.zinc_mg_per_100g    !== null
+      ? Math.round(food.zinc_mg_per_100g    * ratio * 10)  / 10  : null;
+    const qCalcium = food.calcium_known && food.calcium_mg_per_100g !== null
+      ? Math.round(food.calcium_mg_per_100g * ratio * 10)  / 10  : null;
+    const qVitD    = food.vitamin_d_known && food.vitamin_d_mcg_per_100g !== null
+      ? Math.round(food.vitamin_d_mcg_per_100g * ratio * 100) / 100 : null;
+
     const { error } = await addEntry({
       user_id: user.id,
       date: selectedDate,
@@ -393,12 +441,18 @@ export function SearchPage() {
       sugar_g: Math.round(food.sugar_per_100g * ratio * 10) / 10,
       saturated_fat_g: Math.round(food.saturated_fat_per_100g * ratio * 10) / 10,
       sodium_mg: Math.round(food.sodium_per_100g * ratio * 10),
-      vitamin_b12_mcg: Math.round((food.vitamin_b12_mcg_per_100g || 0) * ratio * 100) / 100,
-      iron_mg: Math.round((food.iron_mg_per_100g || 0) * ratio * 10) / 10,
-      zinc_mg: Math.round((food.zinc_mg_per_100g || 0) * ratio * 10) / 10,
-      calcium_mg: Math.round((food.calcium_mg_per_100g || 0) * ratio * 10) / 10,
-      omega3_g: Math.round((food.omega3_g_per_100g || 0) * ratio * 1000) / 1000,
-      vitamin_d_mcg: Math.round((food.vitamin_d_mcg_per_100g || 0) * ratio * 100) / 100,
+      vitamin_b12_mcg: qB12,
+      iron_mg:         qIron,
+      zinc_mg:         qZinc,
+      calcium_mg:      qCalcium,
+      omega3_g:        null,
+      vitamin_d_mcg:   qVitD,
+      vitamin_b12_known: food.vitamin_b12_known,
+      iron_known:        food.iron_known,
+      zinc_known:        food.zinc_known,
+      calcium_known:     food.calcium_known,
+      omega3_known:      false,
+      vitamin_d_known:   food.vitamin_d_known,
       is_vegan: food.is_vegan,
       image_url: food.image_url,
     });
@@ -428,12 +482,13 @@ export function SearchPage() {
         sugars_100g: food.sugar_per_100g,
         'saturated-fat_100g': food.saturated_fat_per_100g,
         sodium_100g: food.sodium_per_100g / 1000,
-        // Micros — stored in target units per 100g, convert back to grams for OFF format
-        'vitamin-b12_100g': (food.vitamin_b12_mcg_per_100g || 0) / 1e6,
-        'iron_100g': (food.iron_mg_per_100g || 0) / 1000,
-        'zinc_100g': (food.zinc_mg_per_100g || 0) / 1000,
-        'calcium_100g': (food.calcium_mg_per_100g || 0) / 1000,
-        'vitamin-d_100g': (food.vitamin_d_mcg_per_100g || 0) / 1e6,
+        // Micros — stored in target units per 100g, convert back to grams for OFF format.
+        // Omit the key when unknown so scaleOrNull in handleAddFood returns null (not 0).
+        ...(food.vitamin_b12_mcg_per_100g !== null && { 'vitamin-b12_100g': food.vitamin_b12_mcg_per_100g / 1e6 }),
+        ...(food.iron_mg_per_100g    !== null && { 'iron_100g':     food.iron_mg_per_100g    / 1000 }),
+        ...(food.zinc_mg_per_100g    !== null && { 'zinc_100g':     food.zinc_mg_per_100g    / 1000 }),
+        ...(food.calcium_mg_per_100g !== null && { 'calcium_100g':  food.calcium_mg_per_100g / 1000 }),
+        ...(food.vitamin_d_mcg_per_100g !== null && { 'vitamin-d_100g': food.vitamin_d_mcg_per_100g / 1e6 }),
       },
       serving_size: `${food.last_serving_g}g`,
       serving_quantity: food.last_serving_g,

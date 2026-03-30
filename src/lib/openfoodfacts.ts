@@ -303,6 +303,47 @@ export function isProductVegan(product: OpenFoodFactsProduct): boolean {
   );
 }
 
+/**
+ * Returns a confidence level for whether a product is vegan.
+ *
+ * - 'high'    — explicit vegan certification label
+ * - 'medium'  — no animal keywords + positive vegan signals in name/brand
+ * - 'low'     — animal keywords detected
+ * - 'unknown' — no signal either way
+ */
+export function getVeganConfidence(
+  product: OpenFoodFactsProduct,
+): 'high' | 'medium' | 'low' | 'unknown' {
+  const labels = product.labels_tags || [];
+  if (labels.some((t) => t === 'en:vegan' || t === 'en:vegan-society')) return 'high';
+
+  const combined = `${product.product_name} ${product.brands}`.toLowerCase();
+  const hasAnimal = ANIMAL_KEYWORDS.some((kw) => combined.includes(kw.toLowerCase()));
+  if (hasAnimal) return 'low';
+
+  const hasVeganSignal = VEGAN_POSITIVE_KEYWORDS.some((kw) =>
+    combined.includes(kw.toLowerCase()),
+  );
+  if (hasVeganSignal) return 'medium';
+
+  return 'unknown';
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+function numberOrZero(value: unknown): number {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function numberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
 function normalizeProduct(raw: any): OpenFoodFactsProduct {
   const n = raw.nutriments || {};
   return {
@@ -310,24 +351,26 @@ function normalizeProduct(raw: any): OpenFoodFactsProduct {
     product_name: raw.product_name || '',
     brands: raw.brands || '',
     image_front_url: raw.image_front_url || '',
-    categories_tags: raw.categories_tags || [],
-    labels_tags: raw.labels_tags || [],
+    categories_tags: Array.isArray(raw.categories_tags) ? raw.categories_tags : [],
+    labels_tags: Array.isArray(raw.labels_tags) ? raw.labels_tags : [],
     nutriments: {
-      'energy-kcal_100g': n['energy-kcal_100g'] || 0,
-      proteins_100g: n.proteins_100g || 0,
-      carbohydrates_100g: n.carbohydrates_100g || 0,
-      fat_100g: n.fat_100g || 0,
-      fiber_100g: n.fiber_100g || 0,
-      sugars_100g: n.sugars_100g || 0,
-      'saturated-fat_100g': n['saturated-fat_100g'] || 0,
-      sodium_100g: n.sodium_100g || 0,
-      'vitamin-b12_100g': n['vitamin-b12_100g'] || 0,
-      'iron_100g': n['iron_100g'] || 0,
-      'zinc_100g': n['zinc_100g'] || 0,
-      'calcium_100g': n['calcium_100g'] || 0,
-      'vitamin-d_100g': n['vitamin-d_100g'] || 0,
+      // Macros — normalize to 0 when absent (always a number)
+      'energy-kcal_100g':  numberOrZero(n['energy-kcal_100g']),
+      proteins_100g:       numberOrZero(n.proteins_100g),
+      carbohydrates_100g:  numberOrZero(n.carbohydrates_100g),
+      fat_100g:            numberOrZero(n.fat_100g),
+      fiber_100g:          numberOrZero(n.fiber_100g),
+      sugars_100g:         numberOrZero(n.sugars_100g),
+      'saturated-fat_100g': numberOrZero(n['saturated-fat_100g']),
+      sodium_100g:         numberOrZero(n.sodium_100g),
+      // Micros — null when not reported; never collapse to 0
+      'vitamin-b12_100g': numberOrNull(n['vitamin-b12_100g']),
+      'iron_100g':        numberOrNull(n['iron_100g']),
+      'zinc_100g':        numberOrNull(n['zinc_100g']),
+      'calcium_100g':     numberOrNull(n['calcium_100g']),
+      'vitamin-d_100g':   numberOrNull(n['vitamin-d_100g']),
     },
-    serving_size: raw.serving_size || '',
-    serving_quantity: raw.serving_quantity || 0,
+    serving_size:     raw.serving_size || '',
+    serving_quantity: numberOrZero(raw.serving_quantity),
   };
 }
