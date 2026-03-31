@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Book, Search, BarChart3, User } from 'lucide-react';
+import { Book, Search, BarChart3, TrendingUp, User } from 'lucide-react';
 
 interface BottomNavProps {
   activeTab: string;
@@ -10,6 +10,7 @@ const TABS = [
   { id: 'diary', label: 'Diario', Icon: Book },
   { id: 'search', label: 'Buscar', Icon: Search },
   { id: 'dashboard', label: 'Dashboard', Icon: BarChart3 },
+  { id: 'progress', label: 'Progreso', Icon: TrendingUp },
   { id: 'profile', label: 'Perfil', Icon: User },
 ];
 

@@ -7,6 +7,7 @@ import { DiaryPage } from '@/features/diary/DiaryPage';
 import { SearchPage } from '@/features/search/SearchPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
+import { ProgressPage } from '@/features/progress/ProgressPage';
 import { LandingPage } from '@/features/landing/LandingPage';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { Spinner } from '@/components/ui/Spinner';
@@ -82,6 +83,7 @@ export default function App() {
         )}
           {activeTab === 'search' && <SearchPage />}
           {activeTab === 'dashboard' && <DashboardPage />}
+          {activeTab === 'progress' && <ProgressPage />}
           {activeTab === 'profile' && <ProfilePage />}
         </main>
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
