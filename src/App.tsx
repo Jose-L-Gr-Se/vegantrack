@@ -88,7 +88,7 @@ export default function App() {
           {activeTab === 'progress' && <ProgressPage />}
           {activeTab === 'profile' && <ProfilePage isDark={isDark} onToggleDark={toggleDark} />}
         </main>
-        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} isDark={isDark} onToggleDark={toggleDark} />
       </div>
     );
   }
