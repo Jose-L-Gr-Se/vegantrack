@@ -4,7 +4,7 @@ import { useCustomFoodStore } from '@/stores/customFoodStore';
 import { calculateTargets } from '@/utils/nutrition';
 import { CustomFoodModal } from '@/features/search/CustomFoodModal';
 import { Spinner } from '@/components/ui/Spinner';
-import { LogOut, Save, User, Calculator, Star, Pencil, Trash2, Plus } from 'lucide-react';
+import { LogOut, Save, User, Calculator, Star, Pencil, Trash2, Plus, Moon, Sun } from 'lucide-react';
 import type { Profile, CustomFood } from '@/types';
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -21,7 +21,12 @@ const GOAL_LABELS: Record<string, string> = {
   bulk: 'Ganar masa',
 };
 
-export function ProfilePage() {
+interface ProfilePageProps {
+  isDark: boolean;
+  onToggleDark: () => void;
+}
+
+export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
   const { profile, user, updateProfile, signOut, loading } = useAuthStore();
   const { customFoods, fetchCustomFoods, deleteCustomFood } = useCustomFoodStore();
   const [form, setForm] = useState<Partial<Profile>>({ ...profile });
@@ -306,6 +311,31 @@ export function ProfilePage() {
           <p className="text-xs text-surface-400">
             Puedes ajustar manualmente o usar el botón de recalcular arriba
           </p>
+        </div>
+
+        {/* Dark mode toggle */}
+        <div className="card overflow-hidden">
+          <button
+            onClick={onToggleDark}
+            className="flex items-center justify-between w-full px-4 py-3.5 hover:bg-surface-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              {isDark
+                ? <Moon className="w-5 h-5 text-brand-500" />
+                : <Sun className="w-5 h-5 text-brand-500" />
+              }
+              <div className="text-left">
+                <p className="text-sm font-semibold text-surface-800">Modo oscuro</p>
+                <p className="text-xs text-surface-400">{isDark ? 'Activado' : 'Desactivado'}</p>
+              </div>
+            </div>
+            <div className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${isDark ? 'bg-brand-600' : 'bg-surface-300'}`}>
+              <div
+                className={`absolute top-0.5 w-5 h-5 rounded-full shadow transition-transform duration-200 ${isDark ? 'translate-x-5' : 'translate-x-0.5'}`}
+                style={{ backgroundColor: '#ffffff' }}
+              />
+            </div>
+          </button>
         </div>
 
         {/* Actions */}

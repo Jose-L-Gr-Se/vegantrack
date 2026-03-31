@@ -62,22 +62,22 @@ export function ProgressPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="pb-28">
       {/* Header */}
-      <div className="bg-gradient-to-br from-green-600 to-emerald-700 px-4 pt-12 pb-8 text-white">
-        <h1 className="text-2xl font-bold">Progreso de peso</h1>
-        <p className="text-green-100 text-sm mt-1">Registra y visualiza tu evolución</p>
+      <div className="bg-gradient-to-br from-brand-600 to-brand-700 px-4 pt-12 pb-8 text-white">
+        <h1 className="font-display text-2xl font-bold">Progreso de peso</h1>
+        <p className="text-brand-100 text-sm mt-1">Registra y visualiza tu evolución</p>
       </div>
 
       {/* Quick log card */}
-      <div className="mx-4 -mt-4 bg-white rounded-2xl shadow-sm p-4 mb-4">
+      <div className="mx-4 -mt-4 card p-4 mb-4">
         <div className="flex items-center gap-2 mb-3">
-          <Scale className="w-5 h-5 text-green-600" />
-          <span className="font-semibold text-gray-800 text-sm">
+          <Scale className="w-5 h-5 text-brand-600" />
+          <span className="font-semibold text-surface-800 text-sm">
             {todayLog ? 'Peso de hoy' : 'Registrar peso de hoy'}
           </span>
           {todayLog && (
-            <span className="ml-auto text-xl font-bold text-green-700">
+            <span className="ml-auto text-xl font-bold text-brand-700">
               {todayLog.weight_kg} kg
             </span>
           )}
@@ -95,27 +95,27 @@ export function ProgressPage() {
             value={inputWeight}
             onChange={(e) => setInputWeight(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-            className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="input flex-1"
           />
           <button
             onClick={handleSave}
             disabled={saving || !inputWeight.trim()}
-            className="bg-green-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-1.5 disabled:opacity-50 hover:bg-green-700 transition-colors"
+            className="bg-brand-600 text-white px-4 py-2.5 rounded-2xl text-sm font-semibold flex items-center gap-1.5 disabled:opacity-50 hover:bg-brand-700 active:bg-brand-800 transition-colors"
           >
             <Plus className="w-4 h-4" />
             {saving ? '...' : 'Guardar'}
           </button>
         </div>
         {errorMsg && <p className="text-red-500 text-xs mt-2">{errorMsg}</p>}
-        {successMsg && <p className="text-green-600 text-xs mt-2 font-medium">{successMsg}</p>}
+        {successMsg && <p className="text-brand-600 text-xs mt-2 font-medium">{successMsg}</p>}
       </div>
 
       {/* Stats */}
       {stats.current !== null && (
         <div className="mx-4 grid grid-cols-4 gap-2 mb-4">
-          <StatCard label="Actual" value={`${stats.current}kg`} colorClass="text-green-700 bg-green-50" />
+          <StatCard label="Actual" value={`${stats.current}kg`} colorClass="text-brand-700 bg-brand-50" />
           <StatCard label="Mínimo" value={`${stats.min}kg`} colorClass="text-blue-700 bg-blue-50" />
-          <StatCard label="Máximo" value={`${stats.max}kg`} colorClass="text-orange-700 bg-orange-50" />
+          <StatCard label="Máximo" value={`${stats.max}kg`} colorClass="text-amber-700 bg-amber-50" />
           <StatCard
             label="Cambio"
             value={
@@ -125,12 +125,12 @@ export function ProgressPage() {
             }
             colorClass={
               stats.change === null
-                ? 'text-gray-600 bg-gray-50'
+                ? 'text-surface-600 bg-surface-100'
                 : stats.change < 0
-                ? 'text-green-700 bg-green-50'
+                ? 'text-brand-700 bg-brand-50'
                 : stats.change > 0
                 ? 'text-red-600 bg-red-50'
-                : 'text-gray-600 bg-gray-50'
+                : 'text-surface-600 bg-surface-100'
             }
             icon={
               stats.change !== null ? (
@@ -146,18 +146,18 @@ export function ProgressPage() {
       )}
 
       {/* Chart */}
-      <div className="mx-4 bg-white rounded-2xl shadow-sm p-4 mb-4">
+      <div className="mx-4 card p-4 mb-4">
         <div className="flex items-center justify-between mb-4">
-          <span className="font-semibold text-gray-800 text-sm">Evolución</span>
+          <span className="font-semibold text-surface-800 text-sm">Evolución</span>
           <div className="flex gap-1">
             {PERIODS.map((p) => (
               <button
                 key={p.days}
                 onClick={() => setPeriod(p.days)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                className={`px-3 py-1 rounded-xl text-xs font-medium transition-colors ${
                   period === p.days
-                    ? 'bg-green-600 text-white'
-                    : 'text-gray-500 hover:bg-gray-100'
+                    ? 'bg-brand-600 text-white'
+                    : 'text-surface-500 hover:bg-surface-100'
                 }`}
               >
                 {p.label}
@@ -168,10 +168,10 @@ export function ProgressPage() {
 
         {loading ? (
           <div className="h-48 flex items-center justify-center">
-            <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : !hasData ? (
-          <div className="h-48 flex flex-col items-center justify-center text-gray-400">
+          <div className="h-48 flex flex-col items-center justify-center text-surface-400">
             <Scale className="w-10 h-10 mb-2 opacity-30" />
             <p className="text-sm font-medium">Sin datos todavía</p>
             <p className="text-xs mt-1 text-center">
@@ -182,16 +182,16 @@ export function ProgressPage() {
           <>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={chartData} margin={{ top: 5, right: 8, bottom: 0, left: -22 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis
                   dataKey="displayDate"
-                  tick={{ fontSize: 9, fill: '#9ca3af' }}
+                  tick={{ fontSize: 9, fill: '#94a3b8' }}
                   tickLine={false}
                   axisLine={false}
                   interval="preserveStartEnd"
                 />
                 <YAxis
-                  tick={{ fontSize: 9, fill: '#9ca3af' }}
+                  tick={{ fontSize: 9, fill: '#94a3b8' }}
                   tickLine={false}
                   axisLine={false}
                   domain={['dataMin - 1.5', 'dataMax + 1.5']}
@@ -201,10 +201,10 @@ export function ProgressPage() {
                     val != null ? `${val} kg` : '-',
                     name === 'weight' ? 'Peso' : 'Media 7 días',
                   ]}
-                  labelStyle={{ fontSize: 11, color: '#374151' }}
+                  labelStyle={{ fontSize: 11, color: '#334155' }}
                   contentStyle={{
                     borderRadius: 10,
-                    border: '1px solid #e5e7eb',
+                    border: '1px solid #e2e8f0',
                     fontSize: 12,
                     boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                   }}
@@ -232,12 +232,12 @@ export function ProgressPage() {
 
             <div className="flex gap-4 mt-3 justify-center">
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-green-600" />
-                <span className="text-xs text-gray-500">Peso registrado</span>
+                <div className="w-3 h-3 rounded-full bg-brand-600" />
+                <span className="text-xs text-surface-500">Peso registrado</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-6 border-t-2 border-dashed border-green-300" />
-                <span className="text-xs text-gray-500">Media 7 días</span>
+                <div className="w-6 border-t-2 border-dashed border-brand-300" />
+                <span className="text-xs text-surface-500">Media 7 días</span>
               </div>
             </div>
           </>
@@ -246,9 +246,9 @@ export function ProgressPage() {
 
       {/* Historial */}
       {logs.length > 0 && (
-        <div className="mx-4 bg-white rounded-2xl shadow-sm overflow-hidden mb-4">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <span className="font-semibold text-gray-800 text-sm">
+        <div className="mx-4 card overflow-hidden mb-4">
+          <div className="px-4 py-3 border-b border-surface-100">
+            <span className="font-semibold text-surface-800 text-sm">
               Historial ({logs.length} registros)
             </span>
           </div>
@@ -264,16 +264,16 @@ export function ProgressPage() {
               return (
                 <div
                   key={log.id}
-                  className="flex items-center px-4 py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors"
+                  className="flex items-center px-4 py-3 border-b border-surface-50 last:border-0 hover:bg-surface-50 transition-colors"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-gray-800">{log.weight_kg} kg</span>
+                      <span className="font-semibold text-surface-800">{log.weight_kg} kg</span>
                       {diff !== null && diff !== 0 && (
                         <span
                           className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${
                             diff < 0
-                              ? 'text-green-700 bg-green-100'
+                              ? 'text-brand-700 bg-brand-100'
                               : 'text-red-600 bg-red-50'
                           }`}
                         >
@@ -282,7 +282,7 @@ export function ProgressPage() {
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-gray-400 mt-0.5">
+                    <div className="text-xs text-surface-400 mt-0.5">
                       {new Date(log.date + 'T00:00:00').toLocaleDateString('es-ES', {
                         weekday: 'long',
                         day: 'numeric',
@@ -293,7 +293,7 @@ export function ProgressPage() {
                   </div>
                   <button
                     onClick={() => deleteLog(log.id)}
-                    className="p-2 text-gray-300 hover:text-red-400 transition-colors rounded-lg"
+                    className="p-2 text-surface-300 hover:text-red-400 transition-colors rounded-xl"
                     aria-label="Eliminar registro"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -319,7 +319,7 @@ function StatCard({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className={`rounded-xl p-2 text-center ${colorClass}`}>
+    <div className={`rounded-2xl p-2 text-center ${colorClass}`}>
       <div className="flex items-center justify-center gap-0.5 min-h-[20px]">
         {icon}
         <span className="text-sm font-bold truncate">{value}</span>

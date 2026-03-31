@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useDarkMode } from '@/hooks/useDarkMode';
 import { useAuthStore } from '@/stores/authStore';
 import { useCustomFoodStore } from '@/stores/customFoodStore';
 import { AuthPage } from '@/features/auth/AuthPage';
@@ -14,6 +15,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Leaf } from 'lucide-react';
 
 export default function App() {
+  const { isDark, toggle: toggleDark } = useDarkMode();
   const { user, profile, initialized, initialize } = useAuthStore();
   const { fetchCustomFoods } = useCustomFoodStore();
   const [activeTab, setActiveTab] = useState('diary');
@@ -84,7 +86,7 @@ export default function App() {
           {activeTab === 'search' && <SearchPage />}
           {activeTab === 'dashboard' && <DashboardPage />}
           {activeTab === 'progress' && <ProgressPage />}
-          {activeTab === 'profile' && <ProfilePage />}
+          {activeTab === 'profile' && <ProfilePage isDark={isDark} onToggleDark={toggleDark} />}
         </main>
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
