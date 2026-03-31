@@ -46,13 +46,14 @@ initialize: async () => {
     });
 
     // Refresh session when app comes back to foreground
-    document.addEventListener('visibilitychange', async () => {
+    const handleVisibility = async () => {
       if (document.visibilityState === 'visible') {
         // Just validate the session is still alive — don't update user object
         // to avoid triggering cascading re-renders across all pages
         await supabase.auth.getSession();
       }
-    });
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
   },
 
   signUp: async (email, password) => {

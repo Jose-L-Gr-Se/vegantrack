@@ -177,14 +177,15 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
             ? Math.round(entry.zinc_mg * ratio * 10) / 10 : null,
           calcium_mg_per_100g: entry.calcium_known && entry.calcium_mg !== null
             ? Math.round(entry.calcium_mg * ratio * 10) / 10 : null,
-          omega3_g_per_100g: null,
+          omega3_g_per_100g: entry.omega3_known && entry.omega3_g !== null
+            ? Math.round(entry.omega3_g * ratio * 1000) / 1000 : null,
           vitamin_d_mcg_per_100g: entry.vitamin_d_known && entry.vitamin_d_mcg !== null
             ? Math.round(entry.vitamin_d_mcg * ratio * 100) / 100 : null,
           vitamin_b12_known: entry.vitamin_b12_known ?? false,
           iron_known:        entry.iron_known        ?? false,
           zinc_known:        entry.zinc_known        ?? false,
           calcium_known:     entry.calcium_known     ?? false,
-          omega3_known:      false,
+          omega3_known:      entry.omega3_known      ?? false,
           vitamin_d_known:   entry.vitamin_d_known   ?? false,
           is_vegan: entry.is_vegan,
           last_serving_g: entry.serving_size_g,

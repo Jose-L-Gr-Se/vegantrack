@@ -81,7 +81,9 @@ export function DashboardPage() {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [user?.id, selectedDate]);
 
-  const calorieTarget = profile?.calorie_target || 2000;
+  const microRda = { ...MICRO_RDA, iron_mg: { ...MICRO_RDA.iron_mg, rda: profile?.sex === 'male' ? 8 : 18 } };
+
+  const calorieTarget = profile?.calorie_target ?? 2000;
   const maxCalInWeek = Math.max(...weekData.map(d => d.calories), calorieTarget);
 
   // Calculate weekly averages
@@ -112,9 +114,9 @@ export function DashboardPage() {
           </ProgressRing>
 
           <div className="flex-1 space-y-3">
-            <MacroBar label="Proteína" value={summary.protein_g} target={profile?.protein_target_g || 120} color="#3b82f6" />
-            <MacroBar label="Carbos" value={summary.carbs_g} target={profile?.carbs_target_g || 250} color="#f59e0b" />
-            <MacroBar label="Grasas" value={summary.fat_g} target={profile?.fat_target_g || 65} color="#ef4444" />
+            <MacroBar label="Proteína" value={summary.protein_g} target={profile?.protein_target_g ?? 120} color="#3b82f6" />
+            <MacroBar label="Carbos" value={summary.carbs_g} target={profile?.carbs_target_g ?? 250} color="#f59e0b" />
+            <MacroBar label="Grasas" value={summary.fat_g} target={profile?.fat_target_g ?? 65} color="#ef4444" />
           </div>
         </div>
 
@@ -226,9 +228,9 @@ export function DashboardPage() {
           <div className="grid grid-cols-4 gap-3">
             {[
               { label: 'Calorías', value: weekAvg.calories, target: calorieTarget, unit: '', color: 'text-brand-600' },
-              { label: 'Proteína', value: weekAvg.protein, target: profile?.protein_target_g || 120, unit: 'g', color: 'text-blue-600' },
-              { label: 'Carbos', value: weekAvg.carbs, target: profile?.carbs_target_g || 250, unit: 'g', color: 'text-amber-600' },
-              { label: 'Grasas', value: weekAvg.fat, target: profile?.fat_target_g || 65, unit: 'g', color: 'text-rose-600' },
+              { label: 'Proteína', value: weekAvg.protein, target: profile?.protein_target_g ?? 120, unit: 'g', color: 'text-blue-600' },
+              { label: 'Carbos', value: weekAvg.carbs, target: profile?.carbs_target_g ?? 250, unit: 'g', color: 'text-amber-600' },
+              { label: 'Grasas', value: weekAvg.fat, target: profile?.fat_target_g ?? 65, unit: 'g', color: 'text-rose-600' },
             ].map((item) => {
               const pct = item.target > 0 ? Math.round((item.value / item.target) * 100) : 0;
               return (
@@ -257,7 +259,7 @@ export function DashboardPage() {
         </div>
 
         <div className="space-y-3">
-          {Object.entries(MICRO_RDA).map(([key, info]) => {
+          {Object.entries(microRda).map(([key, info]) => {
             const microKey = key as keyof typeof summary.micros;
 
             // Omega-3: no reliable data in OFF for now
