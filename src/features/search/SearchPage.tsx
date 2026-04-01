@@ -506,14 +506,33 @@ export function SearchPage() {
       categories_tags: [],
       labels_tags: food.is_vegan ? ['en:vegan'] : [],
       nutriments: {
-        'energy-kcal_100g': food.calories_per_100g,
-        proteins_100g: food.protein_per_100g,
-        carbohydrates_100g: food.carbs_per_100g,
-        fat_100g: food.fat_per_100g,
-        fiber_100g: food.fiber_per_100g,
-        sugars_100g: 0,
-        'saturated-fat_100g': 0,
-        sodium_100g: 0,
+        'energy-kcal_100g':   food.calories_per_100g,
+        proteins_100g:        food.protein_per_100g,
+        carbohydrates_100g:   food.carbs_per_100g,
+        fat_100g:             food.fat_per_100g,
+        fiber_100g:           food.fiber_per_100g,
+        sugars_100g:          food.sugar_per_100g,
+        'saturated-fat_100g': food.saturated_fat_per_100g,
+        sodium_100g:          food.sodium_mg_per_100g / 1000,
+        // Micronutrientes — solo incluir si tienen valor real
+        ...(food.vitamin_b12_mcg_per_100g != null && {
+          'vitamin-b12_100g': food.vitamin_b12_mcg_per_100g / 1e6,
+        }),
+        ...(food.iron_mg_per_100g != null && {
+          'iron_100g': food.iron_mg_per_100g / 1000,
+        }),
+        ...(food.zinc_mg_per_100g != null && {
+          'zinc_100g': food.zinc_mg_per_100g / 1000,
+        }),
+        ...(food.calcium_mg_per_100g != null && {
+          'calcium_100g': food.calcium_mg_per_100g / 1000,
+        }),
+        ...(food.vitamin_d_mcg_per_100g != null && {
+          'vitamin-d_100g': food.vitamin_d_mcg_per_100g / 1e6,
+        }),
+        ...(food.omega3_g_per_100g != null && {
+          'omega3_100g': food.omega3_g_per_100g,
+        }),
       },
       serving_size: '100g',
       serving_quantity: 100,

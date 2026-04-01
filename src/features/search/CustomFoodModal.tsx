@@ -18,13 +18,25 @@ export function CustomFoodModal({ onClose, onSaved, editFood }: CustomFoodModalP
   const { user } = useAuthStore();
   const { createCustomFood, updateCustomFood } = useCustomFoodStore();
 
-  const [name, setName] = useState(editFood?.name ?? '');
-  const [brand, setBrand] = useState(editFood?.brand ?? '');
-  const [calories, setCalories] = useState(editFood ? String(editFood.calories_per_100g) : '');
-  const [protein, setProtein] = useState(editFood ? String(editFood.protein_per_100g) : '');
-  const [carbs, setCarbs] = useState(editFood ? String(editFood.carbs_per_100g) : '');
-  const [fat, setFat] = useState(editFood ? String(editFood.fat_per_100g) : '');
-  const [fiber, setFiber] = useState(editFood ? String(editFood.fiber_per_100g) : '');
+  const [form, setForm] = useState({
+    name:          editFood?.name ?? '',
+    brand:         editFood?.brand ?? '',
+    calories:      editFood ? String(editFood.calories_per_100g) : '',
+    protein:       editFood ? String(editFood.protein_per_100g) : '',
+    carbs:         editFood ? String(editFood.carbs_per_100g) : '',
+    fat:           editFood ? String(editFood.fat_per_100g) : '',
+    fiber:         editFood ? String(editFood.fiber_per_100g) : '',
+    sugar:         editFood ? String(editFood.sugar_per_100g) : '',
+    saturated_fat: editFood ? String(editFood.saturated_fat_per_100g) : '',
+    sodium_mg:     editFood ? String(editFood.sodium_mg_per_100g) : '',
+    vitamin_b12_mcg: editFood?.vitamin_b12_mcg_per_100g != null ? String(editFood.vitamin_b12_mcg_per_100g) : '',
+    iron_mg:         editFood?.iron_mg_per_100g        != null ? String(editFood.iron_mg_per_100g)         : '',
+    zinc_mg:         editFood?.zinc_mg_per_100g        != null ? String(editFood.zinc_mg_per_100g)         : '',
+    calcium_mg:      editFood?.calcium_mg_per_100g     != null ? String(editFood.calcium_mg_per_100g)      : '',
+    vitamin_d_mcg:   editFood?.vitamin_d_mcg_per_100g  != null ? String(editFood.vitamin_d_mcg_per_100g)   : '',
+    omega3_g:        editFood?.omega3_g_per_100g       != null ? String(editFood.omega3_g_per_100g)        : '',
+  });
+
   const [isVegan, setIsVegan] = useState(editFood?.is_vegan ?? true);
   const [imageUrl, setImageUrl] = useState(editFood?.image_url ?? '');
   const [uploading, setUploading] = useState(false);
@@ -66,18 +78,18 @@ export function CustomFoodModal({ onClose, onSaved, editFood }: CustomFoodModalP
   };
 
   const validate = (): string | null => {
-    if (!name.trim()) return 'El nombre es obligatorio';
+    if (!form.name.trim()) return 'El nombre es obligatorio';
     if (!imageUrl) return 'La foto del producto es obligatoria';
-    const cal = parseFloat(calories);
-    const prot = parseFloat(protein);
-    const carb = parseFloat(carbs);
-    const f = parseFloat(fat);
+    const cal = parseFloat(form.calories);
+    const prot = parseFloat(form.protein);
+    const carb = parseFloat(form.carbs);
+    const f = parseFloat(form.fat);
     if (isNaN(cal) || cal < 0) return 'Introduce calorías válidas (>= 0)';
     if (isNaN(prot) || prot < 0) return 'Introduce proteínas válidas (>= 0)';
     if (isNaN(carb) || carb < 0) return 'Introduce carbohidratos válidos (>= 0)';
     if (isNaN(f) || f < 0) return 'Introduce grasas válidas (>= 0)';
-    const fib = parseFloat(fiber);
-    if (fiber && (isNaN(fib) || fib < 0)) return 'Introduce fibra válida (>= 0)';
+    const fib = parseFloat(form.fiber);
+    if (form.fiber && (isNaN(fib) || fib < 0)) return 'Introduce fibra válida (>= 0)';
     return null;
   };
 
@@ -93,14 +105,23 @@ export function CustomFoodModal({ onClose, onSaved, editFood }: CustomFoodModalP
     setError(null);
 
     const foodData = {
-      name: name.trim(),
-      brand: brand.trim() || null,
-      image_url: imageUrl || null,
-      calories_per_100g: parseFloat(calories),
-      protein_per_100g: parseFloat(protein),
-      carbs_per_100g: parseFloat(carbs),
-      fat_per_100g: parseFloat(fat),
-      fiber_per_100g: parseFloat(fiber) || 0,
+      name:                    form.name.trim(),
+      brand:                   form.brand.trim() || null,
+      image_url:               imageUrl || null,
+      calories_per_100g:       parseFloat(form.calories),
+      protein_per_100g:        parseFloat(form.protein),
+      carbs_per_100g:          parseFloat(form.carbs),
+      fat_per_100g:            parseFloat(form.fat),
+      fiber_per_100g:          parseFloat(form.fiber)         || 0,
+      sugar_per_100g:          parseFloat(form.sugar)         || 0,
+      saturated_fat_per_100g:  parseFloat(form.saturated_fat) || 0,
+      sodium_mg_per_100g:      parseFloat(form.sodium_mg)     || 0,
+      vitamin_b12_mcg_per_100g: form.vitamin_b12_mcg !== '' ? parseFloat(form.vitamin_b12_mcg) : null,
+      iron_mg_per_100g:         form.iron_mg         !== '' ? parseFloat(form.iron_mg)         : null,
+      zinc_mg_per_100g:         form.zinc_mg         !== '' ? parseFloat(form.zinc_mg)         : null,
+      calcium_mg_per_100g:      form.calcium_mg      !== '' ? parseFloat(form.calcium_mg)      : null,
+      vitamin_d_mcg_per_100g:   form.vitamin_d_mcg   !== '' ? parseFloat(form.vitamin_d_mcg)   : null,
+      omega3_g_per_100g:        form.omega3_g        !== '' ? parseFloat(form.omega3_g)        : null,
       is_vegan: isVegan,
     };
 
@@ -190,8 +211,8 @@ export function CustomFoodModal({ onClose, onSaved, editFood }: CustomFoodModalP
             <label className="label">Nombre *</label>
             <input
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={form.name}
+              onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
               className="input"
               placeholder="Ej: Tofu firme ecológico"
             />
@@ -202,14 +223,14 @@ export function CustomFoodModal({ onClose, onSaved, editFood }: CustomFoodModalP
             <label className="label">Marca (opcional)</label>
             <input
               type="text"
-              value={brand}
-              onChange={(e) => setBrand(e.target.value)}
+              value={form.brand}
+              onChange={(e) => setForm(f => ({ ...f, brand: e.target.value }))}
               className="input"
               placeholder="Ej: Naturgreen"
             />
           </div>
 
-          {/* Macros */}
+          {/* Macros principales */}
           <div>
             <label className="label">Información nutricional (por 100g) *</label>
             <div className="grid grid-cols-2 gap-3">
@@ -217,8 +238,8 @@ export function CustomFoodModal({ onClose, onSaved, editFood }: CustomFoodModalP
                 <label className="text-xs text-surface-500 mb-1 block">Calorías (kcal)</label>
                 <input
                   type="number"
-                  value={calories}
-                  onChange={(e) => setCalories(e.target.value)}
+                  value={form.calories}
+                  onChange={(e) => setForm(f => ({ ...f, calories: e.target.value }))}
                   className="input font-mono"
                   inputMode="decimal"
                   placeholder="0"
@@ -228,8 +249,8 @@ export function CustomFoodModal({ onClose, onSaved, editFood }: CustomFoodModalP
                 <label className="text-xs text-surface-500 mb-1 block">Proteínas (g)</label>
                 <input
                   type="number"
-                  value={protein}
-                  onChange={(e) => setProtein(e.target.value)}
+                  value={form.protein}
+                  onChange={(e) => setForm(f => ({ ...f, protein: e.target.value }))}
                   className="input font-mono"
                   inputMode="decimal"
                   placeholder="0"
@@ -239,8 +260,8 @@ export function CustomFoodModal({ onClose, onSaved, editFood }: CustomFoodModalP
                 <label className="text-xs text-surface-500 mb-1 block">Carbohidratos (g)</label>
                 <input
                   type="number"
-                  value={carbs}
-                  onChange={(e) => setCarbs(e.target.value)}
+                  value={form.carbs}
+                  onChange={(e) => setForm(f => ({ ...f, carbs: e.target.value }))}
                   className="input font-mono"
                   inputMode="decimal"
                   placeholder="0"
@@ -250,8 +271,8 @@ export function CustomFoodModal({ onClose, onSaved, editFood }: CustomFoodModalP
                 <label className="text-xs text-surface-500 mb-1 block">Grasas (g)</label>
                 <input
                   type="number"
-                  value={fat}
-                  onChange={(e) => setFat(e.target.value)}
+                  value={form.fat}
+                  onChange={(e) => setForm(f => ({ ...f, fat: e.target.value }))}
                   className="input font-mono"
                   inputMode="decimal"
                   placeholder="0"
@@ -262,14 +283,87 @@ export function CustomFoodModal({ onClose, onSaved, editFood }: CustomFoodModalP
               <label className="text-xs text-surface-500 mb-1 block">Fibra (g) — opcional</label>
               <input
                 type="number"
-                value={fiber}
-                onChange={(e) => setFiber(e.target.value)}
+                value={form.fiber}
+                onChange={(e) => setForm(f => ({ ...f, fiber: e.target.value }))}
                 className="input font-mono"
                 inputMode="decimal"
                 placeholder="0"
               />
             </div>
           </div>
+
+          {/* Macros adicionales */}
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="label">Azúcares (g)</label>
+              <input type="number" inputMode="decimal" step="0.1" min="0"
+                value={form.sugar} onChange={e => setForm(f => ({ ...f, sugar: e.target.value }))}
+                className="input" placeholder="0" />
+            </div>
+            <div>
+              <label className="label">G. sat. (g)</label>
+              <input type="number" inputMode="decimal" step="0.1" min="0"
+                value={form.saturated_fat} onChange={e => setForm(f => ({ ...f, saturated_fat: e.target.value }))}
+                className="input" placeholder="0" />
+            </div>
+            <div>
+              <label className="label">Sodio (mg)</label>
+              <input type="number" inputMode="decimal" step="1" min="0"
+                value={form.sodium_mg} onChange={e => setForm(f => ({ ...f, sodium_mg: e.target.value }))}
+                className="input" placeholder="0" />
+            </div>
+          </div>
+
+          {/* Micronutrientes — colapsable */}
+          <details className="group">
+            <summary className="cursor-pointer text-xs font-semibold text-brand-600 flex items-center gap-1 py-1 list-none">
+              <span className="group-open:hidden">▶</span>
+              <span className="hidden group-open:inline">▼</span>
+              Micronutrientes (opcional — muy recomendado para veganos)
+            </summary>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div>
+                <label className="label">Vitamina B12 (μg)</label>
+                <input type="number" inputMode="decimal" step="0.01" min="0"
+                  value={form.vitamin_b12_mcg} onChange={e => setForm(f => ({ ...f, vitamin_b12_mcg: e.target.value }))}
+                  className="input" placeholder="vacío = sin dato" />
+              </div>
+              <div>
+                <label className="label">Hierro (mg)</label>
+                <input type="number" inputMode="decimal" step="0.1" min="0"
+                  value={form.iron_mg} onChange={e => setForm(f => ({ ...f, iron_mg: e.target.value }))}
+                  className="input" placeholder="vacío = sin dato" />
+              </div>
+              <div>
+                <label className="label">Zinc (mg)</label>
+                <input type="number" inputMode="decimal" step="0.1" min="0"
+                  value={form.zinc_mg} onChange={e => setForm(f => ({ ...f, zinc_mg: e.target.value }))}
+                  className="input" placeholder="vacío = sin dato" />
+              </div>
+              <div>
+                <label className="label">Calcio (mg)</label>
+                <input type="number" inputMode="decimal" step="1" min="0"
+                  value={form.calcium_mg} onChange={e => setForm(f => ({ ...f, calcium_mg: e.target.value }))}
+                  className="input" placeholder="vacío = sin dato" />
+              </div>
+              <div>
+                <label className="label">Vitamina D (μg)</label>
+                <input type="number" inputMode="decimal" step="0.01" min="0"
+                  value={form.vitamin_d_mcg} onChange={e => setForm(f => ({ ...f, vitamin_d_mcg: e.target.value }))}
+                  className="input" placeholder="vacío = sin dato" />
+              </div>
+              <div>
+                <label className="label">Omega-3 (g)</label>
+                <input type="number" inputMode="decimal" step="0.01" min="0"
+                  value={form.omega3_g} onChange={e => setForm(f => ({ ...f, omega3_g: e.target.value }))}
+                  className="input" placeholder="vacío = sin dato" />
+              </div>
+            </div>
+            <p className="text-[10px] text-surface-400 mt-2">
+              Los valores vacíos se marcarán como "sin dato" en el tracking de micros.
+              Puedes consultarlos en la etiqueta del producto.
+            </p>
+          </details>
 
           {/* Vegan toggle */}
           <div className="flex items-center justify-between bg-surface-50 rounded-2xl px-4 py-3">

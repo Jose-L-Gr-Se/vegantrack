@@ -11,6 +11,8 @@ import { ProfilePage } from '@/features/profile/ProfilePage';
 import { ProgressPage } from '@/features/progress/ProgressPage';
 import { LandingPage } from '@/features/landing/LandingPage';
 import { BottomNav } from '@/components/layout/BottomNav';
+import { RecipesPage } from '@/features/recipes/RecipesPage';
+import { useRecipeStore } from '@/stores/recipeStore';
 import { Spinner } from '@/components/ui/Spinner';
 import { Leaf } from 'lucide-react';
 
@@ -21,6 +23,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('diary');
   const [showLanding, setShowLanding] = useState(true);
   const [diaryMessage, setDiaryMessage] = useState<string | null>(null);
+  const [searchSubview, setSearchSubview] = useState<'main' | 'recipes'>('main');
+  const { fetchRecipes } = useRecipeStore();
 
   useEffect(() => {
     initialize();
@@ -40,6 +44,10 @@ export default function App() {
     if (user) fetchCustomFoods(user.id);
   }, [user?.id]);
 
+  useEffect(() => {
+    if (user) fetchRecipes(user.id);
+  }, [user?.id]);
+
   // Listen for search navigation from diary
   useEffect(() => {
     const handler = () => setActiveTab('search');
@@ -55,6 +63,15 @@ export default function App() {
     };
     window.addEventListener('navigate-diary', handler as EventListener);
     return () => window.removeEventListener('navigate-diary', handler as EventListener);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => {
+      setActiveTab('search');
+      setSearchSubview('recipes');
+    };
+    window.addEventListener('navigate-recipes', handler);
+    return () => window.removeEventListener('navigate-recipes', handler);
   }, []);
 
   // Loading screen
@@ -83,12 +100,19 @@ export default function App() {
             onMessageShown={() => setDiaryMessage(null)}
           />
         )}
-          {activeTab === 'search' && <SearchPage />}
+          {activeTab === 'search' && (
+            searchSubview === 'recipes'
+              ? <RecipesPage onBack={() => setSearchSubview('main')} />
+              : <SearchPage />
+          )}
           {activeTab === 'dashboard' && <DashboardPage />}
           {activeTab === 'progress' && <ProgressPage />}
           {activeTab === 'profile' && <ProfilePage isDark={isDark} onToggleDark={toggleDark} />}
         </main>
-        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+        <BottomNav activeTab={activeTab} onTabChange={(tab) => {
+          if (tab === 'search') setSearchSubview('main');
+          setActiveTab(tab);
+        }} />
       </div>
     );
   }

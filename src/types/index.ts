@@ -148,13 +148,23 @@ export interface CustomFood {
   user_id: string;
   name: string;
   brand: string | null;
-  image_url: string | null;
   calories_per_100g: number;
   protein_per_100g: number;
   carbs_per_100g: number;
   fat_per_100g: number;
   fiber_per_100g: number;
+  sugar_per_100g: number;
+  saturated_fat_per_100g: number;
+  sodium_mg_per_100g: number;
+  // Micronutrientes críticos para veganos
+  vitamin_b12_mcg_per_100g: number | null;
+  iron_mg_per_100g: number | null;
+  zinc_mg_per_100g: number | null;
+  calcium_mg_per_100g: number | null;
+  vitamin_d_mcg_per_100g: number | null;
+  omega3_g_per_100g: number | null;
   is_vegan: boolean;
+  image_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -166,6 +176,76 @@ export interface WeightLog {
   weight_kg: number;
   note: string | null;
   created_at: string;
+}
+
+export interface RecipeIngredient {
+  id: string;
+  recipe_id: string;
+  food_name: string;
+  brand: string | null;
+  barcode: string | null;
+  serving_size_g: number;
+  calories_per_100g: number;
+  protein_per_100g: number;
+  carbs_per_100g: number;
+  fat_per_100g: number;
+  fiber_per_100g: number;
+  sugar_per_100g: number;
+  saturated_fat_per_100g: number;
+  sodium_mg_per_100g: number;
+  vitamin_b12_mcg_per_100g: number | null;
+  iron_mg_per_100g: number | null;
+  zinc_mg_per_100g: number | null;
+  calcium_mg_per_100g: number | null;
+  vitamin_d_mcg_per_100g: number | null;
+  omega3_g_per_100g: number | null;
+  vitamin_b12_known: boolean;
+  iron_known: boolean;
+  zinc_known: boolean;
+  calcium_known: boolean;
+  vitamin_d_known: boolean;
+  omega3_known: boolean;
+  is_vegan: boolean;
+  image_url: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface Recipe {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  total_servings: number;
+  image_url: string | null;
+  is_vegan: boolean;
+  ingredients: RecipeIngredient[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecipeNutrients {
+  total_g: number;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g: number;
+  sugar_g: number;
+  saturated_fat_g: number;
+  sodium_mg: number;
+  vitamin_b12_mcg: number | null;
+  iron_mg: number | null;
+  zinc_mg: number | null;
+  calcium_mg: number | null;
+  vitamin_d_mcg: number | null;
+  omega3_g: number | null;
+  vitamin_b12_known: boolean;
+  iron_known: boolean;
+  zinc_known: boolean;
+  calcium_known: boolean;
+  vitamin_d_known: boolean;
+  omega3_known: boolean;
 }
 
 export type MealType = FoodLogEntry['meal_type'];
