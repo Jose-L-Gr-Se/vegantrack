@@ -8,6 +8,7 @@ import { ProgressRing } from '@/components/ui/ProgressRing';
 import { MacroBar } from '@/components/ui/MacroBar';
 import { ChevronLeft, ChevronRight, Plus, Trash2, Leaf, X, Save, Info, ChevronDown, Flame } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
+import { SupplementsWidget } from '@/features/diary/SupplementsWidget';
 import type { FoodLogEntry, MealType } from '@/types';
 
 const MEALS: { type: MealType; label: string; icon: string }[] = [
@@ -127,6 +128,8 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
           <span>{successMessage}</span>
         </div>
       )}
+      {/* Supplements daily check-in */}
+      <SupplementsWidget date={selectedDate} />
       {/* Date selector */}
       <div className="mb-6">
         <div className="flex items-center justify-between">

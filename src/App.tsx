@@ -13,6 +13,7 @@ import { LandingPage } from '@/features/landing/LandingPage';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { RecipesPage } from '@/features/recipes/RecipesPage';
 import { useRecipeStore } from '@/stores/recipeStore';
+import { useSupplementStore } from '@/stores/supplementStore';
 import { Spinner } from '@/components/ui/Spinner';
 import { Leaf } from 'lucide-react';
 
@@ -25,6 +26,7 @@ export default function App() {
   const [diaryMessage, setDiaryMessage] = useState<string | null>(null);
   const [searchSubview, setSearchSubview] = useState<'main' | 'recipes'>('main');
   const { fetchRecipes } = useRecipeStore();
+  const { fetchSupplements } = useSupplementStore();
 
   useEffect(() => {
     initialize();
@@ -46,6 +48,10 @@ export default function App() {
 
   useEffect(() => {
     if (user) fetchRecipes(user.id);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user) fetchSupplements(user.id);
   }, [user?.id]);
 
   // Listen for search navigation from diary

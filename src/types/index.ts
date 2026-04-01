@@ -248,4 +248,34 @@ export interface RecipeNutrients {
   omega3_known: boolean;
 }
 
+export type SupplementNutrientKey =
+  | 'vitamin_b12_mcg'
+  | 'vitamin_d_mcg'
+  | 'omega3_g'
+  | 'iron_mg'
+  | 'zinc_mg'
+  | 'calcium_mg'
+  | 'iodine_mcg';
+
+export interface Supplement {
+  id: string;
+  user_id: string;
+  name: string;
+  nutrient_key: SupplementNutrientKey;
+  dose_amount: number;
+  dose_unit: string;
+  frequency: 'daily';
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface SupplementLog {
+  id: string;
+  user_id: string;
+  supplement_id: string;
+  date: string;
+  taken_at: string;
+}
+
 export type MealType = FoodLogEntry['meal_type'];

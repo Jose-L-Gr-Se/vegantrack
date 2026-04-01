@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDiaryStore } from '@/stores/diaryStore';
+import { useSupplementStore } from '@/stores/supplementStore';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { MacroBar } from '@/components/ui/MacroBar';
 import { TrendingUp, Flame, Zap, AlertTriangle, Target } from 'lucide-react';
+import type { SupplementNutrientKey } from '@/types';
 
 const MICRO_RDA = {
   vitamin_b12_mcg: { label: 'Vitamina B12', rda: 2.4,  unit: 'μg' },
@@ -28,6 +30,13 @@ export function DashboardPage() {
   const [weekData, setWeekData] = useState<DayData[]>([]);
   const [loading, setLoading] = useState(true);
   const summary = getDaySummary();
+  const { supplements, takenToday, fetchTodayLogs, getTodayContributions } = useSupplementStore();
+
+  useEffect(() => {
+    if (user) fetchTodayLogs(user.id, selectedDate);
+  }, [user?.id, selectedDate]);
+
+  const suppContributions = getTodayContributions();
   // Generation counter: ensures stale/hung requests never overwrite fresh data
   const loadGenRef = useRef(0);
 
@@ -261,26 +270,11 @@ export function DashboardPage() {
         <div className="space-y-3">
           {Object.entries(microRda).map(([key, info]) => {
             const microKey = key as keyof typeof summary.micros;
-
-            // Omega-3: no reliable data in OFF for now
-            if (microKey === 'omega3_g') {
-              return (
-                <div key={key} className="flex items-center justify-between py-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-surface-500">{info.label}</span>
-                    <span className="text-[10px] bg-surface-100 text-surface-400 px-1.5 py-0.5 rounded-full font-medium">
-                      sin datos suficientes
-                    </span>
-                  </div>
-                  <span className="text-xs text-surface-400 font-mono">
-                    RDA: {info.rda} {info.unit}
-                  </span>
-                </div>
-              );
-            }
-
             const micro = summary.micros[microKey];
-            const hasEnoughCoverage = micro.coverage >= 0.5;
+            const suppAmount = suppContributions[microKey as SupplementNutrientKey] ?? 0;
+            const totalValue = micro.value + suppAmount;
+            const hasSupplement = suppAmount > 0;
+            const hasEnoughCoverage = micro.coverage >= 0.5 || hasSupplement;
 
             if (!hasEnoughCoverage) {
               return (
@@ -288,7 +282,7 @@ export function DashboardPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-surface-500">{info.label}</span>
                     <span className="text-[10px] bg-surface-100 text-surface-400 px-1.5 py-0.5 rounded-full font-medium">
-                      cobertura insuficiente
+                      {microKey === 'omega3_g' ? 'sin datos suficientes' : 'cobertura insuficiente'}
                     </span>
                   </div>
                   <span className="text-xs text-surface-400 font-mono">
@@ -298,10 +292,11 @@ export function DashboardPage() {
               );
             }
 
-            const value = micro.value;
-            const pct = info.rda > 0 ? Math.min((value / info.rda) * 100, 100) : 0;
-            const barColor = pct >= 90 ? 'bg-brand-500' : pct >= 50 ? 'bg-amber-400' : 'bg-red-400';
-            const textColor = pct >= 90 ? 'text-brand-600' : pct >= 50 ? 'text-amber-600' : 'text-red-500';
+            const pct = info.rda > 0 ? Math.min((totalValue / info.rda) * 100, 100) : 0;
+            const barColor =
+              pct >= 90 ? 'bg-brand-500' : pct >= 50 ? 'bg-amber-400' : 'bg-red-400';
+            const textColor =
+              pct >= 90 ? 'text-brand-600' : pct >= 50 ? 'text-amber-600' : 'text-red-500';
 
             return (
               <div key={key}>
@@ -309,9 +304,15 @@ export function DashboardPage() {
                   <div className="flex items-center gap-2">
                     {pct < 50 && <AlertTriangle className="w-3 h-3 text-red-400" />}
                     <span className="text-sm text-surface-700">{info.label}</span>
+                    {hasSupplement && (
+                      <span className="text-[10px] bg-brand-50 text-brand-600 px-1.5 py-0.5 rounded-full font-medium">
+                        +💊 {suppAmount}{info.unit}
+                      </span>
+                    )}
                   </div>
                   <span className={`text-xs font-mono ${textColor}`}>
-                    {value < 10 ? value.toFixed(1) : Math.round(value)} / {info.rda} {info.unit}
+                    {totalValue < 10 ? totalValue.toFixed(1) : Math.round(totalValue)} / {info.rda}{' '}
+                    {info.unit}
                   </span>
                 </div>
                 <div className="h-1.5 bg-surface-100 rounded-full overflow-hidden">

@@ -4,8 +4,27 @@ import { useCustomFoodStore } from '@/stores/customFoodStore';
 import { calculateTargets } from '@/utils/nutrition';
 import { CustomFoodModal } from '@/features/search/CustomFoodModal';
 import { Spinner } from '@/components/ui/Spinner';
-import { LogOut, Save, User, Calculator, Star, Pencil, Trash2, Plus, Moon, Sun } from 'lucide-react';
-import type { Profile, CustomFood } from '@/types';
+import { LogOut, Save, User, Calculator, Star, Pencil, Trash2, Plus, Moon, Sun, X } from 'lucide-react';
+import type { Profile, CustomFood, SupplementNutrientKey } from '@/types';
+import { useSupplementStore } from '@/stores/supplementStore';
+
+const NUTRIENT_ICONS: Record<string, string> = {
+  vitamin_b12_mcg: '🧬', vitamin_d_mcg: '☀️', omega3_g: '🌊',
+  iron_mg: '🩸', zinc_mg: '⚡', calcium_mg: '🦴', iodine_mcg: '💧',
+};
+
+const SUPPLEMENT_PRESETS: Array<{
+  name: string; nutrient_key: SupplementNutrientKey;
+  dose_amount: number; dose_unit: string;
+}> = [
+  { name: 'Vitamina B12',    nutrient_key: 'vitamin_b12_mcg', dose_amount: 100,  dose_unit: 'μg' },
+  { name: 'Vitamina D3',     nutrient_key: 'vitamin_d_mcg',   dose_amount: 25,   dose_unit: 'μg' },
+  { name: 'Omega-3 DHA+EPA', nutrient_key: 'omega3_g',        dose_amount: 0.5,  dose_unit: 'g'  },
+  { name: 'Hierro',          nutrient_key: 'iron_mg',          dose_amount: 18,   dose_unit: 'mg' },
+  { name: 'Zinc',            nutrient_key: 'zinc_mg',          dose_amount: 15,   dose_unit: 'mg' },
+  { name: 'Calcio',          nutrient_key: 'calcium_mg',       dose_amount: 500,  dose_unit: 'mg' },
+  { name: 'Yodo',            nutrient_key: 'iodine_mcg',       dose_amount: 150,  dose_unit: 'μg' },
+];
 
 const ACTIVITY_LABELS: Record<string, string> = {
   sedentary: 'Sedentario',
@@ -29,14 +48,21 @@ interface ProfilePageProps {
 export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
   const { profile, user, updateProfile, signOut, loading } = useAuthStore();
   const { customFoods, fetchCustomFoods, deleteCustomFood } = useCustomFoodStore();
+  const { supplements, fetchSupplements, createSupplement, updateSupplement, deleteSupplement } =
+    useSupplementStore();
   const [form, setForm] = useState<Partial<Profile>>({ ...profile });
   const [saved, setSaved] = useState(false);
   const [editingFood, setEditingFood] = useState<CustomFood | null>(null);
   const [showCreateFood, setShowCreateFood] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showAddSupplement, setShowAddSupplement] = useState(false);
 
   useEffect(() => {
     if (user) fetchCustomFoods(user.id);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user) fetchSupplements(user.id);
   }, [user?.id]);
 
   if (!profile) return null;
@@ -171,6 +197,143 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
               if (user) fetchCustomFoods(user.id);
             }}
           />
+        )}
+
+        {/* My supplements */}
+        <div className="card p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-surface-700 text-sm uppercase tracking-wide">
+                Mis suplementos
+              </h2>
+              <span className="bg-brand-100 text-brand-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                {supplements.filter((s) => s.is_active).length} activos
+              </span>
+            </div>
+            <button
+              onClick={() => setShowAddSupplement(true)}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 px-2.5 py-1.5 rounded-xl transition-colors"
+            >
+              <Plus className="w-3 h-3" strokeWidth={2.5} /> Añadir
+            </button>
+          </div>
+
+          {supplements.length === 0 ? (
+            <div className="text-center py-6">
+              <div className="text-3xl mb-2">💊</div>
+              <p className="text-sm text-surface-500">Sin suplementos configurados</p>
+              <p className="text-xs text-surface-400 mt-1">
+                Se suman automáticamente a tus micros del dashboard
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {supplements.map((sup) => (
+                <div key={sup.id} className="flex items-center gap-3 bg-surface-50 rounded-2xl p-3">
+                  <span className="text-xl shrink-0">{NUTRIENT_ICONS[sup.nutrient_key] ?? '💊'}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-surface-800 truncate">{sup.name}</p>
+                    <p className="text-xs text-surface-400 font-mono">
+                      {sup.dose_amount} {sup.dose_unit} · {sup.frequency === 'daily' ? 'Diario' : sup.frequency}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => updateSupplement(sup.id, { is_active: !sup.is_active })}
+                      className={`relative w-9 h-5 rounded-full transition-colors ${
+                        sup.is_active ? 'bg-brand-500' : 'bg-surface-300'
+                      }`}
+                      aria-label={sup.is_active ? 'Desactivar' : 'Activar'}
+                    >
+                      <div
+                        className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                          sup.is_active ? 'translate-x-4' : 'translate-x-0.5'
+                        }`}
+                      />
+                    </button>
+                    <button
+                      onClick={() => deleteSupplement(sup.id)}
+                      className="w-7 h-7 flex items-center justify-center rounded-xl text-surface-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Add supplement sheet */}
+        {showAddSupplement && (
+          <div
+            className="fixed inset-0 z-[60] bg-black/50 flex flex-col justify-end"
+            onClick={() => setShowAddSupplement(false)}
+          >
+            <div
+              className="bg-white dark:bg-surface-800 rounded-t-3xl pb-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 bg-surface-300 rounded-full" />
+              </div>
+              <div className="px-5 pt-2 pb-2">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-surface-900">Añadir suplemento</h3>
+                  <button
+                    onClick={() => setShowAddSupplement(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-100"
+                  >
+                    <X className="w-4 h-4 text-surface-500" />
+                  </button>
+                </div>
+                <p className="text-xs text-surface-400 mb-3">
+                  Toca un suplemento para añadirlo con la dosis habitual. Edítala después si necesitas ajustarla.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {SUPPLEMENT_PRESETS.map((preset) => {
+                    const alreadyAdded = supplements.some(
+                      (s) => s.nutrient_key === preset.nutrient_key
+                    );
+                    return (
+                      <button
+                        key={preset.nutrient_key}
+                        disabled={alreadyAdded}
+                        onClick={async () => {
+                          if (!user || alreadyAdded) return;
+                          await createSupplement(user.id, {
+                            name: preset.name,
+                            nutrient_key: preset.nutrient_key,
+                            dose_amount: preset.dose_amount,
+                            dose_unit: preset.dose_unit,
+                          });
+                          setShowAddSupplement(false);
+                        }}
+                        className={`flex items-center gap-2.5 p-3 rounded-2xl text-left transition-colors ${
+                          alreadyAdded
+                            ? 'bg-surface-50 opacity-40 cursor-not-allowed'
+                            : 'bg-surface-50 hover:bg-brand-50 active:scale-95'
+                        }`}
+                      >
+                        <span className="text-2xl">{NUTRIENT_ICONS[preset.nutrient_key]}</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-surface-800 truncate">
+                            {preset.name}
+                          </p>
+                          <p className="text-xs text-surface-400 font-mono">
+                            {preset.dose_amount} {preset.dose_unit}/día
+                          </p>
+                        </div>
+                        {alreadyAdded && (
+                          <span className="ml-auto text-[10px] text-brand-500 font-semibold shrink-0">✓</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Basic info */}
