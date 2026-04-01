@@ -6,6 +6,7 @@ import { ProgressRing } from '@/components/ui/ProgressRing';
 import { MacroBar } from '@/components/ui/MacroBar';
 import { TrendingUp, Flame, Zap, AlertTriangle, Target } from 'lucide-react';
 import type { SupplementNutrientKey } from '@/types';
+import { computeVeganScore, getScoreColor, getScoreLabel } from '@/utils/veganScore';
 
 const MICRO_RDA = {
   vitamin_b12_mcg: { label: 'Vitamina B12', rda: 2.4,  unit: 'μg' },
@@ -37,6 +38,15 @@ export function DashboardPage() {
   }, [user?.id, selectedDate]);
 
   const suppContributions = getTodayContributions();
+
+  const veganScore = computeVeganScore({
+    summary,
+    calorieTarget: profile?.calorie_target ?? 2000,
+    proteinTarget: profile?.protein_target_g ?? 120,
+    streakCount: profile?.streak_count ?? 0,
+    suppContributions,
+    sex: profile?.sex ?? null,
+  });
   // Generation counter: ensures stale/hung requests never overwrite fresh data
   const loadGenRef = useRef(0);
 
@@ -108,6 +118,100 @@ export function DashboardPage() {
     <div className="pb-28 px-4 pt-6">
       <h1 className="font-display text-2xl font-bold mb-1">Dashboard</h1>
       <p className="text-sm text-surface-500 mb-6">Tu progreso nutricional</p>
+
+      {/* VeganScore */}
+      <div className="card p-5 mb-4">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-base">🌱</span>
+          <h2 className="font-semibold text-surface-700 text-sm uppercase tracking-wide">
+            VeganScore — Hoy
+          </h2>
+        </div>
+
+        {!veganScore.hasData ? (
+          <div className="text-center py-6">
+            <p className="text-surface-400 text-sm">Registra alimentos para calcular tu score</p>
+            <p className="text-xs text-surface-300 mt-1">Aparecerá aquí en cuanto añadas algo al diario</p>
+          </div>
+        ) : (
+          <div className="flex items-start gap-5">
+            {/* Ring */}
+            <div className="flex flex-col items-center gap-2 flex-shrink-0">
+              <div className="relative w-[100px] h-[100px]">
+                <svg width={100} height={100} className="-rotate-90 absolute inset-0">
+                  <circle cx={50} cy={50} r={42} fill="none" stroke="#f1f5f9" strokeWidth={10} />
+                  <circle
+                    cx={50} cy={50} r={42}
+                    fill="none"
+                    stroke={getScoreColor(veganScore.total)}
+                    strokeWidth={10}
+                    strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 42}
+                    strokeDashoffset={2 * Math.PI * 42 * (1 - veganScore.total / 100)}
+                    style={{ transition: 'stroke-dashoffset 1.2s ease-out, stroke 0.5s ease' }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span
+                    className="font-display text-2xl font-bold leading-none"
+                    style={{ color: getScoreColor(veganScore.total) }}
+                  >
+                    {veganScore.total}
+                  </span>
+                  <span className="text-[9px] text-surface-400 mt-0.5">/ 100</span>
+                </div>
+              </div>
+              <span
+                className="text-xs font-semibold text-center leading-tight"
+                style={{ color: getScoreColor(veganScore.total) }}
+              >
+                {getScoreLabel(veganScore.total)}
+              </span>
+            </div>
+
+            {/* Breakdown */}
+            <div className="flex-1 space-y-2.5">
+              {([
+                { emoji: '🔥', label: 'Calorías', data: veganScore.calories },
+                { emoji: '💪', label: 'Proteína', data: veganScore.protein },
+                { emoji: '🧬', label: 'Micros',   data: veganScore.micros },
+                { emoji: '🌿', label: 'Fibra',    data: veganScore.fiber },
+                { emoji: '⚡', label: 'Racha',    data: veganScore.streak },
+              ] as const).map(({ emoji, label, data }) => {
+                const pct = data.max > 0 ? data.score / data.max : 0;
+                const barColor =
+                  pct >= 0.9 ? 'bg-brand-500'
+                  : pct >= 0.5 ? 'bg-amber-400'
+                  : 'bg-red-400';
+                return (
+                  <div key={label}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px]">{emoji}</span>
+                        <span className="text-xs text-surface-600 font-medium">{label}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-surface-400 truncate max-w-[80px] text-right">
+                          {data.label}
+                        </span>
+                        <span className="text-[10px] font-mono font-semibold text-surface-700 tabular-nums w-9 text-right">
+                          {data.score}/{data.max}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 bg-surface-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-700 ${barColor}`}
+                        style={{ width: `${pct * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Today's summary */}
       <div className="card p-5 mb-4">
