@@ -7,7 +7,7 @@ import { useCustomFoodStore } from '@/stores/customFoodStore';
 import { CustomFoodModal } from './CustomFoodModal';
 import { Spinner } from '@/components/ui/Spinner';
 import { SkeletonList } from '@/components/ui/Skeleton';
-import { Search, ScanBarcode, X, Leaf, Plus, Clock, ChevronDown, ChevronUp, AlertCircle, Star } from 'lucide-react';
+import { Search, ScanBarcode, X, Leaf, Plus, Clock, ChevronDown, ChevronUp, AlertCircle, Star, ChefHat } from 'lucide-react';
 import type { OpenFoodFactsProduct, MealType, RecentFood, CustomFood } from '@/types';
 
 const MEAL_OPTIONS: { value: MealType; label: string; icon: string }[] = [
@@ -990,6 +990,12 @@ export function SearchPage() {
             >
               <Plus className="w-3 h-3" strokeWidth={2.5} /> Crear propio
             </button>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('navigate-recipes'))}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-xl transition-colors"
+            >
+              <ChefHat className="w-3 h-3" /> Recetas
+            </button>
           </div>
           <div className="space-y-2">
             {recentsToShow.map((food, i) => (
@@ -1060,6 +1066,12 @@ export function SearchPage() {
             className="btn-secondary inline-flex items-center gap-2 text-sm"
           >
             <Plus className="w-4 h-4" /> Crear alimento personalizado
+          </button>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-recipes'))}
+            className="btn-secondary inline-flex items-center gap-2 text-sm mt-2"
+          >
+            <ChefHat className="w-4 h-4" /> Mis Recetas
           </button>
         </div>
       )}
