@@ -128,8 +128,6 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
           <span>{successMessage}</span>
         </div>
       )}
-      {/* Supplements daily check-in */}
-      <SupplementsWidget date={selectedDate} />
       {/* Date selector */}
       <div className="mb-6">
         <div className="flex items-center justify-between">
@@ -310,6 +308,11 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
           }}
         />
       )}
+
+      {/* Supplements daily check-in — entre resumen y comidas */}
+      <div className="mt-5">
+        <SupplementsWidget date={selectedDate} />
+      </div>
 
       {/* Meal sections */}
       <div className="space-y-4">

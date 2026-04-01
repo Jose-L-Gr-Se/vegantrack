@@ -56,6 +56,8 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
   const [showCreateFood, setShowCreateFood] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showAddSupplement, setShowAddSupplement] = useState(false);
+  const [editingDose, setEditingDose] = useState<string | null>(null);
+  const [doseInput, setDoseInput] = useState('');
 
   useEffect(() => {
     if (user) fetchCustomFoods(user.id);
@@ -233,9 +235,41 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
                   <span className="text-xl shrink-0">{NUTRIENT_ICONS[sup.nutrient_key] ?? '💊'}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-surface-800 truncate">{sup.name}</p>
-                    <p className="text-xs text-surface-400 font-mono">
-                      {sup.dose_amount} {sup.dose_unit} · {sup.frequency === 'daily' ? 'Diario' : sup.frequency}
-                    </p>
+                    {editingDose === sup.id ? (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.01"
+                          value={doseInput}
+                          onChange={e => setDoseInput(e.target.value)}
+                          onBlur={async () => {
+                            const val = parseFloat(doseInput);
+                            if (!isNaN(val) && val > 0) {
+                              await updateSupplement(sup.id, { dose_amount: val });
+                            }
+                            setEditingDose(null);
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                            if (e.key === 'Escape') setEditingDose(null);
+                          }}
+                          className="w-20 text-xs font-mono bg-surface-100 border border-brand-400 rounded-lg px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                          autoFocus
+                        />
+                        <span className="text-xs text-surface-400">{sup.dose_unit}</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setEditingDose(sup.id); setDoseInput(String(sup.dose_amount)); }}
+                        className="flex items-center gap-1 mt-0.5 group"
+                      >
+                        <p className="text-xs text-surface-400 font-mono">
+                          {sup.dose_amount} {sup.dose_unit} · {sup.frequency === 'daily' ? 'Diario' : sup.frequency}
+                        </p>
+                        <Pencil className="w-2.5 h-2.5 text-surface-300 group-hover:text-brand-400 transition-colors opacity-0 group-hover:opacity-100" />
+                      </button>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <button

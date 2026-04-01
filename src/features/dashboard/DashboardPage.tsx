@@ -293,10 +293,39 @@ export function DashboardPage() {
             }
 
             const pct = info.rda > 0 ? Math.min((totalValue / info.rda) * 100, 100) : 0;
-            const barColor =
-              pct >= 90 ? 'bg-brand-500' : pct >= 50 ? 'bg-amber-400' : 'bg-red-400';
-            const textColor =
-              pct >= 90 ? 'text-brand-600' : pct >= 50 ? 'text-amber-600' : 'text-red-500';
+
+            if (pct >= 90) {
+              return (
+                <div key={key} className="flex items-center gap-3 py-1.5 px-3 rounded-2xl bg-brand-50/60 dark:bg-brand-950/30 border border-brand-100 dark:border-brand-900">
+                  <div className="w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center flex-shrink-0 shadow-sm shadow-brand-500/30">
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-semibold text-brand-700 dark:text-brand-400">
+                        {info.label}
+                      </span>
+                      {hasSupplement && (
+                        <span className="text-[10px] bg-brand-100 text-brand-600 px-1.5 py-0.5 rounded-full font-medium">
+                          +💊
+                        </span>
+                      )}
+                    </div>
+                    <div className="h-1.5 bg-brand-100 rounded-full overflow-hidden mt-1">
+                      <div className="h-full w-full rounded-full bg-brand-400" />
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold font-mono text-brand-600 flex-shrink-0">
+                    {Math.round(pct)}%
+                  </span>
+                </div>
+              );
+            }
+
+            const barColor = pct >= 50 ? 'bg-amber-400' : 'bg-red-400';
+            const textColor = pct >= 50 ? 'text-amber-600' : 'text-red-500';
 
             return (
               <div key={key}>
@@ -311,8 +340,7 @@ export function DashboardPage() {
                     )}
                   </div>
                   <span className={`text-xs font-mono ${textColor}`}>
-                    {totalValue < 10 ? totalValue.toFixed(1) : Math.round(totalValue)} / {info.rda}{' '}
-                    {info.unit}
+                    {totalValue < 10 ? totalValue.toFixed(1) : Math.round(totalValue)} / {info.rda} {info.unit}
                   </span>
                 </div>
                 <div className="h-1.5 bg-surface-100 rounded-full overflow-hidden">
