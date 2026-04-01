@@ -95,12 +95,13 @@ export const useSupplementStore = create<SupplementState>((set, get) => ({
     set({ takenToday: next });
 
     if (isTaken) {
-      await supabase
+      const { error } = await supabase
         .from('supplement_logs')
         .delete()
         .eq('user_id', userId)
         .eq('supplement_id', supplementId)
         .eq('date', date);
+      if (error) set({ takenToday }); // revert on error
     } else {
       const { error } = await supabase
         .from('supplement_logs')

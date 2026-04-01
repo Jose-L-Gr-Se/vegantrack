@@ -15,6 +15,7 @@ const MICRO_RDA = {
   calcium_mg:      { label: 'Calcio',        rda: 1000, unit: 'mg' },
   vitamin_d_mcg:   { label: 'Vitamina D',    rda: 15,   unit: 'μg' },
   omega3_g:        { label: 'Omega-3',       rda: 1.6,  unit: 'g'  },
+  iodine_mcg:      { label: 'Yodo',          rda: 150,  unit: 'μg' },
 };
 
 interface DayData {
@@ -31,11 +32,7 @@ export function DashboardPage() {
   const [weekData, setWeekData] = useState<DayData[]>([]);
   const [loading, setLoading] = useState(true);
   const summary = getDaySummary();
-  const { supplements, takenToday, fetchTodayLogs, getTodayContributions } = useSupplementStore();
-
-  useEffect(() => {
-    if (user) fetchTodayLogs(user.id, selectedDate);
-  }, [user?.id, selectedDate]);
+  const { supplements, takenToday, getTodayContributions } = useSupplementStore();
 
   const suppContributions = getTodayContributions();
 
@@ -376,9 +373,9 @@ export function DashboardPage() {
             const microKey = key as keyof typeof summary.micros;
             const micro = summary.micros[microKey];
             const suppAmount = suppContributions[microKey as SupplementNutrientKey] ?? 0;
-            const totalValue = micro.value + suppAmount;
+            const totalValue = (micro?.value ?? 0) + suppAmount;
             const hasSupplement = suppAmount > 0;
-            const hasEnoughCoverage = micro.coverage >= 0.5 || hasSupplement;
+            const hasEnoughCoverage = (micro?.coverage ?? 0) >= 0.5 || hasSupplement;
 
             if (!hasEnoughCoverage) {
               return (

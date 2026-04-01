@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { useAuthStore } from '@/stores/authStore';
 import { useCustomFoodStore } from '@/stores/customFoodStore';
+import { useDiaryStore } from '@/stores/diaryStore';
 import { AuthPage } from '@/features/auth/AuthPage';
 import { OnboardingPage } from '@/features/profile/OnboardingPage';
 import { DiaryPage } from '@/features/diary/DiaryPage';
@@ -26,7 +27,8 @@ export default function App() {
   const [diaryMessage, setDiaryMessage] = useState<string | null>(null);
   const [searchSubview, setSearchSubview] = useState<'main' | 'recipes'>('main');
   const { fetchRecipes } = useRecipeStore();
-  const { fetchSupplements } = useSupplementStore();
+  const { fetchSupplements, fetchTodayLogs } = useSupplementStore();
+  const { selectedDate } = useDiaryStore();
 
   useEffect(() => {
     initialize();
@@ -34,11 +36,10 @@ export default function App() {
 
   // Reload page when a new service worker takes control (autoUpdate)
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        window.location.reload();
-      });
-    }
+    if (!('serviceWorker' in navigator)) return;
+    const handler = () => window.location.reload();
+    navigator.serviceWorker.addEventListener('controllerchange', handler);
+    return () => navigator.serviceWorker.removeEventListener('controllerchange', handler);
   }, []);
 
   // Fetch custom foods when user is available
@@ -53,6 +54,10 @@ export default function App() {
   useEffect(() => {
     if (user) fetchSupplements(user.id);
   }, [user?.id]);
+
+  useEffect(() => {
+    if (user) fetchTodayLogs(user.id, selectedDate);
+  }, [user?.id, selectedDate]);
 
   // Listen for search navigation from diary
   useEffect(() => {

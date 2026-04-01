@@ -87,7 +87,7 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
     if (data) {
       setDatesWithData(new Set(data.map((r: { date: string }) => r.date)));
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (showCalendar) fetchWeekDates(weekDays);

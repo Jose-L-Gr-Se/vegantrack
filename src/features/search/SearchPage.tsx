@@ -340,7 +340,8 @@ export function SearchPage() {
     setAdding(true);
     setAddError(null);
 
-    const n = selectedProduct.nutriments;
+    const product = selectedProduct;
+    const n = product.nutriments;
     const ratio = servingGrams / 100;
 
     // Micros — OFF stores all values in grams; scaleOrNull converts and returns null when not reported
@@ -361,9 +362,9 @@ export function SearchPage() {
       user_id: user.id,
       date: selectedDate,
       meal_type: mealType,
-      food_name: selectedProduct.product_name,
-      barcode: selectedProduct.code || null,
-      brand: selectedProduct.brands || null,
+      food_name: product.product_name,
+      barcode: product.code || null,
+      brand: product.brands || null,
       serving_size_g: servingGrams,
       calories: Math.round(n['energy-kcal_100g'] * ratio),
       protein_g: Math.round(n.proteins_100g * ratio * 10) / 10,
@@ -385,10 +386,10 @@ export function SearchPage() {
       calcium_known:     calcium    !== null,
       omega3_known:      false,
       vitamin_d_known:   vitaminD   !== null,
-      source:     selectedProduct.code ? 'openfoodfacts' : 'manual',
-      source_ref: selectedProduct.code || null,
-      is_vegan: isProductVegan(selectedProduct),
-      image_url: selectedProduct.image_front_url || null,
+      source:     product.code ? 'openfoodfacts' : 'manual',
+      source_ref: product.code || null,
+      is_vegan: isProductVegan(product),
+      image_url: product.image_front_url || null,
     });
 
     const result = await Promise.race([addPromise, timeoutPromise]);
@@ -402,7 +403,7 @@ export function SearchPage() {
       setAddError(null);
       fetchRecentFoods(user.id);
       window.dispatchEvent(new CustomEvent('navigate-diary', {
-        detail: { message: `${selectedProduct.product_name} añadido a ${MEAL_LABELS[mealType]}` }
+        detail: { message: `${product.product_name} añadido a ${MEAL_LABELS[mealType]}` }
       }));
     }
   };
@@ -440,7 +441,7 @@ export function SearchPage() {
       fiber_g: Math.round(food.fiber_per_100g * ratio * 10) / 10,
       sugar_g: Math.round(food.sugar_per_100g * ratio * 10) / 10,
       saturated_fat_g: Math.round(food.saturated_fat_per_100g * ratio * 10) / 10,
-      sodium_mg: Math.round(food.sodium_per_100g * ratio * 10),
+      sodium_mg: Math.round(food.sodium_per_100g * ratio),
       vitamin_b12_mcg: qB12,
       iron_mg:         qIron,
       zinc_mg:         qZinc,

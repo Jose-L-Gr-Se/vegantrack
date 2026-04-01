@@ -88,7 +88,7 @@ export function computeVeganScore({
   let streakScore = 0; let streakLabel = '';
   if (streakCount >= 7)      { streakScore = 10; streakLabel = `${streakCount} días 🔥`; }
   else if (streakCount >= 3) { streakScore = 7;  streakLabel = `${streakCount} días`; }
-  else if (streakCount >= 1) { streakScore = 3;  streakLabel = '1 día'; }
+  else if (streakCount >= 1) { streakScore = 3;  streakLabel = `${streakCount} día${streakCount > 1 ? 's' : ''}`; }
   else                       { streakLabel = 'Sin racha'; }
 
   return {

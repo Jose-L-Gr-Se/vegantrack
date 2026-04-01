@@ -72,8 +72,8 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   },
 
   deleteEntry: async (id) => {
-    await supabase.from('food_log').delete().eq('id', id);
-    set((state) => ({ entries: state.entries.filter((e) => e.id !== id) }));
+    const { error } = await supabase.from('food_log').delete().eq('id', id);
+    if (!error) set((state) => ({ entries: state.entries.filter((e) => e.id !== id) }));
   },
 
   getDaySummary: () => {
@@ -232,7 +232,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
     }
 
     return Array.from(dayMap.entries()).map(([date, vals]) => ({
-      date: new Date(date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short' }),
+      date: new Date(date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short' }),
       ...vals,
     }));
   },
