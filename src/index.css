@@ -7,6 +7,15 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /*
+   * Contraste WCAG AA: surface-400 (#94a3b8) sobre blanco = ratio 2.85 — suspende.
+   * surface-500 (#64748b) sobre blanco = ratio 4.6 — aprueba AA.
+   * Solo afecta a texto informativo; elementos decorativos usan !text-surface-400.
+   */
+  .text-surface-400 {
+    @apply text-surface-500;
+  }
+
   html {
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
