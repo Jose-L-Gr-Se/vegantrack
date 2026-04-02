@@ -85,6 +85,22 @@ export default function App() {
     return () => window.removeEventListener('navigate-recipes', handler);
   }, []);
 
+  // Detectar vuelta desde Stripe y recargar perfil
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('pro') === 'success') {
+      // Limpiar el parámetro de la URL sin recargar la página
+      window.history.replaceState({}, '', window.location.pathname);
+      // Recargar perfil para que refleje subscription_tier = 'pro'
+      if (user) {
+        const { fetchProfile } = useAuthStore.getState();
+        fetchProfile().then(() => {
+          setActiveTab('profile');
+        });
+      }
+    }
+  }, [user]);
+
   // Loading screen
   if (!initialized) {
     return (
