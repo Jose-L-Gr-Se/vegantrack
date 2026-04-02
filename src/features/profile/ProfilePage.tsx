@@ -4,9 +4,11 @@ import { useCustomFoodStore } from '@/stores/customFoodStore';
 import { calculateTargets } from '@/utils/nutrition';
 import { CustomFoodModal } from '@/features/search/CustomFoodModal';
 import { Spinner } from '@/components/ui/Spinner';
-import { LogOut, Save, User, Calculator, Star, Pencil, Trash2, Plus, Moon, Sun, X } from 'lucide-react';
+import { LogOut, Save, User, Calculator, Star, Pencil, Trash2, Plus, Moon, Sun, X, Zap } from 'lucide-react';
 import type { Profile, CustomFood, SupplementNutrientKey } from '@/types';
 import { useSupplementStore } from '@/stores/supplementStore';
+import { ProModal } from '@/features/pro/ProModal';
+import { usePro } from '@/hooks/usePro';
 
 const NUTRIENT_ICONS: Record<string, string> = {
   vitamin_b12_mcg: '🧬', vitamin_d_mcg: '☀️', omega3_g: '🌊',
@@ -58,6 +60,8 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
   const [showAddSupplement, setShowAddSupplement] = useState(false);
   const [editingDose, setEditingDose] = useState<string | null>(null);
   const [doseInput, setDoseInput] = useState('');
+  const { isPro } = usePro();
+  const [showProModal, setShowProModal] = useState(false);
 
   useEffect(() => {
     if (user) fetchCustomFoods(user.id);
@@ -111,6 +115,43 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
           <User className="w-6 h-6 text-brand-600" />
         </div>
       </div>
+
+      {/* Banner Pro */}
+      {!isPro && (
+        <button
+          onClick={() => setShowProModal(true)}
+          className="w-full mb-4 bg-gradient-to-r from-brand-600 to-brand-700 text-white rounded-3xl p-4 flex items-center justify-between"
+        >
+          <div className="text-left">
+            <div className="flex items-center gap-2 mb-0.5">
+              <Zap className="w-4 h-4" />
+              <span className="font-semibold text-sm">Hazte Pro</span>
+            </div>
+            <p className="text-brand-100 text-xs">
+              Historial completo y exportación · desde 3,33€/mes
+            </p>
+          </div>
+          <div className="bg-white/20 rounded-xl px-3 py-1.5 text-xs font-semibold flex-shrink-0">
+            Ver planes →
+          </div>
+        </button>
+      )}
+
+      {isPro && (
+        <div className="w-full mb-4 bg-brand-50 border border-brand-200 rounded-3xl p-4 flex items-center gap-3">
+          <Zap className="w-5 h-5 text-brand-600 flex-shrink-0" />
+          <div>
+            <p className="font-semibold text-brand-700 text-sm">Plan Pro activo</p>
+            <p className="text-brand-500 text-xs">
+              Renovación: {profile?.subscription_expires_at
+                ? new Date(profile.subscription_expires_at).toLocaleDateString('es-ES')
+                : '—'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {showProModal && <ProModal onClose={() => setShowProModal(false)} />}
 
       <div className="space-y-4">
         {/* My custom foods */}

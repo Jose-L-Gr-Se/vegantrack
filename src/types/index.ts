@@ -15,6 +15,9 @@ export interface Profile {
   last_log_date: string | null;
   created_at: string;
   updated_at: string;
+  subscription_tier: 'free' | 'pro';
+  subscription_expires_at: string | null;
+  stripe_customer_id: string | null;
 }
 
 export interface FoodLogEntry {
