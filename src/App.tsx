@@ -93,8 +93,7 @@ export default function App() {
       window.history.replaceState({}, '', window.location.pathname);
       // Recargar perfil para que refleje subscription_tier = 'pro'
       if (user) {
-        const { fetchProfile } = useAuthStore.getState();
-        fetchProfile().then(() => {
+        useAuthStore.getState().fetchProfile().then(() => {
           setActiveTab('profile');
         });
       }
