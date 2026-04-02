@@ -38,14 +38,13 @@ export default async function handler(req: Request) {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.userId;
         const customerId = session.customer as string;
+        const subscriptionId = session.subscription as string;
 
-        if (userId) {
-          const subscription = await stripe.subscriptions.retrieve(
-            session.subscription as string
-          );
-          const expiresAt = new Date(
-            subscription.current_period_end * 1000
-          ).toISOString();
+        if (userId && subscriptionId) {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          // Acceso seguro al periodo de facturación
+          const periodEnd = (subscription as any).current_period_end as number;
+          const expiresAt = new Date(periodEnd * 1000).toISOString();
 
           await supabase
             .from('profiles')
@@ -63,9 +62,8 @@ export default async function handler(req: Request) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         const customerId = subscription.customer as string;
-        const expiresAt = new Date(
-          subscription.current_period_end * 1000
-        ).toISOString();
+        const periodEnd = (subscription as any).current_period_end as number;
+        const expiresAt = new Date(periodEnd * 1000).toISOString();
         const isActive = subscription.status === 'active';
 
         await supabase

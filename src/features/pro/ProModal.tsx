@@ -29,10 +29,6 @@ export function ProModal({ onClose }: ProModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const priceId = plan === 'monthly'
-    ? import.meta.env.VITE_STRIPE_PRICE_MONTHLY
-    : import.meta.env.VITE_STRIPE_PRICE_YEARLY;
-
   const handleUpgrade = async () => {
     if (!user) return;
     setLoading(true);
@@ -43,7 +39,7 @@ export function ProModal({ onClose }: ProModalProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          priceId,
+          plan,
           userId: user.id,
           email: user.email,
         }),
@@ -54,7 +50,7 @@ export function ProModal({ onClose }: ProModalProps) {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        setError('No se pudo iniciar el proceso de pago. Inténtalo de nuevo.');
+        setError(data.error || 'No se pudo iniciar el proceso de pago. Inténtalo de nuevo.');
       }
     } catch {
       setError('Error de conexión. Comprueba tu internet e inténtalo de nuevo.');

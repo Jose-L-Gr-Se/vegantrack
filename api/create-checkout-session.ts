@@ -2,6 +2,11 @@ import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
+const PRICE_IDS = {
+  monthly: process.env.STRIPE_PRICE_MONTHLY!,
+  yearly: process.env.STRIPE_PRICE_YEARLY!,
+};
+
 export const config = { runtime: 'edge' };
 
 export default async function handler(req: Request) {
@@ -10,11 +15,20 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const { priceId, userId, email } = await req.json();
+    const { plan, userId, email } = await req.json();
 
-    if (!priceId || !userId || !email) {
+    if (!plan || !userId || !email) {
       return new Response(
-        JSON.stringify({ error: 'Faltan parámetros' }),
+        JSON.stringify({ error: 'Faltan parámetros', received: { plan, userId, email } }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const priceId = PRICE_IDS[plan as 'monthly' | 'yearly'];
+
+    if (!priceId) {
+      return new Response(
+        JSON.stringify({ error: `Plan inválido: ${plan}` }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -23,7 +37,7 @@ export default async function handler(req: Request) {
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `https://app.vegantrack.app/pro-success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `https://app.vegantrack.app/?pro=success`,
       cancel_url: `https://app.vegantrack.app/`,
       customer_email: email,
       metadata: { userId },
