@@ -49,7 +49,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
         </button>
 
         <a
-          href="https://vegantrack.vercel.app"
+          href="https://app.vegantrack.app"
           className="text-sm text-surface-400 flex items-center gap-1.5"
         >
           <Download className="w-3.5 h-3.5" />
