@@ -10,6 +10,25 @@ const supabase = createClient(
 
 export const config = { runtime: 'edge' };
 
+function getExpiresAt(subscription: any): string {
+  // Intentar diferentes rutas según versión de API
+  const raw =
+    subscription.current_period_end ??
+    subscription.billing_cycle_anchor ??
+    null;
+
+  if (raw && typeof raw === 'number') {
+    return new Date(raw * 1000).toISOString();
+  }
+  if (raw && typeof raw === 'string') {
+    return new Date(raw).toISOString();
+  }
+  // Fallback: 1 año desde ahora
+  const fallback = new Date();
+  fallback.setFullYear(fallback.getFullYear() + 1);
+  return fallback.toISOString();
+}
+
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
@@ -40,13 +59,15 @@ export default async function handler(req: Request) {
         const customerId = session.customer as string;
         const subscriptionId = session.subscription as string;
 
+        console.log('checkout.session.completed', { userId, customerId, subscriptionId });
+
         if (userId && subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-          // Acceso seguro al periodo de facturación
-          const periodEnd = (subscription as any).current_period_end as number;
-          const expiresAt = new Date(periodEnd * 1000).toISOString();
+          console.log('subscription raw:', JSON.stringify(subscription));
 
-          await supabase
+          const expiresAt = getExpiresAt(subscription);
+
+          const { error } = await supabase
             .from('profiles')
             .update({
               subscription_tier: 'pro',
@@ -55,16 +76,22 @@ export default async function handler(req: Request) {
               updated_at: new Date().toISOString(),
             })
             .eq('id', userId);
+
+          if (error) {
+            console.error('Supabase update error:', error);
+            throw new Error(`Supabase error: ${error.message}`);
+          }
+
+          console.log('Profile updated to pro for userId:', userId);
         }
         break;
       }
 
       case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object as any;
         const customerId = subscription.customer as string;
-        const periodEnd = (subscription as any).current_period_end as number;
-        const expiresAt = new Date(periodEnd * 1000).toISOString();
         const isActive = subscription.status === 'active';
+        const expiresAt = getExpiresAt(subscription);
 
         await supabase
           .from('profiles')
