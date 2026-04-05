@@ -1,117 +1,133 @@
-// src/features/landing/LandingPage.tsx
 import { Leaf, ScanBarcode, BarChart3, Zap, ArrowRight, Download } from 'lucide-react';
 
 interface LandingPageProps {
   onEnter: () => void;
 }
 
+const FEATURES = [
+  {
+    icon: ScanBarcode,
+    title: 'Escaneo inmediato',
+    desc: 'Codigo de barras, macros y micronutrientes en segundos.',
+  },
+  {
+    icon: Zap,
+    title: 'Seguimiento clave',
+    desc: 'B12, hierro, zinc, calcio y vitamina D siempre a la vista.',
+  },
+  {
+    icon: BarChart3,
+    title: 'Decisiones con datos',
+    desc: 'Analiza tendencias y ajusta tu alimentacion sin perder tiempo.',
+  },
+];
+
 export function LandingPage({ onEnter }: LandingPageProps) {
   return (
-    <div className="min-h-dvh bg-white flex flex-col">
-
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 pt-8 pb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-brand-600 rounded-xl flex items-center justify-center">
-            <Leaf className="w-4 h-4 text-white" strokeWidth={2.5} />
+    <div className="min-h-dvh px-4 pt-6 pb-10">
+      <div className="max-w-lg mx-auto">
+        <header className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="icon-badge bg-brand-600 text-white border-0">
+              <Leaf className="w-5 h-5" strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="section-label mb-1">Plant-Based Tracking</p>
+              <span className="font-display text-xl font-bold tracking-[-0.04em] text-surface-900">VeganTrack</span>
+            </div>
           </div>
-          <span className="font-display font-bold text-surface-900">VeganTrack</span>
-        </div>
-        <button
-          onClick={onEnter}
-          className="text-sm font-semibold text-brand-600 hover:text-brand-700"
-        >
-          Entrar
-        </button>
-      </header>
+          <button
+            onClick={onEnter}
+            className="status-pill hover:text-brand-700 transition-colors"
+          >
+            Entrar
+          </button>
+        </header>
 
-      {/* Hero */}
-      <section className="flex-1 flex flex-col items-center justify-center px-6 py-12 text-center">
-        <div className="inline-flex items-center justify-center w-14 h-14 bg-brand-50 rounded-2xl mb-6">
-          <Leaf className="w-7 h-7 text-brand-600" strokeWidth={2} />
-        </div>
+        <section className="page-shell px-6 py-7 mb-5">
+          <div className="relative z-10">
+            <div className="status-pill mb-4">
+              <Leaf className="w-3.5 h-3.5 text-brand-600" />
+              Nutricion vegana, mejor presentada
+            </div>
+            <h1 className="font-display text-[2.8rem] leading-[0.92] tracking-[-0.06em] text-surface-900 max-w-sm">
+              Una app de nutricion vegetal con tacto de producto premium.
+            </h1>
+            <p className="mt-4 text-base text-surface-600 leading-relaxed max-w-md">
+              Escanea, registra y analiza tu alimentacion con una interfaz mas limpia, tranquila y enfocada en lo importante.
+            </p>
 
-        <h1 className="font-display text-4xl font-bold text-surface-900 leading-tight mb-4">
-          Tu nutrición<br />
-          <span className="text-brand-600">plant-based</span>,<br />
-          bajo control
-        </h1>
+            <div className="grid grid-cols-3 gap-3 mt-6 mb-7">
+              <div className="metric-tile text-center">
+                <p className="font-display text-2xl font-bold text-surface-900">0</p>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-surface-500 mt-1">Anuncios</p>
+              </div>
+              <div className="metric-tile text-center">
+                <p className="font-display text-2xl font-bold text-brand-700">100%</p>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-surface-500 mt-1">Focus</p>
+              </div>
+              <div className="metric-tile text-center">
+                <p className="font-display text-2xl font-bold text-surface-900">PWA</p>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-surface-500 mt-1">Instalable</p>
+              </div>
+            </div>
 
-        <p className="text-surface-500 text-lg max-w-xs mb-8">
-          Escanea, registra y analiza tu alimentación vegana. Sin anuncios. Sin suscripciones.
-        </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={onEnter}
+                className="btn-primary flex items-center justify-center gap-2 text-base"
+              >
+                Empezar gratis <ArrowRight className="w-5 h-5" />
+              </button>
 
-        <button
-          onClick={onEnter}
-          className="btn-primary flex items-center gap-2 text-base px-8 py-4 mb-4"
-        >
-          Empezar gratis <ArrowRight className="w-5 h-5" />
-        </button>
+              <a
+                href="https://app.vegantrack.app"
+                className="btn-secondary flex items-center justify-center gap-2 text-sm"
+              >
+                <Download className="w-4 h-4" />
+                Instalar como app
+              </a>
+            </div>
+          </div>
+        </section>
 
-        <a
-          href="https://app.vegantrack.app"
-          className="text-sm text-surface-400 flex items-center gap-1.5"
-        >
-          <Download className="w-3.5 h-3.5" />
-          Instalar como app (PWA)
-        </a>
-      </section>
-
-      {/* Features */}
-      <section className="px-6 pb-12">
-        <div className="grid gap-4 max-w-sm mx-auto">
-          {[
-            {
-              icon: ScanBarcode,
-              title: 'Escanea cualquier producto',
-              desc: 'Código de barras → macros y micros al instante. Base de datos OpenFoodFacts.',
-            },
-            {
-              icon: Zap,
-              title: 'Micronutrientes clave',
-              desc: 'B12, hierro, zinc, calcio, vitamina D. Los que más importan en dieta vegana.',
-            },
-            {
-              icon: BarChart3,
-              title: 'Alternativas veganas',
-              desc: 'Escanea un producto no vegano y VeganTrack te sugiere sustitutos.',
-            },
-          ].map((f) => (
-            <div key={f.title} className="card p-4 flex items-start gap-4">
-              <f.icon className="w-5 h-5 text-surface-400 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
+        <section className="space-y-3 mb-6">
+          {FEATURES.map((feature) => (
+            <div key={feature.title} className="card p-4 flex items-start gap-4">
+              <div className="icon-badge flex-shrink-0">
+                <feature.icon className="w-4 h-4 text-brand-600" strokeWidth={1.8} />
+              </div>
               <div>
-                <p className="font-semibold text-surface-900 text-sm">{f.title}</p>
-                <p className="text-surface-500 text-xs mt-0.5 leading-relaxed">{f.desc}</p>
+                <p className="font-semibold text-surface-900">{feature.title}</p>
+                <p className="text-sm text-surface-500 mt-1 leading-relaxed">{feature.desc}</p>
               </div>
             </div>
           ))}
-        </div>
-      </section>
+        </section>
 
-      {/* Footer */}
-      <footer className="px-6 pb-8 text-center">
-        <p className="text-xs text-surface-400 mb-2">Datos &gt; opinión</p>
-        <div className="flex items-center justify-center gap-4">
-          <a
-            href="https://x.com/VeganoEficaz"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-surface-400 hover:text-surface-600"
-          >
-            @VeganoEficaz
-          </a>
-          <span className="text-surface-200">·</span>
-          <a
-            href="https://instagram.com/manual__verde"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-surface-400 hover:text-surface-600"
-          >
-            @manual__verde
-          </a>
-        </div>
-      </footer>
-
+        <footer className="page-shell px-5 py-4 text-center">
+          <p className="text-xs uppercase tracking-[0.2em] text-surface-400 mb-3">Datos por encima de opinion</p>
+          <div className="flex items-center justify-center gap-4 text-sm text-surface-500">
+            <a
+              href="https://x.com/VeganoEficaz"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-surface-700 transition-colors"
+            >
+              @VeganoEficaz
+            </a>
+            <span className="text-surface-300">/</span>
+            <a
+              href="https://instagram.com/manual__verde"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-surface-700 transition-colors"
+            >
+              @manual__verde
+            </a>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }

@@ -32,18 +32,14 @@ export function SupplementsWidget({ date }: SupplementsWidgetProps) {
 
   return (
     <div className="mb-5">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-sm">💊</span>
-          <span className="text-xs font-semibold text-surface-500 uppercase tracking-wide">
+          <span className="icon-badge text-sm">💊</span>
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-surface-500">
             Suplementos
           </span>
         </div>
-        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-          takenCount === active.length
-            ? 'bg-brand-100 text-brand-700'
-            : 'bg-surface-100 text-surface-500'
-        }`}>
+        <span className={`status-pill text-[10px] ${takenCount === active.length ? 'bg-brand-100 text-brand-700' : 'text-surface-500'}`}>
           {takenCount}/{active.length} tomados
         </span>
       </div>
@@ -54,10 +50,10 @@ export function SupplementsWidget({ date }: SupplementsWidgetProps) {
             <button
               key={sup.id}
               onClick={() => user && toggleTaken(user.id, sup.id, date)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all active:scale-95 ${
                 taken
-                  ? 'bg-brand-500 text-white shadow-sm shadow-brand-500/30'
-                  : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
+                  ? 'bg-brand-500 text-white shadow-[0_14px_28px_-18px_rgba(22,163,74,0.7)]'
+                  : 'bg-white/70 text-surface-600 border border-white/80 hover:bg-surface-100'
               }`}
             >
               <span>{NUTRIENT_ICONS[sup.nutrient_key] ?? '💊'}</span>

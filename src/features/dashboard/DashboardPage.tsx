@@ -10,13 +10,13 @@ import type { SupplementNutrientKey } from '@/types';
 import { computeVeganScore, getScoreColor, getScoreLabel } from '@/utils/veganScore';
 
 const MICRO_RDA = {
-  vitamin_b12_mcg: { label: 'Vitamina B12', rda: 2.4,  unit: 'μg' },
-  iron_mg:         { label: 'Hierro',        rda: 18,   unit: 'mg' },
-  zinc_mg:         { label: 'Zinc',          rda: 11,   unit: 'mg' },
-  calcium_mg:      { label: 'Calcio',        rda: 1000, unit: 'mg' },
-  vitamin_d_mcg:   { label: 'Vitamina D',    rda: 15,   unit: 'μg' },
-  omega3_g:        { label: 'Omega-3',       rda: 1.6,  unit: 'g'  },
-  iodine_mcg:      { label: 'Yodo',          rda: 150,  unit: 'μg' },
+  vitamin_b12_mcg: { label: 'Vitamina B12', rda: 2.4, unit: 'mcg' },
+  iron_mg: { label: 'Hierro', rda: 18, unit: 'mg' },
+  zinc_mg: { label: 'Zinc', rda: 11, unit: 'mg' },
+  calcium_mg: { label: 'Calcio', rda: 1000, unit: 'mg' },
+  vitamin_d_mcg: { label: 'Vitamina D', rda: 15, unit: 'mcg' },
+  omega3_g: { label: 'Omega-3', rda: 1.6, unit: 'g' },
+  iodine_mcg: { label: 'Yodo', rda: 150, unit: 'mcg' },
 };
 
 interface DayData {
@@ -45,7 +45,7 @@ export function DashboardPage() {
     suppContributions,
     sex: profile?.sex ?? null,
   });
-  // Generation counter: ensures stale/hung requests never overwrite fresh data
+
   const loadGenRef = useRef(0);
 
   const loadData = async () => {
@@ -63,7 +63,6 @@ export function DashboardPage() {
     if (gen === loadGenRef.current) setLoading(false);
   };
 
-  // Silent refresh: no skeleton, always clears loading (even if stuck), 10s timeout
   const refreshSilent = async () => {
     if (!user) return;
     const gen = ++loadGenRef.current;
@@ -77,7 +76,6 @@ export function DashboardPage() {
     } catch (err) {
       console.error('Dashboard refresh error:', err);
     }
-    // Always clear loading — this is the key: removes any stuck skeleton
     if (gen === loadGenRef.current) setLoading(false);
   };
 
@@ -89,7 +87,6 @@ export function DashboardPage() {
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        // Immediately clear any stuck skeleton, then refresh data silently
         setLoading(false);
         refreshSilent();
       }
@@ -98,13 +95,15 @@ export function DashboardPage() {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [user?.id, selectedDate]);
 
-  const microRda = { ...MICRO_RDA, iron_mg: { ...MICRO_RDA.iron_mg, rda: profile?.sex === 'male' ? 8 : 18 } };
+  const microRda = {
+    ...MICRO_RDA,
+    iron_mg: { ...MICRO_RDA.iron_mg, rda: profile?.sex === 'male' ? 8 : 18 },
+  };
 
   const calorieTarget = profile?.calorie_target ?? 2000;
-  const maxCalInWeek = Math.max(...weekData.map(d => d.calories), calorieTarget);
+  const maxCalInWeek = Math.max(...weekData.map((d) => d.calories), calorieTarget);
 
-  // Calculate weekly averages
-  const daysWithData = weekData.filter(d => d.calories > 0);
+  const daysWithData = weekData.filter((d) => d.calories > 0);
   const weekAvg = daysWithData.length > 0 ? {
     calories: Math.round(daysWithData.reduce((s, d) => s + d.calories, 0) / daysWithData.length),
     protein: Math.round(daysWithData.reduce((s, d) => s + d.protein, 0) / daysWithData.length),
@@ -113,136 +112,167 @@ export function DashboardPage() {
   } : null;
 
   return (
-    <div className="pb-28 px-4 pt-6">
-      <SectionHeader title="Dashboard" subtitle="Tu progreso nutricional" />
-
-      {/* VeganScore */}
-      <div className="card p-5 mb-4">
-        <div className="mb-4">
-          <h2 className="text-xs font-medium text-surface-400 uppercase tracking-widest">VeganScore — Hoy</h2>
-        </div>
-
-        {!veganScore.hasData ? (
-          <div className="text-center py-6">
-            <p className="text-surface-400 text-sm">Registra alimentos para calcular tu score</p>
-            <p className="text-xs text-surface-300 mt-1">Aparecerá aquí en cuanto añadas algo al diario</p>
+    <div className="pb-32 px-4 pt-6">
+      <SectionHeader
+        title="Dashboard"
+        subtitle="Tu progreso nutricional"
+        action={
+          <div className="icon-badge">
+            <TrendingUp className="w-5 h-5 text-brand-600" />
           </div>
-        ) : (
-          <div className="flex items-start gap-5">
-            {/* Ring */}
-            <div className="flex flex-col items-center gap-2 flex-shrink-0">
-              <div className="relative w-[100px] h-[100px]">
-                <svg width={100} height={100} className="-rotate-90 absolute inset-0">
-                  <circle cx={50} cy={50} r={42} fill="none" stroke="#f1f5f9" strokeWidth={10} />
-                  <circle
-                    cx={50} cy={50} r={42}
-                    fill="none"
-                    stroke={getScoreColor(veganScore.total)}
-                    strokeWidth={10}
-                    strokeLinecap="round"
-                    strokeDasharray={2 * Math.PI * 42}
-                    strokeDashoffset={2 * Math.PI * 42 * (1 - veganScore.total / 100)}
-                    style={{ transition: 'stroke-dashoffset 1.2s ease-out, stroke 0.5s ease' }}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span
-                    className="font-display text-2xl font-bold leading-none"
-                    style={{ color: getScoreColor(veganScore.total) }}
-                  >
-                    {veganScore.total}
-                  </span>
-                  <span className="text-[9px] text-surface-400 mt-0.5">/ 100</span>
-                </div>
-              </div>
-              <span
-                className="text-xs font-semibold text-center leading-tight"
-                style={{ color: getScoreColor(veganScore.total) }}
-              >
-                {getScoreLabel(veganScore.total)}
-              </span>
-            </div>
+        }
+      />
 
-            {/* Breakdown */}
-            <div className="flex-1 space-y-2.5">
-              {([
-                { label: 'Calorías', data: veganScore.calories },
-                { label: 'Proteína', data: veganScore.protein },
-                { label: 'Micros',   data: veganScore.micros },
-                { label: 'Fibra',    data: veganScore.fiber },
-                { label: 'Racha',    data: veganScore.streak },
-              ] as const).map(({ label, data }) => {
-                const pct = data.max > 0 ? data.score / data.max : 0;
-                const barColor =
-                  pct >= 0.9 ? 'bg-brand-500'
-                  : pct >= 0.5 ? 'bg-amber-400'
-                  : 'bg-red-400';
-                return (
-                  <div key={label}>
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs text-surface-600 font-medium">{label}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-surface-400 truncate max-w-[80px] text-right">
-                          {data.label}
-                        </span>
-                        <span className="text-[10px] font-mono font-semibold text-surface-700 tabular-nums w-9 text-right">
-                          {data.score}/{data.max}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="h-1.5 bg-surface-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-700 ${barColor}`}
-                        style={{ width: `${pct * 100}%` }}
-                      />
-                    </div>
+      <div className="page-shell p-5 mb-4">
+        <div className="relative z-10">
+          <div className="flex items-start justify-between gap-3 mb-5">
+            <div>
+              <p className="section-label mb-2">VeganScore</p>
+              <h2 className="font-display text-2xl font-bold tracking-[-0.04em] text-surface-900">Tu lectura de hoy</h2>
+            </div>
+            <span className="status-pill">Hoy</span>
+          </div>
+
+          {!veganScore.hasData ? (
+            <div className="text-center py-6">
+              <p className="text-surface-500 text-sm">Registra alimentos para calcular tu score</p>
+              <p className="text-xs text-surface-400 mt-1">Aparecera aqui en cuanto anadas algo al diario</p>
+            </div>
+          ) : (
+            <div className="flex items-start gap-5">
+              <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                <div className="relative w-[100px] h-[100px] rounded-full bg-white/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+                  <svg width={100} height={100} className="-rotate-90 absolute inset-0">
+                    <circle cx={50} cy={50} r={42} fill="none" stroke="#f1f5f9" strokeWidth={10} />
+                    <circle
+                      cx={50}
+                      cy={50}
+                      r={42}
+                      fill="none"
+                      stroke={getScoreColor(veganScore.total)}
+                      strokeWidth={10}
+                      strokeLinecap="round"
+                      strokeDasharray={2 * Math.PI * 42}
+                      strokeDashoffset={2 * Math.PI * 42 * (1 - veganScore.total / 100)}
+                      style={{ transition: 'stroke-dashoffset 1.2s ease-out, stroke 0.5s ease' }}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span
+                      className="font-display text-2xl font-bold leading-none"
+                      style={{ color: getScoreColor(veganScore.total) }}
+                    >
+                      {veganScore.total}
+                    </span>
+                    <span className="text-[9px] text-surface-400 mt-0.5">/ 100</span>
                   </div>
-                );
-              })}
+                </div>
+                <span
+                  className="text-xs font-semibold text-center leading-tight"
+                  style={{ color: getScoreColor(veganScore.total) }}
+                >
+                  {getScoreLabel(veganScore.total)}
+                </span>
+              </div>
+
+              <div className="flex-1 space-y-2.5">
+                {([
+                  { label: 'Calorias', data: veganScore.calories },
+                  { label: 'Proteina', data: veganScore.protein },
+                  { label: 'Micros', data: veganScore.micros },
+                  { label: 'Fibra', data: veganScore.fiber },
+                  { label: 'Racha', data: veganScore.streak },
+                ] as const).map(({ label, data }) => {
+                  const pct = data.max > 0 ? data.score / data.max : 0;
+                  const barColor =
+                    pct >= 0.9 ? 'bg-brand-500'
+                    : pct >= 0.5 ? 'bg-amber-400'
+                    : 'bg-red-400';
+                  return (
+                    <div key={label}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-surface-600 font-medium">{label}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-surface-400 truncate max-w-[80px] text-right">
+                            {data.label}
+                          </span>
+                          <span className="text-[10px] font-mono font-semibold text-surface-700 tabular-nums w-9 text-right">
+                            {data.score}/{data.max}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-2 bg-surface-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${barColor}`}
+                          style={{ width: `${pct * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Today's summary */}
       <div className="card p-5 mb-4">
-        <div className="mb-4">
-          <h2 className="text-xs font-medium text-surface-400 uppercase tracking-widest">Hoy</h2>
+        <div className="flex items-start justify-between gap-3 mb-5">
+          <div>
+            <p className="section-label mb-2">Hoy</p>
+            <h2 className="font-display text-2xl font-bold tracking-[-0.04em] text-surface-900">Balance diario</h2>
+          </div>
+          <div className="status-pill">
+            <Target className="w-3.5 h-3.5" />
+            {calorieTarget} kcal
+          </div>
         </div>
 
         <div className="flex items-center gap-5">
-          <ProgressRing value={summary.calories} max={calorieTarget} size={110} strokeWidth={9}>
+          <ProgressRing value={summary.calories} max={calorieTarget} size={112} strokeWidth={10}>
             <span className="font-display text-xl font-bold">{Math.round(summary.calories)}</span>
             <span className="text-[9px] text-surface-400">kcal</span>
           </ProgressRing>
 
           <div className="flex-1 space-y-3">
-            <MacroBar label="Proteína" value={summary.protein_g} target={profile?.protein_target_g ?? 120} color="#3b82f6" />
+            <MacroBar label="Proteina" value={summary.protein_g} target={profile?.protein_target_g ?? 120} color="#3b82f6" />
             <MacroBar label="Carbos" value={summary.carbs_g} target={profile?.carbs_target_g ?? 250} color="#f59e0b" />
             <MacroBar label="Grasas" value={summary.fat_g} target={profile?.fat_target_g ?? 65} color="#ef4444" />
           </div>
         </div>
 
-        {/* Fiber bonus */}
-        <div className="mt-3 pt-3 border-t border-surface-100">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-surface-500">Fibra</span>
-            <span className="font-mono text-green-600">{Math.round(summary.fiber_g)}g <span className="text-surface-400">/ 30g</span></span>
+        <div className="soft-divider my-4" />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="metric-tile">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-surface-500 font-semibold">Fibra</p>
+                <p className="text-xl font-display font-bold text-green-600 mt-1">{Math.round(summary.fiber_g)}g</p>
+              </div>
+              <Zap className="w-4 h-4 text-green-500" />
+            </div>
+          </div>
+          <div className="metric-tile">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-surface-500 font-semibold">Racha</p>
+                <p className="text-xl font-display font-bold text-brand-700 mt-1">{profile?.streak_count ?? 0} dias</p>
+              </div>
+              <Flame className="w-4 h-4 text-orange-500" />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Weekly chart */}
       <div className="card p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-xs font-medium text-surface-400 uppercase tracking-widest">Última semana</h2>
+            <p className="section-label mb-2">Ultima semana</p>
+            <h2 className="font-display text-2xl font-bold tracking-[-0.04em] text-surface-900">Energia registrada</h2>
           </div>
           {weekAvg && (
-            <span className="text-xs text-surface-400 font-mono">
-              Ø {weekAvg.calories} kcal/día
+            <span className="status-pill font-mono">
+              {weekAvg.calories} kcal/dia
             </span>
           )}
         </div>
@@ -259,7 +289,6 @@ export function DashboardPage() {
         ) : (
           <>
             <div className="flex items-end gap-1.5 h-36 relative">
-              {/* Target line */}
               {maxCalInWeek > 0 && (
                 <div
                   className="absolute left-0 right-0 border-t border-dashed border-surface-300 z-10"
@@ -269,22 +298,20 @@ export function DashboardPage() {
               {weekData.map((day, i) => {
                 const heightPercent = maxCalInWeek > 0 ? (day.calories / maxCalInWeek) * 100 : 0;
                 const isToday = i === weekData.length - 1;
-                const overTarget = day.calories > calorieTarget;
-                const atTarget = day.calories > 0 && Math.abs(day.calories - calorieTarget) < calorieTarget * 0.1;
 
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center gap-1 z-20">
                     <span className="text-[10px] font-mono text-surface-400">
                       {day.calories > 0 ? Math.round(day.calories) : '—'}
                     </span>
-                    <div className="w-full bg-surface-100 rounded-lg overflow-hidden relative" style={{ height: '100px' }}>
+                    <div className="w-full bg-surface-100 rounded-xl overflow-hidden relative" style={{ height: '100px' }}>
                       <div
-                        className={`w-full rounded-lg transition-all duration-700 ease-out ${
+                        className={`w-full rounded-xl transition-all duration-700 ease-out ${
                           isToday
                             ? 'bg-brand-500'
                             : day.calories > 0
-                            ? 'bg-surface-300'
-                            : 'bg-surface-100'
+                              ? 'bg-surface-300'
+                              : 'bg-surface-100'
                         }`}
                         style={{
                           height: `${Math.max(heightPercent, day.calories > 0 ? 4 : 0)}%`,
@@ -300,8 +327,7 @@ export function DashboardPage() {
               })}
             </div>
 
-            {/* Legend */}
-            <div className="flex items-center gap-4 mt-3 justify-center">
+            <div className="flex items-center gap-4 mt-4 justify-center">
               <div className="flex items-center gap-1.5">
                 <div className="h-px w-6 border-t border-dashed border-surface-400" />
                 <span className="text-[10px] text-surface-400">Objetivo: {calorieTarget}</span>
@@ -317,28 +343,28 @@ export function DashboardPage() {
         )}
       </div>
 
-      {/* Weekly macro averages */}
       {weekAvg && (
         <div className="card p-5 mb-4">
           <div className="mb-4">
-            <h2 className="text-xs font-medium text-surface-400 uppercase tracking-widest">Media semanal</h2>
+            <p className="section-label mb-2">Media semanal</p>
+            <h2 className="font-display text-2xl font-bold tracking-[-0.04em] text-surface-900">Promedio de macros</h2>
           </div>
 
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {[
-              { label: 'Calorías', value: weekAvg.calories, target: calorieTarget, unit: '', color: 'text-brand-600' },
-              { label: 'Proteína', value: weekAvg.protein, target: profile?.protein_target_g ?? 120, unit: 'g', color: 'text-blue-600' },
+              { label: 'Calorias', value: weekAvg.calories, target: calorieTarget, unit: '', color: 'text-brand-600' },
+              { label: 'Proteina', value: weekAvg.protein, target: profile?.protein_target_g ?? 120, unit: 'g', color: 'text-blue-600' },
               { label: 'Carbos', value: weekAvg.carbs, target: profile?.carbs_target_g ?? 250, unit: 'g', color: 'text-amber-600' },
               { label: 'Grasas', value: weekAvg.fat, target: profile?.fat_target_g ?? 65, unit: 'g', color: 'text-rose-600' },
             ].map((item) => {
               const pct = item.target > 0 ? Math.round((item.value / item.target) * 100) : 0;
               return (
-                <div key={item.label} className="text-center">
-                  <div className={`font-display text-lg font-bold ${item.color}`}>
+                <div key={item.label} className="metric-tile text-center">
+                  <div className={`font-display text-2xl font-bold ${item.color}`}>
                     {item.value}{item.unit}
                   </div>
-                  <div className="text-[10px] text-surface-400">{item.label}</div>
-                  <div className={`text-[10px] font-mono mt-0.5 ${
+                  <div className="text-[11px] text-surface-500 uppercase tracking-[0.18em] mt-1">{item.label}</div>
+                  <div className={`text-xs font-mono mt-2 ${
                     pct >= 90 && pct <= 110 ? 'text-brand-600' : pct > 110 ? 'text-red-500' : 'text-surface-400'
                   }`}>
                     {pct}%
@@ -350,10 +376,13 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Micronutrient tracking */}
       <div className="card p-5">
-        <div className="mb-4">
-          <h2 className="text-xs font-medium text-surface-400 uppercase tracking-widest">Micronutrientes clave</h2>
+        <div className="flex items-start justify-between gap-3 mb-5">
+          <div>
+            <p className="section-label mb-2">Micronutrientes</p>
+            <h2 className="font-display text-2xl font-bold tracking-[-0.04em] text-surface-900">Cobertura esencial</h2>
+          </div>
+          <span className="status-pill">RDA</span>
         </div>
 
         <div className="space-y-3">
@@ -367,16 +396,18 @@ export function DashboardPage() {
 
             if (!hasEnoughCoverage) {
               return (
-                <div key={key} className="flex items-center justify-between py-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-surface-500">{info.label}</span>
-                    <span className="text-[10px] bg-surface-100 text-surface-400 px-1.5 py-0.5 rounded-full font-medium">
-                      {microKey === 'omega3_g' ? 'sin datos suficientes' : 'cobertura insuficiente'}
+                <div key={key} className="metric-tile py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-surface-500">{info.label}</span>
+                      <span className="status-pill text-[10px] py-1 px-2">
+                        {microKey === 'omega3_g' ? 'sin datos' : 'cobertura baja'}
+                      </span>
+                    </div>
+                    <span className="text-xs text-surface-400 font-mono">
+                      RDA: {info.rda} {info.unit}
                     </span>
                   </div>
-                  <span className="text-xs text-surface-400 font-mono">
-                    RDA: {info.rda} {info.unit}
-                  </span>
                 </div>
               );
             }
@@ -395,7 +426,7 @@ export function DashboardPage() {
                     </div>
                     <span className="text-xs font-mono text-brand-600">{Math.round(pct)}%</span>
                   </div>
-                  <div className="h-1.5 bg-surface-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-surface-100 rounded-full overflow-hidden">
                     <div className="h-full w-full rounded-full bg-brand-400" />
                   </div>
                 </div>
@@ -412,8 +443,8 @@ export function DashboardPage() {
                     {pct < 50 && <AlertTriangle className="w-3 h-3 text-red-400" />}
                     <span className="text-sm text-surface-700">{info.label}</span>
                     {hasSupplement && (
-                      <span className="text-[10px] bg-brand-50 text-brand-600 px-1.5 py-0.5 rounded-full font-medium">
-                        +💊 {suppAmount}{info.unit}
+                      <span className="status-pill text-[10px] py-1 px-2 text-brand-600">
+                        +{suppAmount}{info.unit}
                       </span>
                     )}
                   </div>
@@ -421,13 +452,13 @@ export function DashboardPage() {
                     {totalValue < 10 ? totalValue.toFixed(1) : Math.round(totalValue)} / {info.rda} {info.unit}
                   </span>
                 </div>
-                <div className="h-1.5 bg-surface-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-surface-100 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-700 ${barColor}`}
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <div className="flex justify-end mt-0.5">
+                <div className="flex justify-end mt-1">
                   <span className={`text-[10px] font-mono ${textColor}`}>{Math.round(pct)}%</span>
                 </div>
               </div>
@@ -435,9 +466,8 @@ export function DashboardPage() {
           })}
         </div>
 
-        <p className="text-xs text-surface-400 mt-3 text-center">
-          Los micronutrientes se muestran solo cuando hay datos suficientes del alimento ·{' '}
-          <span className="text-surface-300">Algunos productos no incluyen todos los micros</span>
+        <p className="text-xs text-surface-400 mt-4 text-center">
+          Los micronutrientes se muestran solo cuando hay datos suficientes del alimento.
         </p>
       </div>
     </div>

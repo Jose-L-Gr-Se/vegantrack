@@ -23,7 +23,10 @@ export function ProgressRing({
   const offset = circumference - percent * circumference;
 
   return (
-    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+    <div
+      className="relative inline-flex items-center justify-center rounded-full bg-white/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_16px_30px_-24px_rgba(15,23,42,0.3)] backdrop-blur-sm"
+      style={{ width: size, height: size }}
+    >
       <svg width={size} height={size} className="-rotate-90">
         <circle
           cx={size / 2}
@@ -43,13 +46,14 @@ export function ProgressRing({
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          className="transition-all duration-700 ease-out"
+          className="progress-ring-circle transition-all duration-700 ease-out"
           style={{
             '--circumference': circumference,
             '--offset': offset,
           } as React.CSSProperties}
         />
       </svg>
+      <div className="absolute inset-[14%] rounded-full bg-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.92)]" />
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         {children}
       </div>

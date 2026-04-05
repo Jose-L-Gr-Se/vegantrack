@@ -103,11 +103,15 @@ export default function App() {
   // Loading screen
   if (!initialized) {
     return (
-      <div className="min-h-dvh flex flex-col items-center justify-center bg-gradient-to-b from-brand-50 via-white to-white">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-600 rounded-3xl mb-4 shadow-lg shadow-brand-600/20 animate-pulse">
-          <Leaf className="w-8 h-8 text-white" strokeWidth={2.5} />
+      <div className="min-h-dvh flex flex-col items-center justify-center px-6">
+        <div className="page-shell px-8 py-10 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-600 rounded-3xl mb-4 shadow-lg shadow-brand-600/20 animate-pulse">
+            <Leaf className="w-8 h-8 text-white" strokeWidth={2.5} />
+          </div>
+          <p className="section-label mb-2">VEGANTRACK</p>
+          <h1 className="font-display text-2xl font-bold text-surface-900 mb-2">Preparando tu panel</h1>
+          <p className="text-surface-500 text-sm">Cargando tus datos y dejando todo listo.</p>
         </div>
-        <p className="text-surface-500 text-sm">Cargando...</p>
       </div>
     );
   }
@@ -118,8 +122,8 @@ export default function App() {
       return <OnboardingPage />;
     }
     return (
-      <div className="min-h-dvh bg-surface-50">
-        <main className="max-w-lg mx-auto" role="main" aria-label="Contenido principal">
+      <div className="min-h-dvh">
+        <main className="relative z-10 max-w-lg mx-auto" role="main" aria-label="Contenido principal">
           {activeTab === 'diary' && (
           <DiaryPage
             successMessage={diaryMessage}

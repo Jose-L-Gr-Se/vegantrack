@@ -5,20 +5,20 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Leaf, ArrowRight, ArrowLeft, Check } from 'lucide-react';
 import type { Profile } from '@/types';
 
-const STEPS = ['Datos básicos', 'Actividad', 'Objetivo'];
+const STEPS = ['Datos basicos', 'Actividad', 'Objetivo'];
 
 const ACTIVITY_OPTIONS = [
   { value: 'sedentary', label: 'Sedentario', desc: 'Trabajo de oficina, sin ejercicio' },
-  { value: 'light', label: 'Ligero', desc: '1-2 días de ejercicio/semana' },
-  { value: 'moderate', label: 'Moderado', desc: '3-4 días de ejercicio/semana' },
-  { value: 'active', label: 'Activo', desc: '5-6 días de ejercicio/semana' },
+  { value: 'light', label: 'Ligero', desc: '1-2 dias de ejercicio/semana' },
+  { value: 'moderate', label: 'Moderado', desc: '3-4 dias de ejercicio/semana' },
+  { value: 'active', label: 'Activo', desc: '5-6 dias de ejercicio/semana' },
   { value: 'very_active', label: 'Muy activo', desc: 'Ejercicio intenso diario' },
 ] as const;
 
 const GOAL_OPTIONS = [
-  { value: 'cut', label: 'Perder grasa', desc: '-500 kcal/día', emoji: '🔥' },
+  { value: 'cut', label: 'Perder grasa', desc: '-500 kcal/dia', emoji: '🔥' },
   { value: 'maintain', label: 'Mantener', desc: 'Mantenimiento', emoji: '⚖️' },
-  { value: 'bulk', label: 'Ganar masa', desc: '+300 kcal/día', emoji: '💪' },
+  { value: 'bulk', label: 'Ganar masa', desc: '+300 kcal/dia', emoji: '💪' },
 ] as const;
 
 export function OnboardingPage() {
@@ -56,188 +56,196 @@ export function OnboardingPage() {
     });
   };
 
+  const targets = calculateTargets(form);
+
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-brand-50 via-white to-white px-6 py-8">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-12 h-12 bg-brand-600 rounded-2xl mb-3">
-          <Leaf className="w-6 h-6 text-white" strokeWidth={2.5} />
-        </div>
-        <h1 className="font-display text-2xl font-bold text-surface-900">Configurar perfil</h1>
-        <p className="text-surface-500 text-sm mt-1">{STEPS[step]}</p>
-      </div>
-
-      {/* Progress bar */}
-      <div className="flex gap-2 mb-8 max-w-sm mx-auto">
-        {STEPS.map((_, i) => (
-          <div
-            key={i}
-            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-              i <= step ? 'bg-brand-500' : 'bg-surface-200'
-            }`}
-          />
-        ))}
-      </div>
-
-      <div className="max-w-sm mx-auto">
-        {/* Step 0: Basic data */}
-        {step === 0 && (
-          <div className="space-y-4">
-            <div>
-              <label className="label">Nombre</label>
-              <input
-                type="text"
-                value={form.display_name || ''}
-                onChange={(e) => update({ display_name: e.target.value })}
-                className="input"
-                placeholder="Tu nombre"
-              />
+    <div className="min-h-dvh px-4 py-6">
+      <div className="max-w-lg mx-auto space-y-5">
+        <section className="page-shell px-6 py-6">
+          <div className="relative z-10">
+            <div className="icon-badge bg-brand-600 text-white border-0 mb-5">
+              <Leaf className="w-5 h-5" strokeWidth={2.5} />
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center justify-between gap-4 mb-4">
               <div>
-                <label className="label">Altura (cm)</label>
+                <p className="section-label mb-2">Setup</p>
+                <h1 className="font-display text-[2.2rem] leading-[0.95] tracking-[-0.05em] text-surface-900">
+                  Configura tu perfil una sola vez.
+                </h1>
+              </div>
+              <span className="status-pill whitespace-nowrap">
+                Paso {step + 1} / {STEPS.length}
+              </span>
+            </div>
+            <p className="text-surface-500 text-sm leading-relaxed mb-5">
+              {STEPS[step]}. Mantendremos intacta la experiencia diaria, pero con objetivos mejor calculados desde el primer minuto.
+            </p>
+
+            <div className="grid grid-cols-3 gap-2">
+              {STEPS.map((item, index) => (
+                <div key={item} className="space-y-2">
+                  <div className={`h-1.5 rounded-full transition-all ${index <= step ? 'bg-brand-500' : 'bg-surface-200'}`} />
+                  <p className={`text-[11px] uppercase tracking-[0.16em] ${index === step ? 'text-surface-700 font-semibold' : 'text-surface-400'}`}>
+                    {item}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="card p-5">
+          {step === 0 && (
+            <div className="space-y-4">
+              <div>
+                <label className="label">Nombre</label>
                 <input
-                  type="number"
-                  value={form.height_cm || ''}
-                  onChange={(e) => update({ height_cm: +e.target.value })}
+                  type="text"
+                  value={form.display_name || ''}
+                  onChange={(e) => update({ display_name: e.target.value })}
                   className="input"
-                  placeholder="175"
+                  placeholder="Tu nombre"
                 />
               </div>
-              <div>
-                <label className="label">Peso (kg)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={form.weight_kg || ''}
-                  onChange={(e) => update({ weight_kg: +e.target.value })}
-                  className="input"
-                  placeholder="72"
-                />
-              </div>
-            </div>
 
-            <div>
-              <label className="label">Fecha de nacimiento</label>
-              <input
-                type="date"
-                value={form.birth_date || ''}
-                onChange={(e) => update({ birth_date: e.target.value })}
-                className="input"
-              />
-            </div>
-
-            <div>
-              <label className="label">Sexo biológico</label>
               <div className="grid grid-cols-2 gap-3">
-                {(['male', 'female'] as const).map((s) => (
+                <div>
+                  <label className="label">Altura (cm)</label>
+                  <input
+                    type="number"
+                    value={form.height_cm || ''}
+                    onChange={(e) => update({ height_cm: +e.target.value })}
+                    className="input"
+                    placeholder="175"
+                  />
+                </div>
+                <div>
+                  <label className="label">Peso (kg)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={form.weight_kg || ''}
+                    onChange={(e) => update({ weight_kg: +e.target.value })}
+                    className="input"
+                    placeholder="72"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="label">Fecha de nacimiento</label>
+                <input
+                  type="date"
+                  value={form.birth_date || ''}
+                  onChange={(e) => update({ birth_date: e.target.value })}
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="label">Sexo biologico</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {(['male', 'female'] as const).map((sex) => (
+                    <button
+                      key={sex}
+                      type="button"
+                      onClick={() => update({ sex })}
+                      className={`rounded-2xl border-2 py-3 text-sm font-semibold transition-all ${
+                        form.sex === sex
+                          ? 'border-brand-500 bg-brand-50 text-brand-700'
+                          : 'border-surface-200 text-surface-500 hover:border-surface-300'
+                      }`}
+                    >
+                      {sex === 'male' ? 'Masculino' : 'Femenino'}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-surface-400 mt-2">Se usa solo para calcular tu metabolismo basal.</p>
+              </div>
+            </div>
+          )}
+
+          {step === 1 && (
+            <div className="space-y-3">
+              {ACTIVITY_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => update({ activity_level: option.value })}
+                  className={`w-full rounded-[1.5rem] border-2 px-4 py-4 text-left transition-all ${
+                    form.activity_level === option.value
+                      ? 'border-brand-500 bg-brand-50'
+                      : 'border-surface-200 hover:border-surface-300'
+                  }`}
+                >
+                  <div className="font-semibold text-surface-900">{option.label}</div>
+                  <div className="text-sm text-surface-500 mt-1">{option.desc}</div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-4">
+              <div className="space-y-3">
+                {GOAL_OPTIONS.map((option) => (
                   <button
-                    key={s}
+                    key={option.value}
                     type="button"
-                    onClick={() => update({ sex: s })}
-                    className={`py-3 rounded-2xl text-sm font-semibold border-2 transition-all ${
-                      form.sex === s
-                        ? 'border-brand-500 bg-brand-50 text-brand-700'
-                        : 'border-surface-200 text-surface-500 hover:border-surface-300'
+                    onClick={() => update({ goal: option.value })}
+                    className={`w-full rounded-[1.5rem] border-2 px-4 py-4 text-left transition-all ${
+                      form.goal === option.value
+                        ? 'border-brand-500 bg-brand-50'
+                        : 'border-surface-200 hover:border-surface-300'
                     }`}
                   >
-                    {s === 'male' ? 'Masculino' : 'Femenino'}
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{option.emoji}</span>
+                      <div>
+                        <div className="font-semibold text-surface-900">{option.label}</div>
+                        <div className="text-sm text-surface-500 mt-1">{option.desc}</div>
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-surface-400 mt-1.5">Se usa solo para calcular tu metabolismo basal</p>
+
+              {targets && (
+                <div className="page-shell px-4 py-4">
+                  <div className="relative z-10">
+                    <p className="section-label mb-3">Objetivos calculados</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="metric-tile text-center">
+                        <div className="font-display text-2xl font-bold text-brand-700">{targets.calories}</div>
+                        <div className="text-xs text-surface-500 mt-1">kcal/dia</div>
+                      </div>
+                      <div className="metric-tile text-center">
+                        <div className="font-display text-2xl font-bold text-blue-600">{targets.protein_g}g</div>
+                        <div className="text-xs text-surface-500 mt-1">proteina</div>
+                      </div>
+                      <div className="metric-tile text-center">
+                        <div className="font-display text-2xl font-bold text-amber-600">{targets.carbs_g}g</div>
+                        <div className="text-xs text-surface-500 mt-1">carbos</div>
+                      </div>
+                      <div className="metric-tile text-center">
+                        <div className="font-display text-2xl font-bold text-rose-600">{targets.fat_g}g</div>
+                        <div className="text-xs text-surface-500 mt-1">grasas</div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-surface-400 mt-3 text-center">
+                      Proteina ajustada para una dieta plant-based.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )}
+        </section>
 
-        {/* Step 1: Activity level */}
-        {step === 1 && (
-          <div className="space-y-3">
-            {ACTIVITY_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => update({ activity_level: opt.value })}
-                className={`w-full text-left px-4 py-4 rounded-2xl border-2 transition-all ${
-                  form.activity_level === opt.value
-                    ? 'border-brand-500 bg-brand-50'
-                    : 'border-surface-200 hover:border-surface-300'
-                }`}
-              >
-                <div className="font-semibold text-surface-900">{opt.label}</div>
-                <div className="text-sm text-surface-500">{opt.desc}</div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Step 2: Goal */}
-        {step === 2 && (
-          <div className="space-y-3">
-            {GOAL_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => update({ goal: opt.value })}
-                className={`w-full text-left px-4 py-4 rounded-2xl border-2 transition-all ${
-                  form.goal === opt.value
-                    ? 'border-brand-500 bg-brand-50'
-                    : 'border-surface-200 hover:border-surface-300'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{opt.emoji}</span>
-                  <div>
-                    <div className="font-semibold text-surface-900">{opt.label}</div>
-                    <div className="text-sm text-surface-500">{opt.desc}</div>
-                  </div>
-                </div>
-              </button>
-            ))}
-
-            {/* Preview targets */}
-            {(() => {
-              const targets = calculateTargets(form);
-              if (!targets) return null;
-              return (
-                <div className="card p-4 mt-6">
-                  <p className="text-sm font-semibold text-surface-600 mb-3">Tus objetivos calculados:</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="text-center">
-                      <div className="font-display text-2xl font-bold text-brand-600">{targets.calories}</div>
-                      <div className="text-xs text-surface-500">kcal/día</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-display text-2xl font-bold text-blue-600">{targets.protein_g}g</div>
-                      <div className="text-xs text-surface-500">proteína</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-display text-2xl font-bold text-amber-600">{targets.carbs_g}g</div>
-                      <div className="text-xs text-surface-500">carbos</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-display text-2xl font-bold text-rose-600">{targets.fat_g}g</div>
-                      <div className="text-xs text-surface-500">grasas</div>
-                    </div>
-                  </div>
-                  <p className="text-xs text-surface-400 mt-3 text-center">
-                    Proteína: 1.8g/kg (ajustada para dieta plant-based)
-                  </p>
-                </div>
-              );
-            })()}
-          </div>
-        )}
-
-        {/* Navigation */}
-        <div className="flex gap-3 mt-8">
+        <div className="flex gap-3">
           {step > 0 && (
-            <button
-              onClick={() => setStep(step - 1)}
-              className="btn-secondary flex items-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" /> Atrás
+            <button onClick={() => setStep(step - 1)} className="btn-secondary flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4" /> Atras
             </button>
           )}
           <button

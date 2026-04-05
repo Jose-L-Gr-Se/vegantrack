@@ -226,7 +226,7 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
 
   const IngredientPicker = () => (
     <div className="fixed inset-0 z-[70] bg-black/50 flex flex-col justify-end" onClick={() => { setShowPicker(false); setPickerSelected(null); }}>
-      <div className="bg-white dark:bg-surface-800 rounded-t-3xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="card rounded-t-[2rem] max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-2">
           <div className="w-10 h-1 bg-surface-300 rounded-full" />
@@ -373,7 +373,7 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
     const t = computeRecipeNutrients(logDialog.recipe.ingredients, servings / logDialog.recipe.total_servings);
     return (
       <div className="fixed inset-0 z-[60] bg-black/50 flex items-end justify-center" onClick={() => { setLogDialog(null); setLogError(null); }}>
-        <div className="bg-white dark:bg-surface-800 rounded-t-3xl w-full max-w-lg p-5 pb-10 space-y-4" onClick={e => e.stopPropagation()}>
+        <div className="card rounded-t-[2rem] w-full max-w-lg p-5 pb-10 space-y-4" onClick={e => e.stopPropagation()}>
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-surface-900">{logDialog.recipe.name}</h3>
             <button onClick={() => setLogDialog(null)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-100">
@@ -437,19 +437,22 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
   // ── EDITOR VIEW ───────────────────────────────────────────────────────────
   if (view === 'editor') {
     return (
-      <div className="min-h-screen bg-gray-50 pb-24">
-        <div className="bg-gradient-to-br from-green-600 to-emerald-700 px-4 pt-12 pb-6 text-white">
+      <div className="pb-32 px-4 pt-6">
+        <div className="page-shell px-5 py-5 mb-4">
           <div className="flex items-center gap-3">
-            <button onClick={() => setView('list')} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">
-              <ChevronLeft className="w-5 h-5" />
+            <button onClick={() => setView('list')} className="icon-badge">
+              <ChevronLeft className="w-5 h-5 text-surface-700" />
             </button>
-            <h1 className="text-xl font-bold">{editorRecipe ? 'Editar receta' : 'Nueva receta'}</h1>
+            <div className="relative z-10">
+              <p className="section-label mb-2">Recetas</p>
+              <h1 className="font-display text-[2rem] font-bold tracking-[-0.05em] text-surface-900">{editorRecipe ? 'Editar receta' : 'Nueva receta'}</h1>
+            </div>
           </div>
         </div>
 
-        <div className="mx-4 -mt-3 space-y-4">
+        <div className="space-y-4">
           {/* Header form */}
-          <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+          <div className="card p-4 space-y-3">
             <div>
               <label className="label">Nombre de la receta *</label>
               <input type="text" value={editorName} onChange={e => setEditorName(e.target.value)}
@@ -488,7 +491,7 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
 
           {/* Ingredients */}
           {editorRecipe && (
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="card overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-surface-50">
                 <span className="font-semibold text-surface-800 text-sm">
                   Ingredientes ({editorRecipe.ingredients.length})
@@ -564,25 +567,26 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
     const totals = computeRecipeNutrients(selectedRecipe.ingredients);
     const perServing = computeRecipeNutrients(selectedRecipe.ingredients, 1 / selectedRecipe.total_servings);
     return (
-      <div className="min-h-screen bg-gray-50 pb-24">
-        <div className="bg-gradient-to-br from-green-600 to-emerald-700 px-4 pt-12 pb-8 text-white">
+      <div className="pb-32 px-4 pt-6">
+        <div className="page-shell px-5 py-5 mb-4">
           <div className="flex items-center gap-3 mb-1">
-            <button onClick={() => setView('list')} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">
-              <ChevronLeft className="w-5 h-5" />
+            <button onClick={() => setView('list')} className="icon-badge">
+              <ChevronLeft className="w-5 h-5 text-surface-700" />
             </button>
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold truncate">{selectedRecipe.name}</h1>
-              {selectedRecipe.description && <p className="text-green-100 text-xs mt-0.5">{selectedRecipe.description}</p>}
+              <p className="section-label mb-2">Receta</p>
+              <h1 className="font-display text-[2rem] font-bold tracking-[-0.05em] text-surface-900 truncate">{selectedRecipe.name}</h1>
+              {selectedRecipe.description && <p className="text-surface-500 text-xs mt-2">{selectedRecipe.description}</p>}
             </div>
-            <button onClick={() => openEdit(selectedRecipe)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">
-              <Edit2 className="w-4 h-4" />
+            <button onClick={() => openEdit(selectedRecipe)} className="icon-badge">
+              <Edit2 className="w-4 h-4 text-surface-700" />
             </button>
           </div>
         </div>
 
-        <div className="mx-4 -mt-4 space-y-4">
+        <div className="space-y-4">
           {/* Nutrition card */}
-          <div className="bg-white rounded-2xl shadow-sm p-4">
+          <div className="card p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-surface-500 uppercase">
                 {selectedRecipe.total_servings > 1 ? `Por porción (1 de ${selectedRecipe.total_servings})` : 'Totales'}
@@ -607,7 +611,7 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
           </div>
 
           {/* Ingredients */}
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="card overflow-hidden">
             <div className="px-4 py-3 border-b border-surface-50">
               <span className="font-semibold text-surface-800 text-sm">{selectedRecipe.ingredients.length} ingredientes</span>
             </div>
@@ -645,26 +649,29 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
 
   // ── LIST VIEW ─────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      <div className="bg-gradient-to-br from-green-600 to-emerald-700 px-4 pt-12 pb-8 text-white">
+    <div className="pb-32 px-4 pt-6">
+      <div className="page-shell px-5 py-5 mb-4">
         <div className="flex items-center gap-3 mb-1">
-          <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">
-            <ChevronLeft className="w-5 h-5" />
+          <button onClick={onBack} className="icon-badge">
+            <ChevronLeft className="w-5 h-5 text-surface-700" />
           </button>
-          <h1 className="text-2xl font-bold">Mis Recetas</h1>
+          <div>
+            <p className="section-label mb-2">Recetas</p>
+            <h1 className="font-display text-[2rem] font-bold tracking-[-0.05em] text-surface-900">Mis recetas</h1>
+          </div>
         </div>
-        <p className="text-green-100 text-sm ml-11">Varios alimentos al diario de un solo toque</p>
+        <p className="relative z-10 text-surface-500 text-sm ml-11">Varios alimentos al diario de un solo toque</p>
       </div>
 
       {logSuccess && (
-        <div className="mx-4 mt-4 bg-green-50 border border-green-100 text-green-700 text-sm px-4 py-3 rounded-2xl flex items-center gap-2">
+        <div className="card text-green-700 text-sm px-4 py-3 mb-4 flex items-center gap-2">
           <Check className="w-4 h-4" />{logSuccess}
         </div>
       )}
 
-      <div className="mx-4 mt-4 mb-3">
+      <div className="mb-4">
         <button onClick={openCreate}
-          className="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-2xl px-6 py-3.5 transition-colors">
+          className="btn-primary w-full flex items-center justify-center gap-2">
           <Plus className="w-5 h-5" /> Nueva receta
         </button>
       </div>
@@ -682,11 +689,11 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
           <p className="text-sm text-surface-400 mt-1">Crea tu primera receta para añadir varios alimentos al diario de un toque</p>
         </div>
       ) : (
-        <div className="mx-4 space-y-3">
+        <div className="space-y-3">
           {recipes.map(recipe => {
             const t = computeRecipeNutrients(recipe.ingredients, 1 / recipe.total_servings);
             return (
-              <div key={recipe.id} className="bg-white rounded-2xl shadow-sm border border-surface-100 overflow-hidden">
+              <div key={recipe.id} className="card overflow-hidden">
                 <button onClick={() => { setSelectedRecipe(recipe); setView('detail'); }}
                   className="w-full flex items-center gap-3 p-4 text-left hover:bg-surface-50 transition-colors">
                   <div className="w-12 h-12 bg-brand-50 rounded-2xl flex items-center justify-center flex-shrink-0">
