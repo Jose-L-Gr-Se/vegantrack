@@ -11,11 +11,11 @@ import { Spinner } from '@/components/ui/Spinner';
 import { SupplementsWidget } from '@/features/diary/SupplementsWidget';
 import type { FoodLogEntry, MealType } from '@/types';
 
-const MEALS: { type: MealType; label: string; icon: string }[] = [
-  { type: 'breakfast', label: 'Desayuno', icon: '🌅' },
-  { type: 'lunch', label: 'Comida', icon: '☀️' },
-  { type: 'dinner', label: 'Cena', icon: '🌙' },
-  { type: 'snack', label: 'Snacks', icon: '🍎' },
+const MEALS: { type: MealType; label: string }[] = [
+  { type: 'breakfast', label: 'Desayuno' },
+  { type: 'lunch', label: 'Comida' },
+  { type: 'dinner', label: 'Cena' },
+  { type: 'snack', label: 'Snacks' },
 ];
 
 function formatDate(dateStr: string): string {
@@ -157,17 +157,11 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
         {/* Streak badge */}
         {profile && profile.streak_count > 0 && (
           <div className="flex justify-center mt-2">
-            <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-              profile.streak_count >= 7
-                ? 'bg-orange-100 text-orange-700'
-                : profile.streak_count >= 3
-                ? 'bg-amber-100 text-amber-700'
-                : 'bg-surface-100 text-surface-600'
-            }`}>
-              <Flame className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-surface-100 text-surface-500">
+              <Flame className="w-3 h-3" />
               {profile.streak_count === 1
-                ? '¡Primer día!'
-                : `${profile.streak_count} días seguidos`}
+                ? 'Primer día'
+                : `${profile.streak_count} días`}
             </div>
           </div>
         )}
@@ -323,10 +317,9 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
           return (
             <div key={meal.type} className="card overflow-hidden">
               {/* Meal header */}
-              <div className="flex items-center justify-between px-4 py-3 bg-surface-50/80 border-b border-surface-100">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-lg">{meal.icon}</span>
-                  <span className="font-semibold text-surface-800">{meal.label}</span>
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-surface-800 text-sm">{meal.label}</span>
                   {mealEntries.length > 0 && (
                     <span className="text-xs text-surface-400 font-mono">{Math.round(mealCalories)} kcal</span>
                   )}
@@ -336,19 +329,19 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
                     window.dispatchEvent(new CustomEvent('navigate-search', { detail: meal.type }));
                   }}
                   aria-label={`Añadir a ${meal.label}`}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-brand-50 text-brand-600 hover:bg-brand-100 transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-surface-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
                 >
-                  <Plus className="w-4 h-4" strokeWidth={2.5} />
+                  <Plus className="w-4 h-4" strokeWidth={2} />
                 </button>
               </div>
 
               {/* Entries */}
               {mealEntries.length === 0 ? (
-                <div className="px-4 py-6 text-center text-sm text-surface-400">
+                <div className="px-4 pb-5 text-center text-sm text-surface-400 border-t border-surface-50">
                   Sin alimentos registrados
                 </div>
               ) : (
-                <div className="divide-y divide-surface-50">
+                <div className="divide-y divide-surface-50 border-t border-surface-100">
                   {mealEntries.map((entry) => (
                     <FoodEntry
                       key={entry.id}
@@ -386,19 +379,14 @@ function FoodEntry({
         {entry.image_url ? (
           <img src={entry.image_url} alt="" className="w-10 h-10 rounded-xl object-cover bg-surface-100" />
         ) : (
-          <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
-            <Leaf className="w-4 h-4 text-brand-400" />
+          <div className="w-10 h-10 rounded-xl bg-surface-100 flex items-center justify-center flex-shrink-0">
+            <Leaf className="w-4 h-4 text-surface-400" />
           </div>
         )}
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <p className="text-sm font-medium text-surface-800 truncate">{entry.food_name}</p>
-            {entry.is_vegan && (
-              <span className="flex-shrink-0 w-4 h-4 bg-brand-100 rounded-full flex items-center justify-center">
-                <Leaf className="w-2.5 h-2.5 text-brand-600" />
-              </span>
-            )}
           </div>
           <p className="text-xs text-surface-400">
             {entry.serving_size_g}g

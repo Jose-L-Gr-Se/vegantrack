@@ -29,7 +29,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                   : 'text-surface-400 hover:text-surface-600'
               }`}
             >
-              <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-brand-50' : ''}`}>
+              <div className="p-1">
                 <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
               </div>
               <span className={`text-[10px] font-medium ${isActive ? 'text-brand-600' : 'text-surface-500'}`}>
