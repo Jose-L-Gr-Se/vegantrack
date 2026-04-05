@@ -21,7 +21,7 @@ export function MacroBar({ label, value, target, unit = 'g', color }: MacroBarPr
           <span className="text-surface-400"> / {target}{unit}</span>
         </span>
       </div>
-      <div className="h-2.5 bg-surface-100 rounded-full overflow-hidden">
+      <div className="h-1.5 bg-surface-100 rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-500 ease-out"
           style={{

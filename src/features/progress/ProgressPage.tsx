@@ -122,12 +122,12 @@ export function ProgressPage() {
             }
             colorClass={
               stats.change === null
-                ? 'text-surface-600 bg-surface-100'
+                ? 'text-surface-600 bg-surface-50'
                 : stats.change < 0
-                ? 'text-brand-700 bg-brand-50'
+                ? 'text-brand-600 bg-surface-50'
                 : stats.change > 0
-                ? 'text-red-600 bg-red-50'
-                : 'text-surface-600 bg-surface-100'
+                ? 'text-red-500 bg-surface-50'
+                : 'text-surface-600 bg-surface-50'
             }
             icon={
               stats.change !== null ? (
@@ -145,7 +145,7 @@ export function ProgressPage() {
       {/* Chart */}
       <div className="card p-4 mb-4">
         <div className="flex items-center justify-between mb-4">
-          <span className="font-semibold text-surface-800 text-sm">Evolución</span>
+          <span className="text-xs font-medium text-surface-400 uppercase tracking-widest">Evolución</span>
           <div className="flex gap-1">
             {PERIODS.map((p) => (
               <button
@@ -245,7 +245,7 @@ export function ProgressPage() {
       {logs.length > 0 && (
         <div className="card overflow-hidden mb-4">
           <div className="px-4 py-3 border-b border-surface-100">
-            <span className="font-semibold text-surface-800 text-sm">
+            <span className="text-xs font-medium text-surface-400 uppercase tracking-widest">
               Historial ({logs.length} registros)
             </span>
           </div>
@@ -316,7 +316,7 @@ function StatCard({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className={`rounded-2xl p-2 text-center ${colorClass}`}>
+    <div className={`rounded-xl p-2 text-center ${colorClass}`}>
       <div className="flex items-center justify-center gap-0.5 min-h-[20px]">
         {icon}
         <span className="text-sm font-bold truncate">{value}</span>
