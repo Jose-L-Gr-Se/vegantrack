@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Scale, Plus, Trash2 } from 'lucide-react';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import {
   ResponsiveContainer,
   LineChart,
@@ -62,15 +63,11 @@ export function ProgressPage() {
   };
 
   return (
-    <div className="pb-28">
-      {/* Header */}
-      <div className="bg-gradient-to-br from-brand-600 to-brand-700 px-4 pt-12 pb-8 text-white">
-        <h1 className="font-display text-2xl font-bold">Progreso de peso</h1>
-        <p className="text-brand-100 text-sm mt-1">Registra y visualiza tu evolución</p>
-      </div>
+    <div className="pb-28 px-4 pt-6">
+      <SectionHeader title="Progreso de peso" subtitle="Registra y visualiza tu evolución" />
 
       {/* Quick log card */}
-      <div className="mx-4 -mt-4 card p-4 mb-4">
+      <div className="card p-4 mb-4">
         <div className="flex items-center gap-2 mb-3">
           <Scale className="w-5 h-5 text-brand-600" />
           <span className="font-semibold text-surface-800 text-sm">
@@ -112,7 +109,7 @@ export function ProgressPage() {
 
       {/* Stats */}
       {stats.current !== null && (
-        <div className="mx-4 grid grid-cols-4 gap-2 mb-4">
+        <div className="grid grid-cols-4 gap-2 mb-4">
           <StatCard label="Actual" value={`${stats.current}kg`} colorClass="text-brand-700 bg-brand-50" />
           <StatCard label="Mínimo" value={`${stats.min}kg`} colorClass="text-blue-700 bg-blue-50" />
           <StatCard label="Máximo" value={`${stats.max}kg`} colorClass="text-amber-700 bg-amber-50" />
@@ -146,7 +143,7 @@ export function ProgressPage() {
       )}
 
       {/* Chart */}
-      <div className="mx-4 card p-4 mb-4">
+      <div className="card p-4 mb-4">
         <div className="flex items-center justify-between mb-4">
           <span className="font-semibold text-surface-800 text-sm">Evolución</span>
           <div className="flex gap-1">
@@ -246,7 +243,7 @@ export function ProgressPage() {
 
       {/* Historial */}
       {logs.length > 0 && (
-        <div className="mx-4 card overflow-hidden mb-4">
+        <div className="card overflow-hidden mb-4">
           <div className="px-4 py-3 border-b border-surface-100">
             <span className="font-semibold text-surface-800 text-sm">
               Historial ({logs.length} registros)
