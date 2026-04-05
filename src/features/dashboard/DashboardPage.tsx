@@ -114,7 +114,7 @@ export function DashboardPage() {
   return (
     <div className="pb-32 px-4 pt-6">
       <SectionHeader
-        title="Dashboard"
+        title="Resumen"
         subtitle="Tu progreso nutricional"
         action={
           <div className="icon-badge">
@@ -136,7 +136,7 @@ export function DashboardPage() {
           {!veganScore.hasData ? (
             <div className="text-center py-6">
               <p className="text-surface-500 text-sm">Registra alimentos para calcular tu score</p>
-              <p className="text-xs text-surface-400 mt-1">Aparecera aqui en cuanto anadas algo al diario</p>
+              <p className="text-xs text-surface-400 mt-1">Aparecerá aquí en cuanto añadas algo al diario</p>
             </div>
           ) : (
             <div className="flex items-start gap-5">
@@ -177,8 +177,8 @@ export function DashboardPage() {
 
               <div className="flex-1 space-y-2.5">
                 {([
-                  { label: 'Calorias', data: veganScore.calories },
-                  { label: 'Proteina', data: veganScore.protein },
+                  { label: 'Calorías', data: veganScore.calories },
+                  { label: 'Proteína', data: veganScore.protein },
                   { label: 'Micros', data: veganScore.micros },
                   { label: 'Fibra', data: veganScore.fiber },
                   { label: 'Racha', data: veganScore.streak },
@@ -235,7 +235,7 @@ export function DashboardPage() {
           </ProgressRing>
 
           <div className="flex-1 space-y-3">
-            <MacroBar label="Proteina" value={summary.protein_g} target={profile?.protein_target_g ?? 120} color="#3b82f6" />
+            <MacroBar label="Proteína" value={summary.protein_g} target={profile?.protein_target_g ?? 120} color="#3b82f6" />
             <MacroBar label="Carbos" value={summary.carbs_g} target={profile?.carbs_target_g ?? 250} color="#f59e0b" />
             <MacroBar label="Grasas" value={summary.fat_g} target={profile?.fat_target_g ?? 65} color="#ef4444" />
           </div>
@@ -256,7 +256,7 @@ export function DashboardPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.18em] text-surface-500 font-semibold">Racha</p>
-                <p className="text-xl font-display font-bold text-brand-700 mt-1">{profile?.streak_count ?? 0} dias</p>
+                <p className="text-xl font-display font-bold text-brand-700 mt-1">{profile?.streak_count ?? 0} días</p>
               </div>
               <Flame className="w-4 h-4 text-orange-500" />
             </div>
@@ -267,12 +267,12 @@ export function DashboardPage() {
       <div className="card p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="section-label mb-2">Ultima semana</p>
-            <h2 className="font-display text-2xl font-bold tracking-[-0.04em] text-surface-900">Energia registrada</h2>
+            <p className="section-label mb-2">Última semana</p>
+            <h2 className="font-display text-2xl font-bold tracking-[-0.04em] text-surface-900">Energía registrada</h2>
           </div>
           {weekAvg && (
             <span className="status-pill font-mono">
-              {weekAvg.calories} kcal/dia
+              {weekAvg.calories} kcal/día
             </span>
           )}
         </div>
@@ -352,8 +352,8 @@ export function DashboardPage() {
 
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: 'Calorias', value: weekAvg.calories, target: calorieTarget, unit: '', color: 'text-brand-600' },
-              { label: 'Proteina', value: weekAvg.protein, target: profile?.protein_target_g ?? 120, unit: 'g', color: 'text-blue-600' },
+              { label: 'Calorías', value: weekAvg.calories, target: calorieTarget, unit: '', color: 'text-brand-600' },
+              { label: 'Proteína', value: weekAvg.protein, target: profile?.protein_target_g ?? 120, unit: 'g', color: 'text-blue-600' },
               { label: 'Carbos', value: weekAvg.carbs, target: profile?.carbs_target_g ?? 250, unit: 'g', color: 'text-amber-600' },
               { label: 'Grasas', value: weekAvg.fat, target: profile?.fat_target_g ?? 65, unit: 'g', color: 'text-rose-600' },
             ].map((item) => {
