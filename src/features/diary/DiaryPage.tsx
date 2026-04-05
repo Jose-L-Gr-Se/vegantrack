@@ -681,7 +681,6 @@ function MacroDetailModal({
                   const pctCal = summary.calories > 0 ? Math.round((meal.calories / summary.calories) * 100) : 0;
                   return (
                     <div key={meal.type} className="flex items-center gap-3">
-                      <span className="text-base">{meal.icon}</span>
                       <div className="flex-1">
                         <div className="flex justify-between text-sm">
                           <span className="text-surface-700">{meal.label}</span>
