@@ -8,7 +8,7 @@ interface BottomNavProps {
 const TABS = [
   { id: 'diary', label: 'Diario', Icon: Book },
   { id: 'search', label: 'Buscar', Icon: Search },
-  { id: 'dashboard', label: 'Dashboard', Icon: BarChart3 },
+  { id: 'dashboard', label: 'Resumen', Icon: BarChart3 },
   { id: 'progress', label: 'Progreso', Icon: TrendingUp },
   { id: 'profile', label: 'Perfil', Icon: User },
 ];
@@ -16,7 +16,7 @@ const TABS = [
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   return (
     <nav
-      aria-label="Navegacion principal"
+      aria-label="Navegación principal"
       className="fixed bottom-0 left-0 right-0 z-50 px-3 pb-3 pointer-events-none"
     >
       <div className="pointer-events-auto max-w-lg mx-auto rounded-[2rem] border border-white/80 bg-white/75 px-2 py-2 shadow-[0_24px_60px_-34px_rgba(15,23,42,0.5)] backdrop-blur-2xl">
