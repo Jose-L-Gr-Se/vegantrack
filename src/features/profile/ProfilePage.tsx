@@ -4,6 +4,7 @@ import { useCustomFoodStore } from '@/stores/customFoodStore';
 import { calculateTargets } from '@/utils/nutrition';
 import { CustomFoodModal } from '@/features/search/CustomFoodModal';
 import { Spinner } from '@/components/ui/Spinner';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { LogOut, Save, User, Calculator, Star, Pencil, Trash2, Plus, Moon, Sun, X, Zap } from 'lucide-react';
 import type { Profile, CustomFood, SupplementNutrientKey } from '@/types';
 import { useSupplementStore } from '@/stores/supplementStore';
@@ -105,16 +106,15 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
 
   return (
     <div className="pb-28 px-4 pt-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-display text-2xl font-bold">Perfil</h1>
-          <p className="text-sm text-surface-500">{profile.display_name || 'Sin nombre'}</p>
-        </div>
-        <div className="w-12 h-12 bg-brand-100 rounded-2xl flex items-center justify-center">
-          <User className="w-6 h-6 text-brand-600" />
-        </div>
-      </div>
+      <SectionHeader
+        title="Perfil"
+        subtitle={profile.display_name || 'Sin nombre'}
+        action={
+          <div className="w-12 h-12 bg-brand-100 rounded-2xl flex items-center justify-center">
+            <User className="w-6 h-6 text-brand-600" />
+          </div>
+        }
+      />
 
       {/* Banner Pro */}
       {!isPro && (

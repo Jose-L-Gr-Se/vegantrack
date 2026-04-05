@@ -4,7 +4,8 @@ import { useDiaryStore } from '@/stores/diaryStore';
 import { useSupplementStore } from '@/stores/supplementStore';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { MacroBar } from '@/components/ui/MacroBar';
-import { AlertTriangle } from 'lucide-react';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { TrendingUp, Flame, Zap, AlertTriangle, Target } from 'lucide-react';
 import type { SupplementNutrientKey } from '@/types';
 import { computeVeganScore, getScoreColor, getScoreLabel } from '@/utils/veganScore';
 
@@ -32,7 +33,7 @@ export function DashboardPage() {
   const [weekData, setWeekData] = useState<DayData[]>([]);
   const [loading, setLoading] = useState(true);
   const summary = getDaySummary();
-  const { supplements, takenToday, getTodayContributions } = useSupplementStore();
+  const { getTodayContributions } = useSupplementStore();
 
   const suppContributions = getTodayContributions();
 
@@ -113,8 +114,7 @@ export function DashboardPage() {
 
   return (
     <div className="pb-28 px-4 pt-6">
-      <h1 className="font-display text-2xl font-bold mb-1">Dashboard</h1>
-      <p className="text-sm text-surface-400 mb-6">Tu progreso nutricional</p>
+      <SectionHeader title="Dashboard" subtitle="Tu progreso nutricional" />
 
       {/* VeganScore */}
       <div className="card p-5 mb-4">

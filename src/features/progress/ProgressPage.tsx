@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Scale, Plus, Trash2 } from 'lucide-react';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import {
   ResponsiveContainer,
   LineChart,
@@ -63,11 +64,7 @@ export function ProgressPage() {
 
   return (
     <div className="pb-28 px-4 pt-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="font-display text-2xl font-bold mb-1">Progreso de peso</h1>
-        <p className="text-sm text-surface-400">Registra y visualiza tu evolución</p>
-      </div>
+      <SectionHeader title="Progreso de peso" subtitle="Registra y visualiza tu evolución" />
 
       {/* Quick log card */}
       <div className="card p-4 mb-4">
@@ -113,9 +110,9 @@ export function ProgressPage() {
       {/* Stats */}
       {stats.current !== null && (
         <div className="grid grid-cols-4 gap-2 mb-4">
-          <StatCard label="Actual" value={`${stats.current}kg`} colorClass="text-surface-900 bg-surface-50" />
-          <StatCard label="Mínimo" value={`${stats.min}kg`} colorClass="text-surface-700 bg-surface-50" />
-          <StatCard label="Máximo" value={`${stats.max}kg`} colorClass="text-surface-700 bg-surface-50" />
+          <StatCard label="Actual" value={`${stats.current}kg`} colorClass="text-brand-700 bg-brand-50" />
+          <StatCard label="Mínimo" value={`${stats.min}kg`} colorClass="text-blue-700 bg-blue-50" />
+          <StatCard label="Máximo" value={`${stats.max}kg`} colorClass="text-amber-700 bg-amber-50" />
           <StatCard
             label="Cambio"
             value={
