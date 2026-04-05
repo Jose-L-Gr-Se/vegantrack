@@ -548,17 +548,18 @@ export function SearchPage() {
     const vegan = isProductVegan(selectedProduct);
 
     return (
-      <div className="pb-28 px-4 pt-6">
-        <button onClick={clearProduct} aria-label="Volver a búsqueda" className="flex items-center gap-1 text-sm text-surface-500 mb-4 hover:text-surface-700">
+      <div className="pb-32 px-4 pt-6">
+        <button onClick={clearProduct} aria-label="Volver a búsqueda" className="status-pill mb-4 hover:text-surface-700">
           <X className="w-4 h-4" /> Volver a búsqueda
         </button>
 
-        <div className="card overflow-hidden">
+        <div className="page-shell overflow-hidden">
           {selectedProduct.image_front_url && (
-            <img src={selectedProduct.image_front_url} alt="" className="w-full h-48 object-contain bg-surface-50 p-4" />
+            <img src={selectedProduct.image_front_url} alt="" className="w-full h-52 object-contain bg-surface-50 p-5" />
           )}
-          <div className="p-4 space-y-4">
+          <div className="relative z-10 p-5 space-y-5">
             <div>
+              <p className="section-label mb-2">Producto</p>
               <div className="flex items-center gap-2">
                 <h2 className="font-display text-xl font-bold">{selectedProduct.product_name}</h2>
                 {vegan && (
@@ -616,7 +617,7 @@ export function SearchPage() {
             </div>
 
             {/* Nutrients */}
-            <div className="bg-surface-50 rounded-2xl p-4 space-y-2">
+            <div className="page-shell rounded-[1.5rem] p-4 space-y-2">
               <div className="flex justify-between font-semibold">
                 <span>Calorías</span>
                 <span className="font-mono">{servingGrams > 0 ? Math.round(n['energy-kcal_100g'] * ratio) : 0} kcal</span>
@@ -698,7 +699,7 @@ export function SearchPage() {
 
             {/* Meal selector — ONLY shown when NOT coming from diary (no lockedMealType) */}
             {lockedMealType ? (
-              <div className="bg-surface-50 rounded-2xl px-4 py-3 flex items-center gap-2">
+              <div className="metric-tile px-4 py-3 flex items-center gap-2">
                 <span className="text-sm text-surface-600">Añadir a</span>
                 <span className="text-sm font-semibold text-surface-800">
                   {MEAL_OPTIONS.find(m => m.value === lockedMealType)?.icon} {MEAL_LABELS[lockedMealType]}
@@ -773,16 +774,28 @@ export function SearchPage() {
   const recentsToShow = showAllRecents ? recentFoods : recentFoods.slice(0, 5);
 
   return (
-    <div className="pb-28 px-4 pt-6">
-      <h1 className="font-display text-2xl font-bold mb-4">Buscar alimento</h1>
+    <div className="pb-32 px-4 pt-6">
+      <div className="page-shell p-5 mb-4">
+        <div className="relative z-10 flex items-start justify-between gap-3">
+        <div>
+          <p className="section-label mb-2">Buscar</p>
+          <h1 className="font-display text-[2rem] font-bold tracking-[-0.05em] text-surface-900">Buscar alimento</h1>
+          <p className="text-sm text-surface-500 mt-2">Busca por nombre, marca o escaneo sin cambiar el flujo actual.</p>
+        </div>
+        <div className="icon-badge">
+          <Search className="w-5 h-5 text-brand-600" />
+        </div>
+      </div>
+      </div>
 
       {/* Success message */}
       {addedMessage && (
-        <div className="bg-brand-50 text-brand-700 text-sm px-4 py-3 rounded-2xl border border-brand-100 mb-4 flex items-center gap-2">
+        <div className="card text-brand-700 text-sm px-4 py-3 mb-4 flex items-center gap-2">
           <Leaf className="w-4 h-4" /> {addedMessage}
         </div>
       )}
 
+      <div className="page-shell p-4 mb-4">
       {/* Search bar */}
       <div className="flex gap-2 mb-3">
         <div className="relative flex-1">
@@ -821,22 +834,23 @@ export function SearchPage() {
       </div>
 
       {/* Filters row */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2">
         <button
           onClick={() => setVeganOnly(!veganOnly)}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+          className={`status-pill ${
             veganOnly
               ? 'bg-brand-100 text-brand-700 border border-brand-200'
-              : 'bg-surface-100 text-surface-500 border border-surface-200'
+              : 'text-surface-500'
           }`}
         >
           <Leaf className="w-3 h-3" /> Solo veganos
         </button>
       </div>
+      </div>
 
       {/* Scanner container */}
       {scanning && (
-        <div className="mb-4 rounded-2xl overflow-hidden border-2 border-brand-500">
+        <div className="mb-4 card overflow-hidden border-2 border-brand-500">
           <div id="scanner-container" className="w-full" />
           <p className="text-center text-sm text-surface-500 py-2 bg-surface-50">
             Enfoca el código de barras
@@ -846,7 +860,7 @@ export function SearchPage() {
 
       {/* Camera permission / init error */}
       {scanError && (
-        <div className="mb-4 bg-red-50 text-red-600 text-sm px-4 py-3 rounded-2xl border border-red-100 flex items-start gap-2">
+        <div className="mb-4 card text-red-600 text-sm px-4 py-3 flex items-start gap-2">
           <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
           <span>{scanError}</span>
         </div>
@@ -984,19 +998,21 @@ export function SearchPage() {
               <Clock className="w-4 h-4 text-surface-400" />
               <h2 className="text-sm font-semibold text-surface-600">Recientes</h2>
             </div>
-            <button
-              onClick={() => setShowCustomFoodModal(true)}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 px-2.5 py-1.5 rounded-xl transition-colors"
-              title="Crear alimento personalizado"
-            >
-              <Plus className="w-3 h-3" strokeWidth={2.5} /> Crear propio
-            </button>
-            <button
-              onClick={() => window.dispatchEvent(new CustomEvent('navigate-recipes'))}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-xl transition-colors"
-            >
-              <ChefHat className="w-3 h-3" /> Recetas
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowCustomFoodModal(true)}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 px-2.5 py-1.5 rounded-xl transition-colors"
+                title="Crear alimento personalizado"
+              >
+                <Plus className="w-3 h-3" strokeWidth={2.5} /> Crear propio
+              </button>
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('navigate-recipes'))}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-xl transition-colors"
+              >
+                <ChefHat className="w-3 h-3" /> Recetas
+              </button>
+            </div>
           </div>
           <div className="space-y-2">
             {recentsToShow.map((food, i) => (

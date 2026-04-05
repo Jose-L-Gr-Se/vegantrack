@@ -120,16 +120,16 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
   const getEntriesForMeal = (type: MealType) => entries.filter((e) => e.meal_type === type);
 
   return (
-    <div className="pb-28 px-4 pt-6">
+    <div className="pb-32 px-4 pt-6">
       {/* Success message from Search */}
       {successMessage && (
-        <div className="mb-4 bg-brand-50 text-brand-700 text-sm px-4 py-3 rounded-2xl border border-brand-100 flex items-center gap-2">
+        <div className="mb-4 card text-brand-700 text-sm px-4 py-3 flex items-center gap-2">
           <Leaf className="w-4 h-4 flex-shrink-0" />
           <span>{successMessage}</span>
         </div>
       )}
       {/* Date selector */}
-      <div className="mb-6">
+      <div className="page-shell mb-6 px-4 py-4">
         <div className="flex items-center justify-between">
           <button
             onClick={() => setDate(shiftDate(selectedDate, -1))}
@@ -139,11 +139,12 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
             <ChevronLeft className="w-5 h-5 text-surface-500" />
           </button>
           <button onClick={() => setShowCalendar((v) => !v)} className="text-center">
-            <h1 className="font-display text-xl font-bold capitalize flex items-center gap-1 justify-center">
+            <p className="section-label mb-1">Diario</p>
+            <h1 className="font-display text-[2rem] font-bold tracking-[-0.05em] capitalize flex items-center gap-1 justify-center leading-none">
               {formatDate(selectedDate)}
               <ChevronDown className={`w-4 h-4 text-surface-400 transition-transform ${showCalendar ? 'rotate-180' : ''}`} />
             </h1>
-            <p className="text-xs text-surface-400">{selectedDate}</p>
+            <p className="text-xs text-surface-400 mt-2">{selectedDate}</p>
           </button>
           <button
             onClick={() => setDate(shiftDate(selectedDate, 1))}
@@ -156,8 +157,8 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
 
         {/* Streak badge */}
         {profile && profile.streak_count > 0 && (
-          <div className="flex justify-center mt-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-surface-100 text-surface-500">
+          <div className="flex justify-center mt-4">
+            <div className="status-pill">
               <Flame className="w-3 h-3" />
               {profile.streak_count === 1
                 ? 'Primer día'
@@ -171,7 +172,7 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
           className="overflow-hidden transition-all duration-300 ease-in-out"
           style={{ maxHeight: showCalendar ? '80px' : '0px', opacity: showCalendar ? 1 : 0 }}
         >
-          <div className="flex items-center justify-between mt-3 px-1">
+          <div className="flex items-center justify-between mt-4 px-1">
             <button
               onClick={() => setDate(shiftDate(weekDays[0], -7))}
               aria-label="Semana anterior"
@@ -237,6 +238,18 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
         onClick={() => setShowMacroDetail(true)}
         className="card p-5 mb-5 w-full text-left"
       >
+        <div className="flex items-start justify-between gap-3 mb-5">
+          <div>
+            <p className="section-label mb-2">Balance diario</p>
+            <h2 className="font-display text-2xl font-bold tracking-[-0.04em] text-surface-900">Resumen nutricional</h2>
+            <p className="text-sm text-surface-500 mt-2">Pulsa para ver el detalle completo de macros y calorias.</p>
+          </div>
+          <div className="status-pill whitespace-nowrap">
+            <Info className="w-3.5 h-3.5" />
+            Detalle
+          </div>
+        </div>
+
         <div className="flex items-center gap-5">
           <ProgressRing value={summary.calories} max={calorieTarget} size={120} strokeWidth={10}>
             <span className="font-display text-2xl font-bold">{Math.round(summary.calories)}</span>
@@ -267,7 +280,8 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
         </div>
 
         {/* Remaining / over */}
-        <div className="flex items-center justify-center gap-1 mt-3">
+        <div className="soft-divider my-4" />
+        <div className="flex items-center justify-center gap-1">
           {calorieTarget - summary.calories > 0 ? (
             <p className="text-sm text-surface-500">
               Te quedan <span className="font-semibold text-brand-600">{Math.round(calorieTarget - summary.calories)} kcal</span>
@@ -317,11 +331,11 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
           return (
             <div key={meal.type} className="card overflow-hidden">
               {/* Meal header */}
-              <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center justify-between px-4 py-4">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-surface-800 text-sm">{meal.label}</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-surface-400">{meal.label}</span>
                   {mealEntries.length > 0 && (
-                    <span className="text-xs text-surface-400 font-mono">{Math.round(mealCalories)} kcal</span>
+                    <span className="status-pill py-1 px-2.5 text-[10px] font-mono">{Math.round(mealCalories)} kcal</span>
                   )}
                 </div>
                 <button
@@ -329,7 +343,7 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
                     window.dispatchEvent(new CustomEvent('navigate-search', { detail: meal.type }));
                   }}
                   aria-label={`Añadir a ${meal.label}`}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-surface-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                  className="icon-badge w-10 h-10 rounded-2xl text-surface-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
                 >
                   <Plus className="w-4 h-4" strokeWidth={2} />
                 </button>
@@ -337,7 +351,7 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
 
               {/* Entries */}
               {mealEntries.length === 0 ? (
-                <div className="px-4 pb-5 text-center text-sm text-surface-400 border-t border-surface-50">
+                <div className="px-4 pb-5 pt-1 text-center text-sm text-surface-400 border-t border-surface-50">
                   Sin alimentos registrados
                 </div>
               ) : (
@@ -373,22 +387,22 @@ function FoodEntry({
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
+    <div className="flex items-center gap-3 px-4 py-3.5">
       {/* Thumbnail or placeholder — tapping opens edit */}
       <button onClick={() => onEdit(entry)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
         {entry.image_url ? (
-          <img src={entry.image_url} alt="" className="w-10 h-10 rounded-xl object-cover bg-surface-100" />
+          <img src={entry.image_url} alt="" className="w-11 h-11 rounded-2xl object-cover bg-surface-100" />
         ) : (
-          <div className="w-10 h-10 rounded-xl bg-surface-100 flex items-center justify-center flex-shrink-0">
+          <div className="w-11 h-11 rounded-2xl bg-surface-100 flex items-center justify-center flex-shrink-0">
             <Leaf className="w-4 h-4 text-surface-400" />
           </div>
         )}
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <p className="text-sm font-medium text-surface-800 truncate">{entry.food_name}</p>
+            <p className="text-sm font-semibold text-surface-800 truncate">{entry.food_name}</p>
           </div>
-          <p className="text-xs text-surface-400">
+          <p className="text-xs text-surface-400 mt-1">
             {entry.serving_size_g}g
             {entry.brand && ` · ${entry.brand}`}
           </p>
@@ -396,9 +410,9 @@ function FoodEntry({
       </button>
 
       {/* Macros mini */}
-      <div className="text-right flex-shrink-0">
+      <div className="text-right flex-shrink-0 min-w-[68px]">
         <p className="text-sm font-semibold font-mono tabular-nums">{Math.round(entry.calories)}</p>
-        <p className="text-[10px] text-surface-400 font-mono tabular-nums">
+        <p className="text-[10px] text-surface-400 font-mono tabular-nums mt-1">
           P{Math.round(entry.protein_g)} C{Math.round(entry.carbs_g)} G{Math.round(entry.fat_g)}
         </p>
       </div>
@@ -487,14 +501,14 @@ function EditEntryModal({
 <div ref={editBackdropRef} className="fixed inset-0 z-[60] bg-black/40 flex items-stretch justify-center" onClick={onClose}>
       <div
         ref={editSheetRef}
-        className="bg-white w-full mt-8 rounded-t-3xl overflow-y-auto pb-24"
+        className="card w-full mt-8 rounded-t-[2rem] overflow-y-auto pb-24"
         onClick={(e) => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
         {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-white rounded-t-3xl">
+        <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-white/90 rounded-t-[2rem] backdrop-blur-xl">
           <div className="w-10 h-1 bg-surface-300 rounded-full" />
         </div>
         <div className="px-5 pb-5 space-y-4">
@@ -549,7 +563,7 @@ function EditEntryModal({
           </div>
 
           {/* Updated nutrients preview */}
-          <div className="bg-surface-50 rounded-2xl p-4 space-y-2">
+          <div className="page-shell rounded-[1.5rem] p-4 space-y-2">
             <div className="flex justify-between font-semibold">
               <span>Calorías</span>
               <span className="font-mono">{Math.round(caloriesPer100g * ratio)} kcal</span>
@@ -622,14 +636,14 @@ function MacroDetailModal({
 <div ref={macroBackdropRef} className="fixed inset-0 z-[60] bg-black/40 flex items-stretch justify-center" onClick={onClose}>
       <div
         ref={macroSheetRef}
-        className="bg-white w-full mt-8 rounded-t-3xl overflow-y-auto pb-24"
+        className="card w-full mt-8 rounded-t-[2rem] overflow-y-auto pb-24"
         onClick={(e) => e.stopPropagation()}
         onTouchStart={macroTouchStart}
         onTouchMove={macroTouchMove}
         onTouchEnd={macroTouchEnd}
       >
         {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-white rounded-t-3xl">
+        <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-white/90 rounded-t-[2rem] backdrop-blur-xl">
           <div className="w-10 h-1 bg-surface-300 rounded-full" />
         </div>
         <div className="px-5 pb-5 space-y-5">

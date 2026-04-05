@@ -22,8 +22,7 @@ const PERIODS = [
 
 export function ProgressPage() {
   const { user } = useAuthStore();
-  const { logs, loading, fetchLogs, addLog, deleteLog, getChartData, getStats } =
-    useWeightStore();
+  const { logs, loading, fetchLogs, addLog, deleteLog, getChartData, getStats } = useWeightStore();
 
   const [period, setPeriod] = useState(30);
   const [inputWeight, setInputWeight] = useState('');
@@ -46,7 +45,7 @@ export function ProgressPage() {
     if (!user || !inputWeight.trim()) return;
     const kg = parseFloat(inputWeight.replace(',', '.'));
     if (isNaN(kg) || kg < 20 || kg > 300) {
-      setErrorMsg('Introduce un peso válido entre 20 y 300 kg');
+      setErrorMsg('Introduce un peso valido entre 20 y 300 kg');
       return;
     }
     setSaving(true);
@@ -63,78 +62,79 @@ export function ProgressPage() {
   };
 
   return (
-    <div className="pb-28 px-4 pt-6">
-      <SectionHeader title="Progreso de peso" subtitle="Registra y visualiza tu evolución" />
+    <div className="pb-32 px-4 pt-6">
+      <SectionHeader
+        title="Progreso"
+        subtitle="Registra y visualiza tu evolucion"
+        action={
+          <div className="icon-badge">
+            <Scale className="w-5 h-5 text-brand-600" />
+          </div>
+        }
+      />
 
-      {/* Quick log card */}
-      <div className="card p-4 mb-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Scale className="w-5 h-5 text-brand-600" />
-          <span className="font-semibold text-surface-800 text-sm">
-            {todayLog ? 'Peso de hoy' : 'Registrar peso de hoy'}
-          </span>
-          {todayLog && (
-            <span className="ml-auto text-xl font-bold text-brand-700">
-              {todayLog.weight_kg} kg
-            </span>
-          )}
+      <div className="page-shell p-5 mb-4">
+        <div className="relative z-10">
+          <div className="flex items-start justify-between gap-3 mb-5">
+            <div>
+              <p className="section-label mb-2">Registro rapido</p>
+              <h2 className="font-display text-2xl font-bold tracking-[-0.04em] text-surface-900">
+                {todayLog ? 'Peso de hoy' : 'Registrar peso'}
+              </h2>
+            </div>
+            {todayLog && <span className="status-pill font-mono">{todayLog.weight_kg} kg</span>}
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="number"
+              inputMode="decimal"
+              min="20"
+              max="300"
+              step="0.1"
+              placeholder={todayLog ? `Actualizar (${todayLog.weight_kg} kg)` : 'Tu peso en kg, ej: 72.5'}
+              value={inputWeight}
+              onChange={(e) => setInputWeight(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+              className="input flex-1"
+            />
+            <button
+              onClick={handleSave}
+              disabled={saving || !inputWeight.trim()}
+              className="btn-primary flex items-center gap-1.5 px-4"
+            >
+              <Plus className="w-4 h-4" />
+              {saving ? '...' : 'Guardar'}
+            </button>
+          </div>
+          {errorMsg && <p className="text-red-500 text-xs mt-3">{errorMsg}</p>}
+          {successMsg && <p className="text-brand-600 text-xs mt-3 font-medium">{successMsg}</p>}
         </div>
-        <div className="flex gap-2">
-          <input
-            type="number"
-            inputMode="decimal"
-            min="20"
-            max="300"
-            step="0.1"
-            placeholder={
-              todayLog ? `Actualizar (${todayLog.weight_kg} kg)` : 'Tu peso en kg, ej: 72.5'
-            }
-            value={inputWeight}
-            onChange={(e) => setInputWeight(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-            className="input flex-1"
-          />
-          <button
-            onClick={handleSave}
-            disabled={saving || !inputWeight.trim()}
-            className="bg-brand-600 text-white px-4 py-2.5 rounded-2xl text-sm font-semibold flex items-center gap-1.5 disabled:opacity-50 hover:bg-brand-700 active:bg-brand-800 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            {saving ? '...' : 'Guardar'}
-          </button>
-        </div>
-        {errorMsg && <p className="text-red-500 text-xs mt-2">{errorMsg}</p>}
-        {successMsg && <p className="text-brand-600 text-xs mt-2 font-medium">{successMsg}</p>}
       </div>
 
-      {/* Stats */}
       {stats.current !== null && (
-        <div className="grid grid-cols-4 gap-2 mb-4">
-          <StatCard label="Actual" value={`${stats.current}kg`} colorClass="text-brand-700 bg-brand-50" />
-          <StatCard label="Mínimo" value={`${stats.min}kg`} colorClass="text-blue-700 bg-blue-50" />
-          <StatCard label="Máximo" value={`${stats.max}kg`} colorClass="text-amber-700 bg-amber-50" />
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <StatCard label="Actual" value={`${stats.current}kg`} colorClass="text-brand-700" />
+          <StatCard label="Minimo" value={`${stats.min}kg`} colorClass="text-blue-700" />
+          <StatCard label="Maximo" value={`${stats.max}kg`} colorClass="text-amber-700" />
           <StatCard
             label="Cambio"
-            value={
-              stats.change !== null
-                ? `${stats.change > 0 ? '+' : ''}${stats.change}kg`
-                : '-'
-            }
+            value={stats.change !== null ? `${stats.change > 0 ? '+' : ''}${stats.change}kg` : '-'}
             colorClass={
               stats.change === null
-                ? 'text-surface-600 bg-surface-50'
+                ? 'text-surface-700'
                 : stats.change < 0
-                ? 'text-brand-600 bg-surface-50'
-                : stats.change > 0
-                ? 'text-red-500 bg-surface-50'
-                : 'text-surface-600 bg-surface-50'
+                  ? 'text-brand-600'
+                  : stats.change > 0
+                    ? 'text-red-500'
+                    : 'text-surface-700'
             }
             icon={
               stats.change !== null ? (
                 stats.change < 0 ? (
-                  <TrendingDown className="w-3 h-3 shrink-0" />
+                  <TrendingDown className="w-3.5 h-3.5 shrink-0" />
                 ) : stats.change > 0 ? (
-                  <TrendingUp className="w-3 h-3 shrink-0" />
+                  <TrendingUp className="w-3.5 h-3.5 shrink-0" />
                 ) : undefined
               ) : undefined
             }
@@ -142,16 +142,18 @@ export function ProgressPage() {
         </div>
       )}
 
-      {/* Chart */}
-      <div className="card p-4 mb-4">
+      <div className="card p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-medium text-surface-400 uppercase tracking-widest">Evolución</span>
+          <div>
+            <p className="section-label mb-2">Evolucion</p>
+            <h2 className="font-display text-2xl font-bold tracking-[-0.04em] text-surface-900">Tendencia de peso</h2>
+          </div>
           <div className="flex gap-1">
             {PERIODS.map((p) => (
               <button
                 key={p.days}
                 onClick={() => setPeriod(p.days)}
-                className={`px-3 py-1 rounded-xl text-xs font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
                   period === p.days
                     ? 'bg-brand-600 text-white'
                     : 'text-surface-500 hover:bg-surface-100'
@@ -170,14 +172,14 @@ export function ProgressPage() {
         ) : !hasData ? (
           <div className="h-48 flex flex-col items-center justify-center text-surface-400">
             <Scale className="w-10 h-10 mb-2 opacity-30" />
-            <p className="text-sm font-medium">Sin datos todavía</p>
+            <p className="text-sm font-medium">Sin datos todavia</p>
             <p className="text-xs mt-1 text-center">
-              Registra tu primer peso arriba para ver tu gráfico
+              Registra tu primer peso arriba para ver tu grafico
             </p>
           </div>
         ) : (
           <>
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={210}>
               <LineChart data={chartData} margin={{ top: 5, right: 8, bottom: 0, left: -22 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis
@@ -196,14 +198,15 @@ export function ProgressPage() {
                 <Tooltip
                   formatter={(val: number, name: string) => [
                     val != null ? `${val} kg` : '-',
-                    name === 'weight' ? 'Peso' : 'Media 7 días',
+                    name === 'weight' ? 'Peso' : 'Media 7 dias',
                   ]}
                   labelStyle={{ fontSize: 11, color: '#334155' }}
                   contentStyle={{
-                    borderRadius: 10,
+                    borderRadius: 16,
                     border: '1px solid #e2e8f0',
                     fontSize: 12,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                    boxShadow: '0 18px 40px -28px rgba(15,23,42,0.35)',
+                    backgroundColor: 'rgba(255,255,255,0.94)',
                   }}
                 />
                 <Line
@@ -234,20 +237,18 @@ export function ProgressPage() {
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-6 border-t-2 border-dashed border-brand-300" />
-                <span className="text-xs text-surface-500">Media 7 días</span>
+                <span className="text-xs text-surface-500">Media 7 dias</span>
               </div>
             </div>
           </>
         )}
       </div>
 
-      {/* Historial */}
       {logs.length > 0 && (
         <div className="card overflow-hidden mb-4">
-          <div className="px-4 py-3 border-b border-surface-100">
-            <span className="text-xs font-medium text-surface-400 uppercase tracking-widest">
-              Historial ({logs.length} registros)
-            </span>
+          <div className="px-4 py-4 border-b border-surface-100">
+            <p className="section-label mb-2">Historial</p>
+            <span className="text-sm font-semibold text-surface-700">{logs.length} registros</span>
           </div>
           {[...logs]
             .reverse()
@@ -279,7 +280,7 @@ export function ProgressPage() {
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-surface-400 mt-0.5">
+                    <div className="text-xs text-surface-400 mt-1">
                       {new Date(log.date + 'T00:00:00').toLocaleDateString('es-ES', {
                         weekday: 'long',
                         day: 'numeric',
@@ -290,7 +291,7 @@ export function ProgressPage() {
                   </div>
                   <button
                     onClick={() => deleteLog(log.id)}
-                    className="p-2 text-surface-300 hover:text-red-400 transition-colors rounded-xl"
+                    className="icon-badge w-9 h-9 text-surface-300 hover:text-red-400 transition-colors"
                     aria-label="Eliminar registro"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -316,12 +317,12 @@ function StatCard({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className={`rounded-xl p-2 text-center ${colorClass}`}>
-      <div className="flex items-center justify-center gap-0.5 min-h-[20px]">
+    <div className="metric-tile text-center">
+      <div className={`flex items-center justify-center gap-1 min-h-[22px] ${colorClass}`}>
         {icon}
-        <span className="text-sm font-bold truncate">{value}</span>
+        <span className="text-base font-display font-bold truncate">{value}</span>
       </div>
-      <div className="text-xs opacity-60 mt-0.5 leading-tight">{label}</div>
+      <div className="text-[11px] uppercase tracking-[0.18em] text-surface-500 mt-2 leading-tight">{label}</div>
     </div>
   );
 }

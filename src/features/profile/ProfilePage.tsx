@@ -105,13 +105,13 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
   };
 
   return (
-    <div className="pb-28 px-4 pt-6">
+    <div className="pb-32 px-4 pt-6">
       <SectionHeader
         title="Perfil"
         subtitle={profile.display_name || 'Sin nombre'}
         action={
-          <div className="w-12 h-12 bg-brand-100 rounded-2xl flex items-center justify-center">
-            <User className="w-6 h-6 text-brand-600" />
+          <div className="icon-badge">
+            <User className="w-5 h-5 text-brand-600" />
           </div>
         }
       />
@@ -120,25 +120,25 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
       {!isPro && (
         <button
           onClick={() => setShowProModal(true)}
-          className="w-full mb-4 bg-gradient-to-r from-brand-600 to-brand-700 text-white rounded-3xl p-4 flex items-center justify-between"
+          className="page-shell w-full mb-4 p-4 flex items-center justify-between text-left"
         >
-          <div className="text-left">
-            <div className="flex items-center gap-2 mb-0.5">
-              <Zap className="w-4 h-4" />
-              <span className="font-semibold text-sm">Hazte Pro</span>
+          <div className="relative z-10 text-left">
+            <div className="flex items-center gap-2 mb-1">
+              <Zap className="w-4 h-4 text-brand-600" />
+              <span className="font-semibold text-sm text-surface-900">Hazte Pro</span>
             </div>
-            <p className="text-brand-100 text-xs">
+            <p className="text-surface-500 text-xs">
               Historial completo y exportación · desde 3,33€/mes
             </p>
           </div>
-          <div className="bg-white/20 rounded-xl px-3 py-1.5 text-xs font-semibold flex-shrink-0">
-            Ver planes →
+          <div className="status-pill text-brand-700 flex-shrink-0">
+            Ver planes
           </div>
         </button>
       )}
 
       {isPro && (
-        <div className="w-full mb-4 bg-brand-50 border border-brand-200 rounded-3xl p-4 flex items-center gap-3">
+        <div className="page-shell w-full mb-4 p-4 flex items-center gap-3">
           <Zap className="w-5 h-5 text-brand-600 flex-shrink-0" />
           <div>
             <p className="font-semibold text-brand-700 text-sm">Plan Pro activo</p>
