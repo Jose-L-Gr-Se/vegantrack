@@ -40,7 +40,7 @@
 
 @layer components {
   .card {
-    @apply bg-white rounded-3xl border border-surface-100 shadow-sm;
+    @apply bg-white rounded-3xl border border-surface-100 shadow-card;
   }
 
   .btn-primary {

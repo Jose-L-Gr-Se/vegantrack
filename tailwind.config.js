@@ -42,6 +42,13 @@ export default {
         '2xl': '1rem',
         '3xl': '1.25rem',
         '4xl': '1.5rem',
+        'card': '1rem',
+      },
+      spacing: {
+        'section-y': '6rem',
+      },
+      boxShadow: {
+        'card': '0 4px 6px rgb(0 0 0 / 0.05)',
       },
     },
   },
