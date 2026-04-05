@@ -4,7 +4,7 @@ import { useDiaryStore } from '@/stores/diaryStore';
 import { useSupplementStore } from '@/stores/supplementStore';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { MacroBar } from '@/components/ui/MacroBar';
-import { TrendingUp, Flame, Zap, AlertTriangle, Target } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import type { SupplementNutrientKey } from '@/types';
 import { computeVeganScore, getScoreColor, getScoreLabel } from '@/utils/veganScore';
 
@@ -114,15 +114,12 @@ export function DashboardPage() {
   return (
     <div className="pb-28 px-4 pt-6">
       <h1 className="font-display text-2xl font-bold mb-1">Dashboard</h1>
-      <p className="text-sm text-surface-500 mb-6">Tu progreso nutricional</p>
+      <p className="text-sm text-surface-400 mb-6">Tu progreso nutricional</p>
 
       {/* VeganScore */}
       <div className="card p-5 mb-4">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-base">🌱</span>
-          <h2 className="font-semibold text-surface-700 text-sm uppercase tracking-wide">
-            VeganScore — Hoy
-          </h2>
+        <div className="mb-4">
+          <h2 className="text-xs font-medium text-surface-400 uppercase tracking-widest">VeganScore — Hoy</h2>
         </div>
 
         {!veganScore.hasData ? (
@@ -169,12 +166,12 @@ export function DashboardPage() {
             {/* Breakdown */}
             <div className="flex-1 space-y-2.5">
               {([
-                { emoji: '🔥', label: 'Calorías', data: veganScore.calories },
-                { emoji: '💪', label: 'Proteína', data: veganScore.protein },
-                { emoji: '🧬', label: 'Micros',   data: veganScore.micros },
-                { emoji: '🌿', label: 'Fibra',    data: veganScore.fiber },
-                { emoji: '⚡', label: 'Racha',    data: veganScore.streak },
-              ] as const).map(({ emoji, label, data }) => {
+                { label: 'Calorías', data: veganScore.calories },
+                { label: 'Proteína', data: veganScore.protein },
+                { label: 'Micros',   data: veganScore.micros },
+                { label: 'Fibra',    data: veganScore.fiber },
+                { label: 'Racha',    data: veganScore.streak },
+              ] as const).map(({ label, data }) => {
                 const pct = data.max > 0 ? data.score / data.max : 0;
                 const barColor =
                   pct >= 0.9 ? 'bg-brand-500'
@@ -184,7 +181,6 @@ export function DashboardPage() {
                   <div key={label}>
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[11px]">{emoji}</span>
                         <span className="text-xs text-surface-600 font-medium">{label}</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -212,9 +208,8 @@ export function DashboardPage() {
 
       {/* Today's summary */}
       <div className="card p-5 mb-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Flame className="w-4 h-4 text-brand-600" />
-          <h2 className="font-semibold text-surface-700 text-sm uppercase tracking-wide">Hoy</h2>
+        <div className="mb-4">
+          <h2 className="text-xs font-medium text-surface-400 uppercase tracking-widest">Hoy</h2>
         </div>
 
         <div className="flex items-center gap-5">
@@ -242,9 +237,8 @@ export function DashboardPage() {
       {/* Weekly chart */}
       <div className="card p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-brand-600" />
-            <h2 className="font-semibold text-surface-700 text-sm uppercase tracking-wide">Última semana</h2>
+          <div>
+            <h2 className="text-xs font-medium text-surface-400 uppercase tracking-widest">Última semana</h2>
           </div>
           {weekAvg && (
             <span className="text-xs text-surface-400 font-mono">
@@ -288,13 +282,9 @@ export function DashboardPage() {
                         className={`w-full rounded-lg transition-all duration-700 ease-out ${
                           isToday
                             ? 'bg-brand-500'
-                            : overTarget
-                            ? 'bg-red-400'
-                            : atTarget
-                            ? 'bg-brand-400'
                             : day.calories > 0
-                            ? 'bg-brand-300'
-                            : 'bg-surface-200'
+                            ? 'bg-surface-300'
+                            : 'bg-surface-100'
                         }`}
                         style={{
                           height: `${Math.max(heightPercent, day.calories > 0 ? 4 : 0)}%`,
@@ -330,9 +320,8 @@ export function DashboardPage() {
       {/* Weekly macro averages */}
       {weekAvg && (
         <div className="card p-5 mb-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Target className="w-4 h-4 text-blue-500" />
-            <h2 className="font-semibold text-surface-700 text-sm uppercase tracking-wide">Media semanal</h2>
+          <div className="mb-4">
+            <h2 className="text-xs font-medium text-surface-400 uppercase tracking-widest">Media semanal</h2>
           </div>
 
           <div className="grid grid-cols-4 gap-3">
@@ -363,9 +352,8 @@ export function DashboardPage() {
 
       {/* Micronutrient tracking */}
       <div className="card p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Zap className="w-4 h-4 text-amber-500" />
-          <h2 className="font-semibold text-surface-700 text-sm uppercase tracking-wide">Micronutrientes clave</h2>
+        <div className="mb-4">
+          <h2 className="text-xs font-medium text-surface-400 uppercase tracking-widest">Micronutrientes clave</h2>
         </div>
 
         <div className="space-y-3">
@@ -397,30 +385,19 @@ export function DashboardPage() {
 
             if (pct >= 90) {
               return (
-                <div key={key} className="flex items-center gap-3 py-1.5 px-3 rounded-2xl bg-brand-50/60 dark:bg-brand-950/30 border border-brand-100 dark:border-brand-900">
-                  <div className="w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center flex-shrink-0 shadow-sm shadow-brand-500/30">
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-semibold text-brand-700 dark:text-brand-400">
-                        {info.label}
-                      </span>
+                <div key={key}>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-surface-700">{info.label}</span>
                       {hasSupplement && (
-                        <span className="text-[10px] bg-brand-100 text-brand-600 px-1.5 py-0.5 rounded-full font-medium">
-                          +💊
-                        </span>
+                        <span className="text-[10px] text-surface-400 font-medium">supl.</span>
                       )}
                     </div>
-                    <div className="h-1.5 bg-brand-100 rounded-full overflow-hidden mt-1">
-                      <div className="h-full w-full rounded-full bg-brand-400" />
-                    </div>
+                    <span className="text-xs font-mono text-brand-600">{Math.round(pct)}%</span>
                   </div>
-                  <span className="text-xs font-bold font-mono text-brand-600 flex-shrink-0">
-                    {Math.round(pct)}%
-                  </span>
+                  <div className="h-1.5 bg-surface-100 rounded-full overflow-hidden">
+                    <div className="h-full w-full rounded-full bg-brand-400" />
+                  </div>
                 </div>
               );
             }

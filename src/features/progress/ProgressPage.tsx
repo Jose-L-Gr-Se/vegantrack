@@ -62,15 +62,15 @@ export function ProgressPage() {
   };
 
   return (
-    <div className="pb-28">
+    <div className="pb-28 px-4 pt-6">
       {/* Header */}
-      <div className="bg-gradient-to-br from-brand-600 to-brand-700 px-4 pt-12 pb-8 text-white">
-        <h1 className="font-display text-2xl font-bold">Progreso de peso</h1>
-        <p className="text-brand-100 text-sm mt-1">Registra y visualiza tu evolución</p>
+      <div className="mb-6">
+        <h1 className="font-display text-2xl font-bold mb-1">Progreso de peso</h1>
+        <p className="text-sm text-surface-400">Registra y visualiza tu evolución</p>
       </div>
 
       {/* Quick log card */}
-      <div className="mx-4 -mt-4 card p-4 mb-4">
+      <div className="card p-4 mb-4">
         <div className="flex items-center gap-2 mb-3">
           <Scale className="w-5 h-5 text-brand-600" />
           <span className="font-semibold text-surface-800 text-sm">
@@ -112,10 +112,10 @@ export function ProgressPage() {
 
       {/* Stats */}
       {stats.current !== null && (
-        <div className="mx-4 grid grid-cols-4 gap-2 mb-4">
-          <StatCard label="Actual" value={`${stats.current}kg`} colorClass="text-brand-700 bg-brand-50" />
-          <StatCard label="Mínimo" value={`${stats.min}kg`} colorClass="text-blue-700 bg-blue-50" />
-          <StatCard label="Máximo" value={`${stats.max}kg`} colorClass="text-amber-700 bg-amber-50" />
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          <StatCard label="Actual" value={`${stats.current}kg`} colorClass="text-surface-900 bg-surface-50" />
+          <StatCard label="Mínimo" value={`${stats.min}kg`} colorClass="text-surface-700 bg-surface-50" />
+          <StatCard label="Máximo" value={`${stats.max}kg`} colorClass="text-surface-700 bg-surface-50" />
           <StatCard
             label="Cambio"
             value={
@@ -125,12 +125,12 @@ export function ProgressPage() {
             }
             colorClass={
               stats.change === null
-                ? 'text-surface-600 bg-surface-100'
+                ? 'text-surface-600 bg-surface-50'
                 : stats.change < 0
-                ? 'text-brand-700 bg-brand-50'
+                ? 'text-brand-600 bg-surface-50'
                 : stats.change > 0
-                ? 'text-red-600 bg-red-50'
-                : 'text-surface-600 bg-surface-100'
+                ? 'text-red-500 bg-surface-50'
+                : 'text-surface-600 bg-surface-50'
             }
             icon={
               stats.change !== null ? (
@@ -146,9 +146,9 @@ export function ProgressPage() {
       )}
 
       {/* Chart */}
-      <div className="mx-4 card p-4 mb-4">
+      <div className="card p-4 mb-4">
         <div className="flex items-center justify-between mb-4">
-          <span className="font-semibold text-surface-800 text-sm">Evolución</span>
+          <span className="text-xs font-medium text-surface-400 uppercase tracking-widest">Evolución</span>
           <div className="flex gap-1">
             {PERIODS.map((p) => (
               <button
@@ -246,9 +246,9 @@ export function ProgressPage() {
 
       {/* Historial */}
       {logs.length > 0 && (
-        <div className="mx-4 card overflow-hidden mb-4">
+        <div className="card overflow-hidden mb-4">
           <div className="px-4 py-3 border-b border-surface-100">
-            <span className="font-semibold text-surface-800 text-sm">
+            <span className="text-xs font-medium text-surface-400 uppercase tracking-widest">
               Historial ({logs.length} registros)
             </span>
           </div>
@@ -319,7 +319,7 @@ function StatCard({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className={`rounded-2xl p-2 text-center ${colorClass}`}>
+    <div className={`rounded-xl p-2 text-center ${colorClass}`}>
       <div className="flex items-center justify-center gap-0.5 min-h-[20px]">
         {icon}
         <span className="text-sm font-bold truncate">{value}</span>
