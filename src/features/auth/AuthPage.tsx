@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { Spinner } from '@/components/ui/Spinner';
-import { Leaf } from 'lucide-react';
+import { AppLogo } from '@/components/ui/AppLogo';
 
 export function AuthPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -39,9 +39,7 @@ export function AuthPage() {
       <div className="max-w-lg mx-auto w-full space-y-5">
         <section className="page-shell px-6 py-7">
           <div className="relative z-10">
-            <div className="icon-badge bg-brand-600 text-white border-0 mb-5">
-              <Leaf className="w-5 h-5" strokeWidth={2.5} />
-            </div>
+            <AppLogo className="w-12 h-12 mb-5 rounded-[1.35rem] shadow-[0_14px_28px_-24px_rgba(15,23,42,0.28)]" />
             <p className="section-label mb-2">Welcome back</p>
             <h1 className="font-display text-[2.4rem] leading-[0.95] tracking-[-0.05em] text-surface-900">
               Controla tu nutricion vegana con una experiencia mas pulida.

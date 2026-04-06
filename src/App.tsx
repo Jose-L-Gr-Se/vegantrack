@@ -16,7 +16,7 @@ import { RecipesPage } from '@/features/recipes/RecipesPage';
 import { useRecipeStore } from '@/stores/recipeStore';
 import { useSupplementStore } from '@/stores/supplementStore';
 import { Spinner } from '@/components/ui/Spinner';
-import { Leaf } from 'lucide-react';
+import { AppLogo } from '@/components/ui/AppLogo';
 import { ProSuccessModal } from '@/features/pro/ProSuccessModal';
 
 export default function App() {
@@ -106,9 +106,7 @@ export default function App() {
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center px-6">
         <div className="page-shell px-8 py-10 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-600 rounded-3xl mb-4 shadow-lg shadow-brand-600/20 animate-pulse">
-            <Leaf className="w-8 h-8 text-white" strokeWidth={2.5} />
-          </div>
+          <AppLogo className="w-16 h-16 mb-4 mx-auto animate-pulse shadow-lg shadow-brand-600/20 rounded-3xl" />
           <p className="section-label mb-2">VEGANTRACK</p>
           <h1 className="font-display text-2xl font-bold text-surface-900 mb-2">Preparando tu panel</h1>
           <p className="text-surface-500 text-sm">Cargando tus datos y dejando todo listo.</p>
