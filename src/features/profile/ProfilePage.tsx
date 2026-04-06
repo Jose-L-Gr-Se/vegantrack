@@ -17,17 +17,30 @@ const NUTRIENT_ICONS: Record<string, string> = {
   iron_mg: '🩸', zinc_mg: '⚡', calcium_mg: '🦴', iodine_mcg: '💧',
 };
 
+const FREE_SUPPLEMENT_LIMIT = 3;
+
 const SUPPLEMENT_PRESETS: Array<{
-  name: string; nutrient_key: SupplementNutrientKey;
-  dose_amount: number; dose_unit: string;
+  name: string;
+  nutrient_key: SupplementNutrientKey | null;
+  dose_amount: number;
+  dose_unit: string;
+  emoji: string;
+  category: 'esenciales' | 'rendimiento' | 'general';
 }> = [
-  { name: 'Vitamina B12',    nutrient_key: 'vitamin_b12_mcg', dose_amount: 100,  dose_unit: 'μg' },
-  { name: 'Vitamina D3',     nutrient_key: 'vitamin_d_mcg',   dose_amount: 25,   dose_unit: 'μg' },
-  { name: 'Omega-3 DHA+EPA', nutrient_key: 'omega3_g',        dose_amount: 0.5,  dose_unit: 'g'  },
-  { name: 'Hierro',          nutrient_key: 'iron_mg',          dose_amount: 18,   dose_unit: 'mg' },
-  { name: 'Zinc',            nutrient_key: 'zinc_mg',          dose_amount: 15,   dose_unit: 'mg' },
-  { name: 'Calcio',          nutrient_key: 'calcium_mg',       dose_amount: 500,  dose_unit: 'mg' },
-  { name: 'Yodo',            nutrient_key: 'iodine_mcg',       dose_amount: 150,  dose_unit: 'μg' },
+  { name: 'Vitamina B12', nutrient_key: 'vitamin_b12_mcg', dose_amount: 1000, dose_unit: 'μg', emoji: '🧬', category: 'esenciales' },
+  { name: 'Vitamina D3', nutrient_key: 'vitamin_d_mcg', dose_amount: 100, dose_unit: 'μg', emoji: '☀️', category: 'esenciales' },
+  { name: 'Omega-3 DHA+EPA', nutrient_key: 'omega3_g', dose_amount: 1, dose_unit: 'g', emoji: '🌊', category: 'esenciales' },
+  { name: 'Yodo', nutrient_key: 'iodine_mcg', dose_amount: 150, dose_unit: 'μg', emoji: '💧', category: 'esenciales' },
+  { name: 'Hierro', nutrient_key: 'iron_mg', dose_amount: 18, dose_unit: 'mg', emoji: '🩸', category: 'esenciales' },
+  { name: 'Zinc', nutrient_key: 'zinc_mg', dose_amount: 15, dose_unit: 'mg', emoji: '⚡', category: 'esenciales' },
+  { name: 'Calcio', nutrient_key: 'calcium_mg', dose_amount: 500, dose_unit: 'mg', emoji: '🦴', category: 'esenciales' },
+  { name: 'Creatina', nutrient_key: null, dose_amount: 5, dose_unit: 'g', emoji: '💪', category: 'rendimiento' },
+  { name: 'Proteína', nutrient_key: null, dose_amount: 30, dose_unit: 'g', emoji: '🥤', category: 'rendimiento' },
+  { name: 'Cafeína', nutrient_key: null, dose_amount: 200, dose_unit: 'mg', emoji: '☕', category: 'rendimiento' },
+  { name: 'Magnesio', nutrient_key: null, dose_amount: 400, dose_unit: 'mg', emoji: '🔮', category: 'general' },
+  { name: 'Vitamina C', nutrient_key: null, dose_amount: 500, dose_unit: 'mg', emoji: '🍊', category: 'general' },
+  { name: 'Ashwagandha', nutrient_key: null, dose_amount: 600, dose_unit: 'mg', emoji: '🌿', category: 'general' },
+  { name: 'Melatonina', nutrient_key: null, dose_amount: 1, dose_unit: 'mg', emoji: '🌙', category: 'general' },
 ];
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -274,10 +287,17 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
               </span>
             </div>
             <button
-              onClick={() => setShowAddSupplement(true)}
+              onClick={() => {
+                if (!isPro && supplements.length >= FREE_SUPPLEMENT_LIMIT) {
+                  setShowProModal(true);
+                } else {
+                  setShowAddSupplement(true);
+                }
+              }}
               className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 px-2.5 py-1.5 rounded-xl transition-colors"
             >
-              <Plus className="w-3 h-3" strokeWidth={2.5} /> Añadir
+              <Plus className="w-3 h-3" strokeWidth={2.5} />
+              {!isPro && supplements.length >= FREE_SUPPLEMENT_LIMIT ? '🔒 Pro' : 'Añadir'}
             </button>
           </div>
 
@@ -293,7 +313,9 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
             <div className="space-y-2">
               {supplements.map((sup) => (
                 <div key={sup.id} className="flex items-center gap-3 bg-surface-50 rounded-2xl p-3">
-                  <span className="text-xl shrink-0">{NUTRIENT_ICONS[sup.nutrient_key] ?? '💊'}</span>
+                  <span className="text-xl shrink-0">
+                    {sup.emoji ?? (sup.nutrient_key ? NUTRIENT_ICONS[sup.nutrient_key] ?? '💊' : '💊')}
+                  </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-surface-800 truncate">{sup.name}</p>
                     {editingDose === sup.id ? (
@@ -385,44 +407,60 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
                 <p className="text-xs text-surface-400 mb-3">
                   Toca un suplemento para añadirlo con la dosis habitual. Edítala después si necesitas ajustarla.
                 </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {SUPPLEMENT_PRESETS.map((preset) => {
-                    const alreadyAdded = supplements.some(
-                      (s) => s.nutrient_key === preset.nutrient_key
-                    );
+                <div className="space-y-4 overflow-y-auto max-h-[60vh]">
+                  {(['esenciales', 'rendimiento', 'general'] as const).map((cat) => {
+                    const catPresets = SUPPLEMENT_PRESETS.filter((p) => p.category === cat);
                     return (
-                      <button
-                        key={preset.nutrient_key}
-                        disabled={alreadyAdded}
-                        onClick={async () => {
-                          if (!user || alreadyAdded) return;
-                          await createSupplement(user.id, {
-                            name: preset.name,
-                            nutrient_key: preset.nutrient_key,
-                            dose_amount: preset.dose_amount,
-                            dose_unit: preset.dose_unit,
-                          });
-                          setShowAddSupplement(false);
-                        }}
-                        className={`flex items-center gap-2.5 p-3 rounded-2xl text-left transition-colors ${
-                          alreadyAdded
-                            ? 'bg-surface-50 opacity-40 cursor-not-allowed'
-                            : 'bg-surface-50 hover:bg-brand-50 active:scale-95'
-                        }`}
-                      >
-                        <span className="text-2xl">{NUTRIENT_ICONS[preset.nutrient_key]}</span>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-surface-800 truncate">
-                            {preset.name}
-                          </p>
-                          <p className="text-xs text-surface-400 font-mono">
-                            {preset.dose_amount} {preset.dose_unit}/día
-                          </p>
+                      <div key={cat}>
+                        <p className="text-[10px] font-semibold text-surface-400 uppercase tracking-wider mb-2 capitalize">
+                          {cat}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {catPresets.map((preset) => {
+                            const alreadyAdded = supplements.some((s) => s.name === preset.name);
+                            const isLocked = !isPro && !alreadyAdded && supplements.length >= FREE_SUPPLEMENT_LIMIT;
+                            return (
+                              <button
+                                key={preset.name}
+                                disabled={alreadyAdded}
+                                onClick={async () => {
+                                  if (!user || alreadyAdded) return;
+                                  if (isLocked) {
+                                    setShowAddSupplement(false);
+                                    setShowProModal(true);
+                                    return;
+                                  }
+                                  await createSupplement(user.id, {
+                                    name: preset.name,
+                                    nutrient_key: preset.nutrient_key,
+                                    dose_amount: preset.dose_amount,
+                                    dose_unit: preset.dose_unit,
+                                    emoji: preset.emoji,
+                                  });
+                                  setShowAddSupplement(false);
+                                }}
+                                className={`flex items-center gap-2.5 p-3 rounded-2xl text-left transition-colors ${
+                                  alreadyAdded
+                                    ? 'bg-surface-50 opacity-40 cursor-not-allowed'
+                                    : isLocked
+                                      ? 'bg-surface-50 opacity-60'
+                                      : 'bg-surface-50 hover:bg-brand-50 active:scale-95'
+                                }`}
+                              >
+                                <span className="text-xl">{preset.emoji}</span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-semibold text-surface-800 truncate">{preset.name}</p>
+                                  <p className="text-xs text-surface-400 font-mono">
+                                    {preset.dose_amount} {preset.dose_unit}/día
+                                  </p>
+                                </div>
+                                {alreadyAdded && <span className="text-[10px] text-brand-500 font-semibold shrink-0">✓</span>}
+                                {isLocked && <span className="text-[10px] text-surface-400 shrink-0">Pro</span>}
+                              </button>
+                            );
+                          })}
                         </div>
-                        {alreadyAdded && (
-                          <span className="ml-auto text-[10px] text-brand-500 font-semibold shrink-0">✓</span>
-                        )}
-                      </button>
+                      </div>
                     );
                   })}
                 </div>

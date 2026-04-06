@@ -10,7 +10,7 @@ interface SupplementState {
   fetchTodayLogs: (userId: string, date: string) => Promise<void>;
   createSupplement: (
     userId: string,
-    data: Pick<Supplement, 'name' | 'nutrient_key' | 'dose_amount' | 'dose_unit'>
+    data: Pick<Supplement, 'name' | 'nutrient_key' | 'dose_amount' | 'dose_unit' | 'emoji'>
   ) => Promise<void>;
   updateSupplement: (id: string, data: Partial<Supplement>) => Promise<void>;
   deleteSupplement: (id: string) => Promise<void>;
@@ -117,7 +117,7 @@ export const useSupplementStore = create<SupplementState>((set, get) => ({
     const { supplements, takenToday } = get();
     const result: Partial<Record<SupplementNutrientKey, number>> = {};
     for (const sup of supplements) {
-      if (sup.is_active && takenToday.has(sup.id)) {
+      if (sup.is_active && sup.nutrient_key && takenToday.has(sup.id)) {
         const k = sup.nutrient_key;
         result[k] = (result[k] ?? 0) + sup.dose_amount;
       }

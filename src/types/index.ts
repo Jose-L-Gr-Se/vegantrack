@@ -264,7 +264,8 @@ export interface Supplement {
   id: string;
   user_id: string;
   name: string;
-  nutrient_key: SupplementNutrientKey;
+  nutrient_key: SupplementNutrientKey | null;
+  emoji: string | null;
   dose_amount: number;
   dose_unit: string;
   frequency: 'daily';
