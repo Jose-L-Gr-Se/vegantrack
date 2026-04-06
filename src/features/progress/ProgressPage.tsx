@@ -65,7 +65,7 @@ export function ProgressPage() {
     <div className="pb-32 px-4 pt-6">
       <SectionHeader
         title="Progreso"
-        subtitle="Registra y visualiza tu evolucion"
+        subtitle="Registra y visualiza tu evolución"
         action={
           <div className="icon-badge">
             <Scale className="w-5 h-5 text-brand-600" />
@@ -145,7 +145,7 @@ export function ProgressPage() {
       <div className="card p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="section-label mb-2">Evolucion</p>
+            <p className="section-label mb-2">Evolución</p>
             <h2 className="font-display text-2xl font-bold tracking-[-0.04em] text-surface-900">Tendencia de peso</h2>
           </div>
           <div className="flex gap-1">

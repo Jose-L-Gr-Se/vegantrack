@@ -322,6 +322,27 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
         <SupplementsWidget date={selectedDate} />
       </div>
 
+      {/* Empty state — solo cuando no hay ninguna entrada en todo el día */}
+      {entries.length === 0 && (
+        <div className="card p-5 mb-4 text-center">
+          <div className="w-14 h-14 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+            <Leaf className="w-6 h-6 text-brand-400" />
+          </div>
+          <h3 className="font-display text-lg font-bold text-surface-900 mb-1">
+            Empieza a registrar
+          </h3>
+          <p className="text-sm text-surface-500 mb-4 leading-relaxed">
+            Escanea un código de barras, busca un alimento o añade una receta habitual.
+          </p>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-search'))}
+            className="btn-primary inline-flex items-center gap-2 mx-auto"
+          >
+            <Plus className="w-4 h-4" /> Añadir primer alimento
+          </button>
+        </div>
+      )}
+
       {/* Meal sections */}
       <div className="space-y-4">
         {MEALS.map((meal) => {

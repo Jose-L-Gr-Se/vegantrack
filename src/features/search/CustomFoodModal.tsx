@@ -79,7 +79,6 @@ export function CustomFoodModal({ onClose, onSaved, editFood }: CustomFoodModalP
 
   const validate = (): string | null => {
     if (!form.name.trim()) return 'El nombre es obligatorio';
-    if (!imageUrl) return 'La foto del producto es obligatoria';
     const cal = parseFloat(form.calories);
     const prot = parseFloat(form.protein);
     const carb = parseFloat(form.carbs);
@@ -172,7 +171,7 @@ export function CustomFoodModal({ onClose, onSaved, editFood }: CustomFoodModalP
 
           {/* Photo upload */}
           <div>
-            <label className="label">Foto del producto *</label>
+            <label className="label">Foto del producto <span className="text-surface-400 font-normal normal-case tracking-normal">(opcional)</span></label>
             <input
               ref={fileInputRef}
               type="file"

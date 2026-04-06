@@ -16,7 +16,6 @@ const MICRO_RDA = {
   calcium_mg: { label: 'Calcio', rda: 1000, unit: 'mg' },
   vitamin_d_mcg: { label: 'Vitamina D', rda: 15, unit: 'mcg' },
   omega3_g: { label: 'Omega-3', rda: 1.6, unit: 'g' },
-  iodine_mcg: { label: 'Yodo', rda: 150, unit: 'mcg' },
 };
 
 interface DayData {
@@ -400,9 +399,7 @@ export function DashboardPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-surface-500">{info.label}</span>
-                      <span className="status-pill text-[10px] py-1 px-2">
-                        {microKey === 'omega3_g' ? 'sin datos' : 'cobertura baja'}
-                      </span>
+                      <span className="status-pill text-[10px] py-1 px-2">cobertura baja</span>
                     </div>
                     <span className="text-xs text-surface-400 font-mono">
                       RDA: {info.rda} {info.unit}

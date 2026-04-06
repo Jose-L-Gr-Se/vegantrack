@@ -17,6 +17,7 @@ import { useRecipeStore } from '@/stores/recipeStore';
 import { useSupplementStore } from '@/stores/supplementStore';
 import { Spinner } from '@/components/ui/Spinner';
 import { Leaf } from 'lucide-react';
+import { ProSuccessModal } from '@/features/pro/ProSuccessModal';
 
 export default function App() {
   const { isDark, toggle: toggleDark } = useDarkMode();
@@ -26,6 +27,7 @@ export default function App() {
   const [showLanding, setShowLanding] = useState(true);
   const [diaryMessage, setDiaryMessage] = useState<string | null>(null);
   const [searchSubview, setSearchSubview] = useState<'main' | 'recipes'>('main');
+  const [showProSuccess, setShowProSuccess] = useState(false);
   const { fetchRecipes } = useRecipeStore();
   const { fetchSupplements, fetchTodayLogs } = useSupplementStore();
   const { selectedDate } = useDiaryStore();
@@ -89,12 +91,11 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('pro') === 'success') {
-      // Limpiar el parámetro de la URL sin recargar la página
       window.history.replaceState({}, '', window.location.pathname);
-      // Recargar perfil para que refleje subscription_tier = 'pro'
       if (user) {
         useAuthStore.getState().fetchProfile().then(() => {
           setActiveTab('profile');
+          setShowProSuccess(true);
         });
       }
     }
@@ -139,6 +140,7 @@ export default function App() {
           {activeTab === 'progress' && <ProgressPage />}
           {activeTab === 'profile' && <ProfilePage isDark={isDark} onToggleDark={toggleDark} />}
         </main>
+        {showProSuccess && <ProSuccessModal onClose={() => setShowProSuccess(false)} />}
         <BottomNav activeTab={activeTab} onTabChange={(tab) => {
           if (tab === 'search') setSearchSubview('main');
           setActiveTab(tab);
