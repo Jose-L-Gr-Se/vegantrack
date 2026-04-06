@@ -5,11 +5,12 @@ import { calculateTargets } from '@/utils/nutrition';
 import { CustomFoodModal } from '@/features/search/CustomFoodModal';
 import { Spinner } from '@/components/ui/Spinner';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { LogOut, Save, User, Calculator, Star, Pencil, Trash2, Plus, Moon, Sun, X, Zap } from 'lucide-react';
+import { LogOut, Save, User, Calculator, Star, Pencil, Trash2, Plus, Moon, Sun, X, Zap, Download } from 'lucide-react';
 import type { Profile, CustomFood, SupplementNutrientKey } from '@/types';
 import { useSupplementStore } from '@/stores/supplementStore';
 import { ProModal } from '@/features/pro/ProModal';
 import { usePro } from '@/hooks/usePro';
+import { exportDiaryCsv } from '@/utils/exportCsv';
 
 const NUTRIENT_ICONS: Record<string, string> = {
   vitamin_b12_mcg: '🧬', vitamin_d_mcg: '☀️', omega3_g: '🌊',
@@ -63,6 +64,9 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
   const [doseInput, setDoseInput] = useState('');
   const { isPro } = usePro();
   const [showProModal, setShowProModal] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportSuccess, setExportSuccess] = useState(false);
 
   useEffect(() => {
     if (user) fetchCustomFoods(user.id);
@@ -102,6 +106,22 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
   const handleDeleteFood = async (id: string) => {
     await deleteCustomFood(id);
     setDeletingId(null);
+  };
+
+  const handleExport = async () => {
+    if (!user || !isPro) return;
+    setExporting(true);
+    setExportError(null);
+    setExportSuccess(false);
+    try {
+      await exportDiaryCsv(user.id);
+      setExportSuccess(true);
+      setTimeout(() => setExportSuccess(false), 3000);
+    } catch (err: any) {
+      setExportError(err.message ?? 'Error al exportar');
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -408,6 +428,42 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Exportación Pro */}
+        {isPro && (
+          <div className="card p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Download className="w-4 h-4 text-brand-600" />
+              <h2 className="font-semibold text-surface-700 text-sm uppercase tracking-wide">
+                Exportar datos
+              </h2>
+            </div>
+            <p className="text-sm text-surface-500">
+              Descarga todo tu diario nutricional en formato CSV. Compatible con Excel y Google Sheets.
+            </p>
+            {exportError && (
+              <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-2xl border border-red-100">
+                {exportError}
+              </div>
+            )}
+            {exportSuccess && (
+              <div className="bg-brand-50 text-brand-700 text-sm px-4 py-3 rounded-2xl border border-brand-100">
+                ✓ Archivo descargado correctamente
+              </div>
+            )}
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="btn-secondary w-full flex items-center justify-center gap-2"
+            >
+              {exporting ? (
+                <><Spinner className="text-surface-600" /> Exportando...</>
+              ) : (
+                <><Download className="w-4 h-4" /> Descargar CSV</>
+              )}
+            </button>
           </div>
         )}
 
