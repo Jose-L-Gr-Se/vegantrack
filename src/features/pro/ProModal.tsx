@@ -15,7 +15,7 @@ const FEATURES_PRO = [
 ];
 
 const FEATURES_FREE = [
-  'Historial de 7 días',
+  'Historial de 14 días',
   'Escáner de código de barras',
   'Tracking de macros y micros',
   'Suplementos integrados',
