@@ -10,6 +10,7 @@ import type { SupplementNutrientKey } from '@/types';
 import { computeVeganScore, getScoreColor, getScoreLabel } from '@/utils/veganScore';
 import { usePro } from '@/hooks/usePro';
 import { ProModal } from '@/features/pro/ProModal';
+import { MicroTrendsChart } from '@/features/dashboard/MicroTrendsChart';
 
 const MICRO_RDA = {
   vitamin_b12_mcg: { label: 'Vitamina B12', rda: 2.4, unit: 'mcg' },
@@ -472,9 +473,10 @@ export function DashboardPage() {
         </p>
       </div>
 
-      {!isPro && (
+      {isPro ? (
+        <MicroTrendsChart />
+      ) : (
         <div className="card overflow-hidden mt-4 relative">
-          {/* Preview borroso */}
           <div className="p-5 filter blur-[3px] pointer-events-none select-none opacity-60">
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
@@ -493,18 +495,13 @@ export function DashboardPage() {
                   </div>
                   <div className="h-12 bg-surface-100 rounded-xl overflow-hidden flex items-end gap-0.5 px-1 pb-1">
                     {[40,55,48,70,65,80,90].map((h, i) => (
-                      <div
-                        key={i}
-                        className="flex-1 bg-brand-300 rounded-sm"
-                        style={{ height: `${h}%` }}
-                      />
+                      <div key={i} className="flex-1 bg-brand-300 rounded-sm" style={{ height: `${h}%` }} />
                     ))}
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          {/* Paywall overlay */}
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[1px]">
             <span className="text-2xl mb-2">📈</span>
             <p className="font-display font-bold text-surface-900 text-base mb-1">
