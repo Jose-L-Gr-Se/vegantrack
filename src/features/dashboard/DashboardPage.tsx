@@ -104,6 +104,43 @@ export function DashboardPage() {
     iron_mg: { ...MICRO_RDA.iron_mg, rda: profile?.sex === 'male' ? 8 : 18 },
   };
 
+  const MICRO_INSIGHTS: Partial<Record<keyof typeof microRda, {
+    condition: (pct: number, hasSupp: boolean) => boolean;
+    text: string;
+    type: 'tip' | 'warning' | 'info';
+  }>> = {
+    omega3_g: {
+      condition: (pct, hasSupp) => pct < 50 && !hasSupp,
+      text: 'Casi ningún alimento declara DHA/EPA. Si no tomas suplemento de algas, considera añadirlo — es el omega-3 más relevante en dieta vegana.',
+      type: 'tip',
+    },
+    iron_mg: {
+      condition: (pct) => pct < 70,
+      text: 'El hierro vegetal se absorbe mejor con vitamina C. Combínalo en la misma comida con pimiento, cítricos, kiwi o perejil para mejorar la absorción.',
+      type: 'tip',
+    },
+    vitamin_b12_mcg: {
+      condition: (pct, hasSupp) => pct < 80 && !hasSupp,
+      text: 'La B12 fiable en dieta vegana proviene de suplementos o alimentos enriquecidos. Los análisis de sangre anuales son recomendables para confirmar tus niveles.',
+      type: 'warning',
+    },
+    calcium_mg: {
+      condition: (pct) => pct < 60,
+      text: 'Buenas fuentes veganas de calcio: bebida de soja enriquecida, tofu (con sulfato cálcico), brócoli, almendras y tahini.',
+      type: 'tip',
+    },
+    zinc_mg: {
+      condition: (pct) => pct < 60,
+      text: 'Las legumbres y semillas son las mejores fuentes veganas de zinc. Remojarlas antes de cocinar reduce el ácido fítico y mejora la absorción.',
+      type: 'tip',
+    },
+    vitamin_d_mcg: {
+      condition: (pct, hasSupp) => pct < 50 && !hasSupp,
+      text: 'La síntesis solar en España es insuficiente de octubre a marzo. Un suplemento de vitamina D3 (de líquenes para veganos) es recomendable en esos meses.',
+      type: 'warning',
+    },
+  };
+
   const calorieTarget = profile?.calorie_target ?? 2000;
   const maxCalInWeek = Math.max(...weekData.map((d) => d.calories), calorieTarget);
 
@@ -114,6 +151,32 @@ export function DashboardPage() {
     carbs: Math.round(daysWithData.reduce((s, d) => s + d.carbs, 0) / daysWithData.length),
     fat: Math.round(daysWithData.reduce((s, d) => s + d.fat, 0) / daysWithData.length),
   } : null;
+
+  function MicroInsightBox({ text, type }: { text: string; type: 'tip' | 'warning' | 'info' }) {
+    const [open, setOpen] = useState(false);
+    const colors = {
+      tip: 'text-brand-700 bg-brand-50 border-brand-100',
+      warning: 'text-amber-700 bg-amber-50 border-amber-100',
+      info: 'text-blue-700 bg-blue-50 border-blue-100',
+    };
+    const icons = { tip: '💡', warning: '⚠️', info: 'ℹ️' };
+    return (
+      <div className="mt-1.5">
+        <button
+          onClick={() => setOpen(v => !v)}
+          className="flex items-center gap-1 text-[10px] text-surface-400 hover:text-surface-600 transition-colors"
+        >
+          <span>{icons[type]}</span>
+          <span>{open ? 'Ocultar consejo' : 'Ver consejo'}</span>
+        </button>
+        {open && (
+          <div className={`mt-1.5 rounded-xl border px-3 py-2 text-xs leading-relaxed ${colors[type]}`}>
+            {text}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="pb-32 px-4 pt-6">
@@ -399,17 +462,24 @@ export function DashboardPage() {
             const hasEnoughCoverage = (micro?.coverage ?? 0) >= 0.5 || hasSupplement;
 
             if (!hasEnoughCoverage) {
+              const insight = MICRO_INSIGHTS[key as keyof typeof MICRO_INSIGHTS];
+              const pct = info.rda > 0 ? Math.min(((micro?.value ?? 0) + suppAmount) / info.rda * 100, 100) : 0;
               return (
-                <div key={key} className="metric-tile py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-surface-500">{info.label}</span>
-                      <span className="status-pill text-[10px] py-1 px-2">cobertura baja</span>
+                <div key={key}>
+                  <div className="metric-tile py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-surface-500">{info.label}</span>
+                        <span className="status-pill text-[10px] py-1 px-2">cobertura baja</span>
+                      </div>
+                      <span className="text-xs text-surface-400 font-mono">
+                        RDA: {info.rda} {info.unit}
+                      </span>
                     </div>
-                    <span className="text-xs text-surface-400 font-mono">
-                      RDA: {info.rda} {info.unit}
-                    </span>
                   </div>
+                  {insight && insight.condition(pct, hasSupplement) && (
+                    <MicroInsightBox text={insight.text} type={insight.type} />
+                  )}
                 </div>
               );
             }
@@ -417,6 +487,7 @@ export function DashboardPage() {
             const pct = info.rda > 0 ? Math.min((totalValue / info.rda) * 100, 100) : 0;
 
             if (pct >= 90) {
+              const insight = MICRO_INSIGHTS[key as keyof typeof MICRO_INSIGHTS];
               return (
                 <div key={key}>
                   <div className="flex items-center justify-between mb-1">
@@ -431,12 +502,16 @@ export function DashboardPage() {
                   <div className="h-2 bg-surface-100 rounded-full overflow-hidden">
                     <div className="h-full w-full rounded-full bg-brand-400" />
                   </div>
+                  {insight && insight.condition(pct, hasSupplement) && (
+                    <MicroInsightBox text={insight.text} type={insight.type} />
+                  )}
                 </div>
               );
             }
 
             const barColor = pct >= 50 ? 'bg-amber-400' : 'bg-red-400';
             const textColor = pct >= 50 ? 'text-amber-600' : 'text-red-500';
+            const insight = MICRO_INSIGHTS[key as keyof typeof MICRO_INSIGHTS];
 
             return (
               <div key={key}>
@@ -463,14 +538,20 @@ export function DashboardPage() {
                 <div className="flex justify-end mt-1">
                   <span className={`text-[10px] font-mono ${textColor}`}>{Math.round(pct)}%</span>
                 </div>
+                {insight && insight.condition(pct, hasSupplement) && (
+                  <MicroInsightBox text={insight.text} type={insight.type} />
+                )}
               </div>
             );
           })}
         </div>
 
-        <p className="text-xs text-surface-400 mt-4 text-center">
-          Los micronutrientes se muestran solo cuando hay datos suficientes del alimento.
-        </p>
+        <div className="mt-4 rounded-xl border border-surface-100 bg-surface-50 px-4 py-3">
+          <p className="text-[11px] text-surface-500 leading-relaxed text-center">
+            Los micronutrientes se calculan cuando el fabricante los declara en la etiqueta.
+            Para monitorización completa, complementa con <strong className="text-surface-600">analíticas de sangre anuales</strong> — especialmente B12, hierro y vitamina D.
+          </p>
+        </div>
       </div>
 
       {isPro ? (
