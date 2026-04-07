@@ -12,6 +12,8 @@ import type {
   Recipe, RecipeIngredient, RecentFood,
   MealType, OpenFoodFactsProduct, CustomFood,
 } from '@/types';
+import { usePro } from '@/hooks/usePro';
+import { ProModal } from '@/features/pro/ProModal';
 
 type PageView = 'list' | 'detail' | 'editor';
 
@@ -31,6 +33,10 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
   const { recipes, loading, fetchRecipes, createRecipe, updateRecipe, deleteRecipe, addIngredient, removeIngredient, logRecipe } = useRecipeStore();
   const { recentFoods, selectedDate } = useDiaryStore();
   const { customFoods } = useCustomFoodStore();
+
+  const { isPro } = usePro();
+  const [showProModal, setShowProModal] = useState(false);
+  const FREE_RECIPE_LIMIT = 3;
 
   const [view, setView]                     = useState<PageView>('list');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
@@ -670,9 +676,18 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
       )}
 
       <div className="mb-4">
-        <button onClick={openCreate}
-          className="btn-primary w-full flex items-center justify-center gap-2">
-          <Plus className="w-5 h-5" /> Nueva receta
+        <button
+          onClick={() => {
+            if (!isPro && recipes.length >= FREE_RECIPE_LIMIT) {
+              setShowProModal(true);
+            } else {
+              openCreate();
+            }
+          }}
+          className="btn-primary w-full flex items-center justify-center gap-2"
+        >
+          <Plus className="w-5 h-5" />
+          {!isPro && recipes.length >= FREE_RECIPE_LIMIT ? '🔒 Nueva receta — Pro' : 'Nueva receta'}
         </button>
       </div>
 
@@ -734,6 +749,7 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
       )}
 
       {logDialog && <LogDialogModal />}
+      {showProModal && <ProModal onClose={() => setShowProModal(false)} />}
     </div>
   );
 }

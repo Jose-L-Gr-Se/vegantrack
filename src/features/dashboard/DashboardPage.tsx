@@ -8,6 +8,8 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { TrendingUp, Flame, Zap, AlertTriangle, Target } from 'lucide-react';
 import type { SupplementNutrientKey } from '@/types';
 import { computeVeganScore, getScoreColor, getScoreLabel } from '@/utils/veganScore';
+import { usePro } from '@/hooks/usePro';
+import { ProModal } from '@/features/pro/ProModal';
 
 const MICRO_RDA = {
   vitamin_b12_mcg: { label: 'Vitamina B12', rda: 2.4, unit: 'mcg' },
@@ -31,6 +33,8 @@ export function DashboardPage() {
   const { getDaySummary, getWeekData, fetchEntries, selectedDate } = useDiaryStore();
   const [weekData, setWeekData] = useState<DayData[]>([]);
   const [loading, setLoading] = useState(true);
+  const { isPro } = usePro();
+  const [showProModal, setShowProModal] = useState(false);
   const summary = getDaySummary();
   const { getTodayContributions } = useSupplementStore();
 
@@ -467,6 +471,58 @@ export function DashboardPage() {
           Los micronutrientes se muestran solo cuando hay datos suficientes del alimento.
         </p>
       </div>
+
+      {!isPro && (
+        <div className="card overflow-hidden mt-4 relative">
+          {/* Preview borroso */}
+          <div className="p-5 filter blur-[3px] pointer-events-none select-none opacity-60">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <p className="section-label mb-2">Tendencias Pro</p>
+                <h2 className="font-display text-2xl font-bold tracking-[-0.04em] text-surface-900">
+                  Evolución de micros
+                </h2>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {['Vitamina B12', 'Hierro', 'Vitamina D'].map((micro) => (
+                <div key={micro}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-surface-600">{micro}</span>
+                    <span className="text-brand-600 font-mono">↑ mejorando</span>
+                  </div>
+                  <div className="h-12 bg-surface-100 rounded-xl overflow-hidden flex items-end gap-0.5 px-1 pb-1">
+                    {[40,55,48,70,65,80,90].map((h, i) => (
+                      <div
+                        key={i}
+                        className="flex-1 bg-brand-300 rounded-sm"
+                        style={{ height: `${h}%` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Paywall overlay */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[1px]">
+            <span className="text-2xl mb-2">📈</span>
+            <p className="font-display font-bold text-surface-900 text-base mb-1">
+              Tendencias de micronutrientes
+            </p>
+            <p className="text-xs text-surface-500 mb-4 text-center px-8">
+              Visualiza tu evolución de B12, hierro y vitamina D semana a semana
+            </p>
+            <button
+              onClick={() => setShowProModal(true)}
+              className="btn-primary text-sm px-5 py-2.5"
+            >
+              Desbloquear con Pro
+            </button>
+          </div>
+          {showProModal && <ProModal onClose={() => setShowProModal(false)} />}
+        </div>
+      )}
     </div>
   );
 }

@@ -10,6 +10,8 @@ import { ChevronLeft, ChevronRight, Plus, Trash2, Leaf, X, Save, Info, ChevronDo
 import { Spinner } from '@/components/ui/Spinner';
 import { SupplementsWidget } from '@/features/diary/SupplementsWidget';
 import type { FoodLogEntry, MealType } from '@/types';
+import { usePro } from '@/hooks/usePro';
+import { ProModal } from '@/features/pro/ProModal';
 
 const MEALS: { type: MealType; label: string }[] = [
   { type: 'breakfast', label: 'Desayuno' },
@@ -71,6 +73,16 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
   const [showMacroDetail, setShowMacroDetail] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [datesWithData, setDatesWithData] = useState<Set<string>>(new Set());
+  const { isPro } = usePro();
+  const [showProModal, setShowProModal] = useState(false);
+
+  const FREE_HISTORY_DAYS = 14;
+  const oldestFreeDate = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - FREE_HISTORY_DAYS);
+    return d.toISOString().split('T')[0];
+  })();
+  const isDateLocked = !isPro && selectedDate < oldestFreeDate;
 
   const todayStr = new Date().toISOString().split('T')[0];
   const weekDays = getWeekDays(selectedDate);
@@ -132,11 +144,22 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
       <div className="page-shell mb-6 px-4 py-4">
         <div className="flex items-center justify-between">
           <button
-            onClick={() => setDate(shiftDate(selectedDate, -1))}
+            onClick={() => {
+              const prev = shiftDate(selectedDate, -1);
+              if (!isPro && prev < oldestFreeDate) {
+                setShowProModal(true);
+              } else {
+                setDate(prev);
+              }
+            }}
             aria-label="Día anterior"
             className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-100 transition-colors"
           >
-            <ChevronLeft className="w-5 h-5 text-surface-500" />
+            <ChevronLeft className={`w-5 h-5 ${
+              !isPro && shiftDate(selectedDate, -1) < oldestFreeDate
+                ? 'text-surface-200'
+                : 'text-surface-500'
+            }`} />
           </button>
           <button onClick={() => setShowCalendar((v) => !v)} className="text-center">
             <p className="section-label mb-1">Diario</p>
@@ -187,11 +210,15 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
                 const isSelected = day === selectedDate;
                 const isToday = day === todayStr;
                 const hasData = datesWithData.has(day);
+                const isLocked = !isPro && day < oldestFreeDate;
 
                 return (
                   <button
                     key={day}
-                    onClick={() => setDate(day)}
+                    onClick={() => {
+                      if (isLocked) { setShowProModal(true); return; }
+                      setDate(day);
+                    }}
                     className="flex flex-col items-center gap-0.5 py-1.5 px-1 min-w-[32px] rounded-xl transition-colors"
                   >
                     <span className={`text-[10px] font-semibold ${isSelected ? 'text-brand-600' : 'text-surface-400'}`}>
@@ -199,11 +226,10 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
                     </span>
                     <span
                       className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-semibold transition-colors ${
-                        isSelected
-                          ? 'bg-brand-500 text-white'
-                          : isToday
-                            ? 'bg-brand-50 text-brand-700'
-                            : 'text-surface-700 hover:bg-surface-100'
+                        isSelected ? 'bg-brand-500 text-white'
+                        : isLocked ? 'text-surface-200'
+                        : isToday ? 'bg-brand-50 text-brand-700'
+                        : 'text-surface-700 hover:bg-surface-100'
                       }`}
                     >
                       {dayNum}
@@ -232,6 +258,29 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
           </div>
         </div>
       </div>
+
+      {isDateLocked && (
+        <div className="card p-6 mb-5 text-center">
+          <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+            <span className="text-2xl">🔒</span>
+          </div>
+          <h3 className="font-display text-lg font-bold text-surface-900 mb-1">
+            Historial limitado a 14 días
+          </h3>
+          <p className="text-sm text-surface-500 mb-4 leading-relaxed">
+            Con el Plan Pro accedes a todo tu historial sin límite de días.
+          </p>
+          <button
+            onClick={() => setShowProModal(true)}
+            className="btn-primary inline-flex items-center gap-2 mx-auto"
+          >
+            <span>Ver planes Pro</span>
+          </button>
+        </div>
+      )}
+
+      {!isDateLocked && (
+        <>
 
       {/* Summary card — clickable for detail */}
       <button
@@ -347,6 +396,7 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
       <div className="space-y-4">
         {MEALS.map((meal) => {
           const mealEntries = getEntriesForMeal(meal.type);
+
           const mealCalories = mealEntries.reduce((sum, e) => sum + (e.calories || 0), 0);
 
           return (
@@ -391,6 +441,11 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
           );
         })}
       </div>
+
+        </>
+      )}
+
+      {showProModal && <ProModal onClose={() => setShowProModal(false)} />}
     </div>
   );
 }
