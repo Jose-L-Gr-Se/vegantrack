@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import type { FoodLogEntry, NutrientSummary, RecentFood } from '@/types';
+import { applyOverrides } from '@/lib/nutrientOverrides';
 
 interface DiaryState {
   entries: FoodLogEntry[];
   selectedDate: string;
   loading: boolean;
   recentFoods: RecentFood[];
+  overrides: Awaited<ReturnType<typeof import('@/lib/nutrientOverrides').loadOverrides>> | null;
   setDate: (date: string) => void;
   fetchEntries: (userId: string, date: string) => Promise<void>;
   addEntry: (entry: Omit<FoodLogEntry, 'id' | 'created_at'>) => Promise<{ error: string | null }>;
@@ -14,6 +16,7 @@ interface DiaryState {
   getDaySummary: () => NutrientSummary;
   fetchRecentFoods: (userId: string) => Promise<void>;
   getWeekData: (userId: string) => Promise<{ date: string; calories: number; protein: number; carbs: number; fat: number }[]>;
+  loadOverrides: () => Promise<void>;
 }
 
 const today = () => new Date().toISOString().split('T')[0];
@@ -23,6 +26,7 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   selectedDate: today(),
   loading: false,
   recentFoods: [],
+  overrides: null,
 
   setDate: (date) => set({ selectedDate: date }),
 
@@ -77,7 +81,8 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   },
 
   getDaySummary: () => {
-    const { entries } = get();
+    const { entries, overrides } = get();
+    const ov = overrides ?? [];
 
     const makeMicro = () => ({ value: 0, knownEntries: 0, totalEntries: 0, coverage: 0 });
 
@@ -104,24 +109,22 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
       summary.fat_g     += e.fat_g     || 0;
       summary.fiber_g   += e.fiber_g   || 0;
 
+      // Aplicar overrides si el alimento tiene micros desconocidos
+      const enriched = { ...e, ...applyOverrides(e, ov) };
+
       const microFields = [
-        ['vitamin_b12_mcg', e.vitamin_b12_mcg, e.vitamin_b12_known],
-        ['iron_mg',         e.iron_mg,         e.iron_known],
-        ['zinc_mg',         e.zinc_mg,         e.zinc_known],
-        ['calcium_mg',      e.calcium_mg,      e.calcium_known],
-        ['omega3_g',        e.omega3_g,        e.omega3_known],
-        ['vitamin_d_mcg',   e.vitamin_d_mcg,   e.vitamin_d_known],
+        ['vitamin_b12_mcg', enriched.vitamin_b12_mcg, enriched.vitamin_b12_known],
+        ['iron_mg',         enriched.iron_mg,         enriched.iron_known],
+        ['zinc_mg',         enriched.zinc_mg,         enriched.zinc_known],
+        ['calcium_mg',      enriched.calcium_mg,      enriched.calcium_known],
+        ['omega3_g',        enriched.omega3_g,        enriched.omega3_known],
+        ['vitamin_d_mcg',   enriched.vitamin_d_mcg,   enriched.vitamin_d_known],
       ] as const;
 
       for (const [key, value, known] of microFields) {
         const m = summary.micros[key];
         const isKnown = (known ?? false) && value !== null && value !== undefined;
-
-        // Custom food entries (source === 'manual') are never expected to carry micro data —
-        // don't let them drag coverage down unless they actually have a known value.
-        if (e.source !== 'manual' || isKnown) {
-          m.totalEntries += 1;
-        }
+        if (e.source !== 'manual' || isKnown) m.totalEntries += 1;
         if (isKnown) {
           m.value += value;
           m.knownEntries += 1;
@@ -135,6 +138,12 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
     }
 
     return summary;
+  },
+
+  loadOverrides: async () => {
+    const { loadOverrides } = await import('@/lib/nutrientOverrides');
+    const data = await loadOverrides();
+    set({ overrides: data });
   },
 
   fetchRecentFoods: async (userId) => {

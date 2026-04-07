@@ -11,6 +11,7 @@ import { computeVeganScore, getScoreColor, getScoreLabel } from '@/utils/veganSc
 import { usePro } from '@/hooks/usePro';
 import { ProModal } from '@/features/pro/ProModal';
 import { MicroTrendsChart } from '@/features/dashboard/MicroTrendsChart';
+import { IRON_NONHEME_FACTOR } from '@/lib/nutrientOverrides';
 
 const MICRO_RDA = {
   vitamin_b12_mcg: { label: 'Vitamina B12', rda: 2.4, unit: 'mcg' },
@@ -545,6 +546,33 @@ export function DashboardPage() {
             );
           })}
         </div>
+
+        {(() => {
+          const ironMicro = summary.micros['iron_mg'];
+          const ironSupp = suppContributions['iron_mg'] ?? 0;
+          const ironTotal = (ironMicro?.value ?? 0) + ironSupp;
+          if (ironTotal <= 0) return null;
+          const ironAbsorbable = Math.round(ironTotal * IRON_NONHEME_FACTOR * 10) / 10;
+          return (
+            <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
+              <p className="text-[11px] font-semibold text-amber-700 mb-1 uppercase tracking-wide">
+                Hierro absorbible estimado
+              </p>
+              <div className="flex items-baseline gap-2">
+                <span className="font-display text-xl font-bold text-amber-700">
+                  {ironAbsorbable} mg
+                </span>
+                <span className="text-xs text-amber-600">
+                  de {Math.round(ironTotal * 10) / 10} mg totales
+                </span>
+              </div>
+              <p className="text-[10px] text-amber-600 mt-1 leading-relaxed">
+                El hierro vegetal se absorbe en menor proporción (~12% vs ~25% del animal).
+                Combinarlo con vitamina C puede doblar esta cifra.
+              </p>
+            </div>
+          );
+        })()}
 
         <div className="mt-4 rounded-xl border border-surface-100 bg-surface-50 px-4 py-3">
           <p className="text-[11px] text-surface-500 leading-relaxed text-center">

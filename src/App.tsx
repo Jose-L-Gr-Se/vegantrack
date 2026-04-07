@@ -36,6 +36,10 @@ export default function App() {
     initialize();
   }, []);
 
+  useEffect(() => {
+    useDiaryStore.getState().loadOverrides();
+  }, []);
+
   // Reload page when a new service worker takes control (autoUpdate)
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
