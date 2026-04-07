@@ -65,7 +65,7 @@ function buildChartData(rows: WeekPoint[], micro: MicroConfig): ChartPoint[] {
     }
 
     const total = fromFood + fromSupp;
-    const pct = Math.round((total / micro.rda) * 100);
+    const pct = Math.min(Math.round((total / micro.rda) * 100), 200);
     const date = new Date(row.week_start + 'T12:00:00');
     const label = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
 
@@ -191,9 +191,9 @@ export function MicroTrendsChart() {
           <div className="metric-tile flex-1 text-center py-3">
             <div
               className="font-display text-3xl font-bold"
-              style={{ color: getBarColor(avg4w) }}
+              style={{ color: getBarColor(Math.min(avg4w, 100)) }}
             >
-              {avg4w}%
+              {avg4w > 200 ? '>200%' : `${avg4w}%`}
             </div>
             <div className="text-[11px] text-surface-500 uppercase tracking-[0.18em] mt-1">
               Media 4 semanas
@@ -240,7 +240,7 @@ export function MicroTrendsChart() {
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v: number) => `${v}%`}
-                domain={[0, Math.max(150, Math.max(...chartData.map((d) => d.pct)) + 20)]}
+                domain={[0, 220]}
               />
               <Tooltip content={<CustomTooltip micro={microWithRda} />} />
               <ReferenceLine
