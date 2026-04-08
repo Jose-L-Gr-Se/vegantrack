@@ -17,6 +17,7 @@ interface DiaryState {
   fetchRecentFoods: (userId: string) => Promise<void>;
   getWeekData: (userId: string) => Promise<{ date: string; calories: number; protein: number; carbs: number; fat: number }[]>;
   loadOverrides: () => Promise<void>;
+  copyDayEntries: (fromDate: string, toDate: string) => Promise<{ count: number; error: string | null }>;
 }
 
 const today = () => new Date().toISOString().split('T')[0];
@@ -40,7 +41,6 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
       .order('created_at', { ascending: true });
 
     if (!error) {
-      // Only update entries on success — never wipe existing data on network error
       set({ entries: (data ?? []) as FoodLogEntry[], loading: false });
     } else {
       set({ loading: false });
@@ -63,7 +63,6 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
     if (!error && data) {
       set((state) => ({ entries: [...state.entries, data as FoodLogEntry] }));
 
-      // Actualizar racha — fire and forget, no bloquea la UI
       supabase.rpc('update_streak', {
         p_user_id: entry.user_id,
         p_date: entry.date,
@@ -78,6 +77,24 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   deleteEntry: async (id) => {
     const { error } = await supabase.from('food_log').delete().eq('id', id);
     if (!error) set((state) => ({ entries: state.entries.filter((e) => e.id !== id) }));
+  },
+
+  // Copia todos los alimentos de fromDate al toDate usando la RPC del backend
+  copyDayEntries: async (fromDate, toDate) => {
+    const { data, error } = await supabase.rpc('copy_day_entries', {
+      p_from_date: fromDate,
+      p_to_date: toDate,
+    });
+
+    const count = typeof data === 'number' ? data : 0;
+
+    if (!error && count > 0 && toDate === get().selectedDate) {
+      const { useAuthStore } = await import('@/stores/authStore');
+      const user = useAuthStore.getState().user;
+      if (user) await get().fetchEntries(user.id, toDate);
+    }
+
+    return { count, error: error?.message ?? null };
   },
 
   getDaySummary: () => {
@@ -103,22 +120,21 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
     };
 
     for (const e of entries) {
-      summary.calories  += e.calories  || 0;
+      summary.calories += e.calories || 0;
       summary.protein_g += e.protein_g || 0;
-      summary.carbs_g   += e.carbs_g   || 0;
-      summary.fat_g     += e.fat_g     || 0;
-      summary.fiber_g   += e.fiber_g   || 0;
+      summary.carbs_g += e.carbs_g || 0;
+      summary.fat_g += e.fat_g || 0;
+      summary.fiber_g += e.fiber_g || 0;
 
-      // Aplicar overrides si el alimento tiene micros desconocidos
       const enriched = { ...e, ...applyOverrides(e, ov) };
 
       const microFields = [
         ['vitamin_b12_mcg', enriched.vitamin_b12_mcg, enriched.vitamin_b12_known],
-        ['iron_mg',         enriched.iron_mg,         enriched.iron_known],
-        ['zinc_mg',         enriched.zinc_mg,         enriched.zinc_known],
-        ['calcium_mg',      enriched.calcium_mg,      enriched.calcium_known],
-        ['omega3_g',        enriched.omega3_g,        enriched.omega3_known],
-        ['vitamin_d_mcg',   enriched.vitamin_d_mcg,   enriched.vitamin_d_known],
+        ['iron_mg', enriched.iron_mg, enriched.iron_known],
+        ['zinc_mg', enriched.zinc_mg, enriched.zinc_known],
+        ['calcium_mg', enriched.calcium_mg, enriched.calcium_known],
+        ['omega3_g', enriched.omega3_g, enriched.omega3_known],
+        ['vitamin_d_mcg', enriched.vitamin_d_mcg, enriched.vitamin_d_known],
       ] as const;
 
       for (const [key, value, known] of microFields) {
@@ -147,7 +163,6 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
   },
 
   fetchRecentFoods: async (userId) => {
-    // Get last 50 log entries, deduplicate by food_name, rank by frequency
     const { data } = await supabase
       .from('food_log')
       .select('food_name, barcode, brand, image_url, calories, protein_g, carbs_g, fat_g, fiber_g, sugar_g, saturated_fat_g, sodium_mg, vitamin_b12_mcg, iron_mg, zinc_mg, calcium_mg, omega3_g, vitamin_d_mcg, vitamin_b12_known, iron_known, zinc_known, calcium_known, omega3_known, vitamin_d_known, is_vegan, serving_size_g')
@@ -191,11 +206,11 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
           vitamin_d_mcg_per_100g: entry.vitamin_d_known && entry.vitamin_d_mcg !== null
             ? Math.round(entry.vitamin_d_mcg * ratio * 100) / 100 : null,
           vitamin_b12_known: entry.vitamin_b12_known ?? false,
-          iron_known:        entry.iron_known        ?? false,
-          zinc_known:        entry.zinc_known        ?? false,
-          calcium_known:     entry.calcium_known     ?? false,
-          omega3_known:      entry.omega3_known      ?? false,
-          vitamin_d_known:   entry.vitamin_d_known   ?? false,
+          iron_known: entry.iron_known ?? false,
+          zinc_known: entry.zinc_known ?? false,
+          calcium_known: entry.calcium_known ?? false,
+          omega3_known: entry.omega3_known ?? false,
+          vitamin_d_known: entry.vitamin_d_known ?? false,
           is_vegan: entry.is_vegan,
           last_serving_g: entry.serving_size_g,
           use_count: 1,
@@ -221,7 +236,6 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
 
     const dayMap = new Map<string, { calories: number; protein: number; carbs: number; fat: number }>();
 
-    // Initialize all 7 days
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
@@ -229,7 +243,6 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
       dayMap.set(dateStr, { calories: 0, protein: 0, carbs: 0, fat: 0 });
     }
 
-    // Aggregate
     for (const entry of data || []) {
       const existing = dayMap.get(entry.date);
       if (existing) {
