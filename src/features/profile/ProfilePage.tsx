@@ -81,8 +81,12 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportSuccess, setExportSuccess] = useState(false);
-  const { isSubscribed, isSupported, permission, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
+  const { isSubscribed, isSupported, permission, loading: pushLoading, savedReminderHour, subscribe, unsubscribe } = usePushNotifications();
   const [reminderHour, setReminderHour] = useState(20);
+
+  useEffect(() => {
+    setReminderHour(savedReminderHour);
+  }, [savedReminderHour]);
 
   useEffect(() => {
     if (user) fetchCustomFoods(user.id);
@@ -694,6 +698,7 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
                 <div className="flex items-center gap-3 pt-3 border-t border-surface-100">
                   <label className="text-xs text-surface-500 font-medium whitespace-nowrap">Hora del aviso</label>
                   <input
+                    key={savedReminderHour}
                     type="range"
                     min={7}
                     max={23}
