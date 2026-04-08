@@ -8,7 +8,7 @@ import { ProgressRing } from '@/components/ui/ProgressRing';
 import { MacroBar } from '@/components/ui/MacroBar';
 import {
   ChevronLeft, ChevronRight, Plus, Trash2, Leaf, X,
-  Save, Info, ChevronDown, Flame, Copy,
+  Save, Info, ChevronDown, Flame, Copy, Zap,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import { SupplementsWidget } from '@/features/diary/SupplementsWidget';
@@ -79,6 +79,7 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
   const [datesWithData, setDatesWithData] = useState<Set<string>>(new Set());
   const { isPro } = usePro();
   const [showProModal, setShowProModal] = useState(false);
+  const [quickAddMeal, setQuickAddMeal] = useState<MealType | null>(null);
 
   const FREE_HISTORY_DAYS = 14;
   const oldestFreeDate = (() => {
@@ -364,13 +365,23 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
                       <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-surface-400">{meal.label}</span>
                       {mealEntries.length > 0 && <span className="status-pill py-1 px-2.5 text-[10px] font-mono">{Math.round(mealCalories)} kcal</span>}
                     </div>
-                    <button
-                      onClick={() => { window.dispatchEvent(new CustomEvent('navigate-search', { detail: meal.type })); }}
-                      aria-label={`Anadir a ${meal.label}`}
-                      className="icon-badge w-10 h-10 rounded-2xl text-surface-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
-                    >
-                      <Plus className="w-4 h-4" strokeWidth={2} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setQuickAddMeal(meal.type)}
+                        aria-label={`Anadir rapido a ${meal.label}`}
+                        className="w-9 h-9 flex items-center justify-center rounded-xl text-surface-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                        title="Anadir calorias rapido"
+                      >
+                        <Zap className="w-3.5 h-3.5" strokeWidth={2} />
+                      </button>
+                      <button
+                        onClick={() => { window.dispatchEvent(new CustomEvent('navigate-search', { detail: meal.type })); }}
+                        aria-label={`Anadir a ${meal.label}`}
+                        className="icon-badge w-10 h-10 rounded-2xl text-surface-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                      >
+                        <Plus className="w-4 h-4" strokeWidth={2} />
+                      </button>
+                    </div>
                   </div>
                   {mealEntries.length === 0 ? (
                     <div className="px-4 pb-5 pt-1 text-center text-sm text-surface-400 border-t border-surface-50">Sin alimentos registrados</div>
@@ -384,6 +395,18 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
             })}
           </div>
         </>
+      )}
+
+      {quickAddMeal && (
+        <QuickAddModal
+          mealType={quickAddMeal}
+          selectedDate={selectedDate}
+          onClose={() => setQuickAddMeal(null)}
+          onAdded={(msg) => {
+            setQuickAddMeal(null);
+            setCopyBanner(msg);
+          }}
+        />
       )}
 
       {showProModal && <ProModal onClose={() => setShowProModal(false)} />}
@@ -631,6 +654,252 @@ function MacroDetailModal({ summary, profile, entries, onClose }: { summary: { c
           ].map((m) => <div key={m.label} className={`${m.bg} rounded-2xl p-3 text-center`}><div className={`font-display text-lg font-bold ${m.color}`}>{Math.round(m.val)}{m.unit}</div><div className="text-[10px] text-surface-500 mt-0.5">{m.label}</div><div className={`text-[10px] font-mono mt-0.5 ${pct(m.val, m.target) >= 90 && pct(m.val, m.target) <= 110 ? 'text-brand-600 font-semibold' : pct(m.val, m.target) > 110 ? 'text-red-500' : 'text-surface-400'}`}>{pct(m.val, m.target)}%</div></div>)}</div>
           {mealBreakdown.length > 0 && <div><h4 className="text-sm font-semibold text-surface-600 mb-2">Distribucion por comida</h4><div className="space-y-2">{mealBreakdown.map((meal) => { const pctCal = summary.calories > 0 ? Math.round((meal.calories / summary.calories) * 100) : 0; return <div key={meal.type} className="flex items-center gap-3"><div className="flex-1"><div className="flex justify-between text-sm"><span className="text-surface-700">{meal.label}</span><span className="font-mono text-surface-600">{Math.round(meal.calories)} kcal</span></div><div className="h-1.5 bg-surface-100 rounded-full mt-1 overflow-hidden"><div className="h-full bg-brand-400 rounded-full" style={{ width: `${pctCal}%` }} /></div></div><span className="text-xs text-surface-400 w-8 text-right font-mono">{pctCal}%</span></div>; })}</div></div>}
           {summary.calories > 0 && <div><h4 className="text-sm font-semibold text-surface-600 mb-2">Ratio de macros</h4><div className="flex h-4 rounded-full overflow-hidden"><div className="bg-blue-400" style={{ width: `${Math.round((summary.protein_g * 4 / summary.calories) * 100)}%` }} /><div className="bg-amber-400" style={{ width: `${Math.round((summary.carbs_g * 4 / summary.calories) * 100)}%` }} /><div className="bg-rose-400" style={{ width: `${Math.round((summary.fat_g * 9 / summary.calories) * 100)}%` }} /></div><div className="flex justify-between mt-1.5"><span className="text-[10px] text-blue-600 font-mono">{Math.round((summary.protein_g * 4 / summary.calories) * 100)}% P</span><span className="text-[10px] text-amber-600 font-mono">{Math.round((summary.carbs_g * 4 / summary.calories) * 100)}% C</span><span className="text-[10px] text-rose-600 font-mono">{Math.round((summary.fat_g * 9 / summary.calories) * 100)}% G</span></div></div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function QuickAddModal({
+  mealType,
+  selectedDate,
+  onClose,
+  onAdded,
+}: {
+  mealType: MealType;
+  selectedDate: string;
+  onClose: () => void;
+  onAdded: (msg: string) => void;
+}) {
+  const { user } = useAuthStore();
+  const { addEntry } = useDiaryStore();
+
+  const MEAL_LABELS: Record<MealType, string> = {
+    breakfast: 'Desayuno',
+    lunch: 'Comida',
+    dinner: 'Cena',
+    snack: 'Snacks',
+  };
+
+  const [name, setName] = useState('');
+  const [kcal, setKcal] = useState('');
+  const [protein, setProtein] = useState('');
+  const [carbs, setCarbs] = useState('');
+  const [fat, setFat] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+  useBackHandler(true, onClose);
+  const { sheetRef, backdropRef, onTouchStart, onTouchMove, onTouchEnd } = useSwipeToDismiss({ onDismiss: onClose });
+
+  const kcalNum = Math.round(parseFloat(kcal) || 0);
+  const proteinNum = parseFloat(protein) || 0;
+  const carbsNum = parseFloat(carbs) || 0;
+  const fatNum = parseFloat(fat) || 0;
+
+  const estimatedCarbs = carbsNum === 0 && proteinNum === 0 && fatNum === 0 && kcalNum > 0
+    ? Math.round(kcalNum / 4)
+    : carbsNum;
+
+  const handleSave = async () => {
+    if (!user) return;
+    if (kcalNum <= 0) {
+      setError('Introduce al menos las calorias.');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+
+    const foodName = name.trim() || `Anadido rapido (${MEAL_LABELS[mealType].toLowerCase()})`;
+
+    const { error: addError } = await addEntry({
+      user_id: user.id,
+      date: selectedDate,
+      meal_type: mealType,
+      food_name: foodName,
+      barcode: null,
+      brand: null,
+      serving_size_g: 100,
+      calories: kcalNum,
+      protein_g: proteinNum,
+      carbs_g: estimatedCarbs,
+      fat_g: fatNum,
+      fiber_g: 0,
+      sugar_g: 0,
+      saturated_fat_g: 0,
+      sodium_mg: 0,
+      vitamin_b12_mcg: null,
+      iron_mg: null,
+      zinc_mg: null,
+      calcium_mg: null,
+      omega3_g: null,
+      vitamin_d_mcg: null,
+      vitamin_b12_known: false,
+      iron_known: false,
+      zinc_known: false,
+      calcium_known: false,
+      omega3_known: false,
+      vitamin_d_known: false,
+      source: 'manual',
+      source_ref: null,
+      is_vegan: true,
+      image_url: null,
+    });
+
+    setSaving(false);
+    if (addError) {
+      setError('Error al guardar. Intentalo de nuevo.');
+    } else {
+      onAdded(`${kcalNum} kcal anadidas a ${MEAL_LABELS[mealType].toLowerCase()} OK`);
+    }
+  };
+
+  return (
+    <div
+      ref={backdropRef}
+      className="fixed inset-0 z-[60] bg-black/40 flex items-end justify-center"
+      onClick={onClose}
+    >
+      <div
+        ref={sheetRef}
+        className="card w-full rounded-t-[2rem] pb-10"
+        onClick={(e) => e.stopPropagation()}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        <div className="flex justify-center pt-3 pb-2 sticky top-0 bg-white/90 rounded-t-[2rem] backdrop-blur-xl">
+          <div className="w-10 h-1 bg-surface-300 rounded-full" />
+        </div>
+
+        <div className="px-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 flex items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <Zap className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="section-label mb-0.5">Anadir rapido</p>
+                <h3 className="font-display text-lg font-bold text-surface-900 leading-tight">
+                  {MEAL_LABELS[mealType]}
+                </h3>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="Cerrar"
+              className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-100"
+            >
+              <X className="w-4 h-4 text-surface-500" />
+            </button>
+          </div>
+
+          <div>
+            <label className="label">Nombre (opcional)</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="input"
+              placeholder="Ej: Menu del dia, Pizza casera..."
+              maxLength={80}
+            />
+          </div>
+
+          <div>
+            <label className="label">
+              Calorias <span className="text-red-400">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                inputMode="decimal"
+                value={kcal}
+                onChange={(e) => setKcal(e.target.value)}
+                className="input font-mono text-xl pr-16"
+                placeholder="0"
+                autoFocus
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-surface-400 font-medium">
+                kcal
+              </span>
+            </div>
+            <div className="flex gap-2 mt-2">
+              {[300, 500, 700, 900].map((cal) => (
+                <button
+                  key={cal}
+                  onClick={() => setKcal(String(cal))}
+                  className={`flex-1 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                    kcalNum === cal
+                      ? 'border-amber-400 bg-amber-50 text-amber-700'
+                      : 'border-surface-200 text-surface-500 hover:border-surface-300'
+                  }`}
+                >
+                  {cal}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="label mb-2">Macros (opcional)</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: 'Proteina', state: protein, setter: setProtein, color: 'text-blue-600', unit: 'g' },
+                { label: 'Carbos', state: carbs, setter: setCarbs, color: 'text-amber-600', unit: 'g' },
+                { label: 'Grasa', state: fat, setter: setFat, color: 'text-rose-600', unit: 'g' },
+              ].map((macro) => (
+                <div key={macro.label}>
+                  <label className={`text-[10px] font-semibold uppercase tracking-wide ${macro.color} block mb-1`}>
+                    {macro.label}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={macro.state}
+                      onChange={(e) => macro.setter(e.target.value)}
+                      className="input font-mono text-sm pr-6 py-2.5"
+                      placeholder="0"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-surface-400">
+                      {macro.unit}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {kcalNum > 0 && proteinNum === 0 && carbsNum === 0 && fatNum === 0 && (
+              <p className="text-[11px] text-surface-400 mt-2 text-center">
+                Sin macros: se asignaran {estimatedCarbs}g de carbos estimados
+              </p>
+            )}
+          </div>
+
+          {error && (
+            <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-2xl border border-red-100">
+              {error}
+            </div>
+          )}
+
+          <button
+            onClick={handleSave}
+            disabled={saving || kcalNum <= 0}
+            className="btn-primary w-full flex items-center justify-center gap-2"
+          >
+            {saving ? (
+              <Spinner className="text-white" />
+            ) : (
+              <>
+                <Zap className="w-4 h-4" />
+                Anadir {kcalNum > 0 ? `${kcalNum} kcal` : ''} al diario
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>
