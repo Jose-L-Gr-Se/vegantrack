@@ -396,6 +396,7 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
           >
             <div
               className="bg-white dark:bg-surface-800 rounded-t-3xl pb-10"
+              style={{ paddingBottom: 'calc(2.5rem + env(safe-area-inset-bottom))' }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-center pt-3 pb-1">
@@ -414,7 +415,7 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
                 <p className="text-xs text-surface-400 mb-3">
                   Toca un suplemento para añadirlo con la dosis habitual. Edítala después si necesitas ajustarla.
                 </p>
-                <div className="space-y-4 overflow-y-auto max-h-[60vh]">
+                <div className="space-y-4 overflow-y-auto max-h-[55vh]">
                   {(['esenciales', 'rendimiento', 'general'] as const).map((cat) => {
                     const catPresets = SUPPLEMENT_PRESETS.filter((p) => p.category === cat);
                     return (
