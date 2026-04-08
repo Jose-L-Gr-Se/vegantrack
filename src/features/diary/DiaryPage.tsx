@@ -464,10 +464,10 @@ function CopyDaySheet({ selectedDate, onClose, onCopied }: { selectedDate: strin
   };
 
   return (
-    <div ref={backdropRef} className="fixed inset-0 z-[60] bg-black/40 flex items-end justify-center" onClick={onClose}>
+    <div ref={backdropRef} className="fixed inset-0 z-[70] bg-black/40 flex items-end justify-center" onClick={onClose}>
       <div
         ref={sheetRef}
-        className="card w-full rounded-t-[2rem] overflow-y-auto pb-10 max-h-[80vh]"
+        className="card w-full rounded-t-[2rem] overflow-y-auto overscroll-contain pb-[calc(env(safe-area-inset-bottom)+7rem)] max-h-[calc(100vh-1rem)]"
         onClick={(e) => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
@@ -583,8 +583,8 @@ function EditEntryModal({ entry, onClose, onSaved }: { entry: FoodLogEntry; onCl
   };
 
   return (
-    <div ref={editBackdropRef} className="fixed inset-0 z-[60] bg-black/40 flex items-stretch justify-center" onClick={onClose}>
-      <div ref={editSheetRef} className="card w-full mt-8 rounded-t-[2rem] overflow-y-auto pb-24" onClick={(e) => e.stopPropagation()} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+    <div ref={editBackdropRef} className="fixed inset-0 z-[70] bg-black/40 flex items-stretch justify-center" onClick={onClose}>
+      <div ref={editSheetRef} className="card w-full mt-8 rounded-t-[2rem] overflow-y-auto overscroll-contain pb-[calc(env(safe-area-inset-bottom)+7rem)] max-h-[calc(100vh-2rem)]" onClick={(e) => e.stopPropagation()} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-white/90 rounded-t-[2rem] backdrop-blur-xl"><div className="w-10 h-1 bg-surface-300 rounded-full" /></div>
         <div className="px-5 pb-5 space-y-4">
           <div className="flex items-center justify-between">
@@ -640,8 +640,8 @@ function MacroDetailModal({ summary, profile, entries, onClose }: { summary: { c
   }).filter((m) => m.count > 0);
 
   return (
-    <div ref={macroBackdropRef} className="fixed inset-0 z-[60] bg-black/40 flex items-stretch justify-center" onClick={onClose}>
-      <div ref={macroSheetRef} className="card w-full mt-8 rounded-t-[2rem] overflow-y-auto pb-24" onClick={(e) => e.stopPropagation()} onTouchStart={macroTouchStart} onTouchMove={macroTouchMove} onTouchEnd={macroTouchEnd}>
+    <div ref={macroBackdropRef} className="fixed inset-0 z-[70] bg-black/40 flex items-stretch justify-center" onClick={onClose}>
+      <div ref={macroSheetRef} className="card w-full mt-8 rounded-t-[2rem] overflow-y-auto overscroll-contain pb-[calc(env(safe-area-inset-bottom)+7rem)] max-h-[calc(100vh-2rem)]" onClick={(e) => e.stopPropagation()} onTouchStart={macroTouchStart} onTouchMove={macroTouchMove} onTouchEnd={macroTouchEnd}>
         <div className="flex justify-center pt-3 pb-1 sticky top-0 bg-white/90 rounded-t-[2rem] backdrop-blur-xl"><div className="w-10 h-1 bg-surface-300 rounded-full" /></div>
         <div className="px-5 pb-5 space-y-5">
           <div className="flex items-center justify-between"><h3 className="font-display text-lg font-bold">Detalle nutricional</h3><button onClick={onClose} aria-label="Cerrar" className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-100"><X className="w-4 h-4 text-surface-500" /></button></div>
@@ -761,12 +761,12 @@ function QuickAddModal({
   return (
     <div
       ref={backdropRef}
-      className="fixed inset-0 z-[60] bg-black/40 flex items-end justify-center"
+      className="fixed inset-0 z-[70] bg-black/40 flex items-end justify-center"
       onClick={onClose}
     >
       <div
         ref={sheetRef}
-        className="card w-full rounded-t-[2rem] pb-10"
+        className="card w-full rounded-t-[2rem] overflow-y-auto overscroll-contain pb-[calc(env(safe-area-inset-bottom)+7rem)] max-h-[calc(100vh-1rem)]"
         onClick={(e) => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
