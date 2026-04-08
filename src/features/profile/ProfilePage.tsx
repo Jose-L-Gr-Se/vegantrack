@@ -415,7 +415,7 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
                 <p className="text-xs text-surface-400 mb-3">
                   Toca un suplemento para añadirlo con la dosis habitual. Edítala después si necesitas ajustarla.
                 </p>
-                <div className="space-y-4 overflow-y-auto max-h-[55vh]">
+                <div className="space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(70vh - env(safe-area-inset-bottom) - 80px)' }}>
                   {(['esenciales', 'rendimiento', 'general'] as const).map((cat) => {
                     const catPresets = SUPPLEMENT_PRESETS.filter((p) => p.category === cat);
                     return (
