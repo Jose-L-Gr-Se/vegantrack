@@ -11,6 +11,7 @@ import { useSupplementStore } from '@/stores/supplementStore';
 import { ProModal } from '@/features/pro/ProModal';
 import { usePro } from '@/hooks/usePro';
 import { exportDiaryCsv } from '@/utils/exportCsv';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 const NUTRIENT_ICONS: Record<string, string> = {
   vitamin_b12_mcg: '🧬', vitamin_d_mcg: '☀️', omega3_g: '🌊',
@@ -80,6 +81,8 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportSuccess, setExportSuccess] = useState(false);
+  const { isSubscribed, isSupported, permission, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications();
+  const [reminderHour, setReminderHour] = useState(20);
 
   useEffect(() => {
     if (user) fetchCustomFoods(user.id);
@@ -644,6 +647,70 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
             Puedes ajustar manualmente o usar el botón de recalcular arriba
           </p>
         </div>
+
+        {/* Notificaciones push */}
+        {isSupported && (
+          <div className="card overflow-hidden">
+            <div className="px-4 py-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isSubscribed ? 'bg-brand-50' : 'bg-surface-100'}`}>
+                    <span className="text-base">🔔</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-surface-800">Recordatorio diario</p>
+                    <p className="text-xs text-surface-400 mt-0.5">
+                      {permission === 'denied'
+                        ? 'Bloqueado - activalo en ajustes del navegador'
+                        : isSubscribed
+                        ? 'Recibiras un aviso si no has registrado nada'
+                        : 'Aviso cuando no hayas registrado nada ese dia'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (isSubscribed) {
+                      await unsubscribe();
+                    } else {
+                      await subscribe(reminderHour);
+                    }
+                  }}
+                  disabled={pushLoading || permission === 'denied'}
+                  className={`relative w-11 h-6 rounded-full transition-colors disabled:opacity-40 ${
+                    isSubscribed ? 'bg-brand-500' : 'bg-surface-300'
+                  }`}
+                  aria-label={isSubscribed ? 'Desactivar recordatorio' : 'Activar recordatorio'}
+                >
+                  <div
+                    className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                      isSubscribed ? 'translate-x-5' : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {isSubscribed && (
+                <div className="flex items-center gap-3 pt-3 border-t border-surface-100">
+                  <label className="text-xs text-surface-500 font-medium whitespace-nowrap">Hora del aviso</label>
+                  <input
+                    type="range"
+                    min={7}
+                    max={23}
+                    value={reminderHour}
+                    onChange={(e) => setReminderHour(Number(e.target.value))}
+                    onMouseUp={async () => await subscribe(reminderHour)}
+                    onTouchEnd={async () => await subscribe(reminderHour)}
+                    className="flex-1 accent-brand-600"
+                  />
+                  <span className="text-xs font-mono font-semibold text-surface-700 w-12 text-right">
+                    {String(reminderHour).padStart(2, '0')}:00
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Dark mode toggle */}
         <div className="card overflow-hidden">
