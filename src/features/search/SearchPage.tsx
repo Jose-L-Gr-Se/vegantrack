@@ -11,14 +11,12 @@ import { SkeletonList } from '@/components/ui/Skeleton';
 import { Search, ScanBarcode, X, Leaf, Plus, Clock, ChevronDown, ChevronUp, AlertCircle, Star, ChefHat } from 'lucide-react';
 import type { OpenFoodFactsProduct, MealType, RecentFood, CustomFood } from '@/types';
 
-// Detectar iOS una vez — getUserMedia en PWA standalone de iOS es poco fiable
-const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
 
 const MEAL_OPTIONS: { value: MealType; label: string; icon: string }[] = [
-  { value: 'breakfast', label: 'Desayuno', icon: '🌅' },
-  { value: 'lunch', label: 'Comida', icon: '☀️' },
-  { value: 'dinner', label: 'Cena', icon: '🌙' },
-  { value: 'snack', label: 'Snacks', icon: '🍎' },
+  { value: 'breakfast', label: 'Desayuno', icon: 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã¢â‚¬â„¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦' },
+  { value: 'lunch', label: 'Comida', icon: 'ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â' },
+  { value: 'dinner', label: 'Cena', icon: 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã¢â‚¬â„¢ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢' },
+  { value: 'snack', label: 'Snacks', icon: 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â½' },
 ];
 
 const MEAL_LABELS: Record<MealType, string> = {
@@ -33,7 +31,7 @@ const ADD_TIMEOUT = 15000;
 
 /**
  * Scales a raw OFF nutriment value (in grams) to the target unit.
- * Returns null when the value is missing, null, undefined, or NaN —
+ * Returns null when the value is missing, null, undefined, or NaN ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â
  * so callers can distinguish "truly zero" from "not reported".
  */
 const scaleOrNull = (
@@ -78,8 +76,6 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
   const [showCustomFoodModal, setShowCustomFoodModal] = useState(false);
   const [alternatives, setAlternatives] = useState<OpenFoodFactsProduct[]>([]);
   const [debouncePending, setDebouncePending] = useState(false);
-  const iosFileInputRef = useRef<HTMLInputElement>(null);
-  const [iosScanning, setIosScanning] = useState(false);
   const [loadingAlternatives, setLoadingAlternatives] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const scannerRef = useRef<any>(null);
@@ -92,7 +88,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
     if (user) fetchRecentFoods(user.id);
   }, [user?.id]);
 
-  // Listen for meal type from diary page (locked — no selector shown)
+  // Listen for meal type from diary page (locked ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â no selector shown)
   useEffect(() => {
     if (initialLockedMeal) {
       setMealType(initialLockedMeal);
@@ -128,7 +124,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
     return () => { cancelled = true; };
   }, [selectedProduct?.code]);
 
-  // Debounced search — custom foods instantly, OpenFoodFacts after 300ms debounce
+  // Debounced search ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â custom foods instantly, OpenFoodFacts after 300ms debounce
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (selectedProduct) {
@@ -169,191 +165,95 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
     };
   }, [query, veganOnly, selectedProduct]);
 
-  // iOS: decodifica un barcode desde una foto tomada con la cámara nativa
-  const handleIOSScan = useCallback(async (file: File) => {
-    setIosScanning(true);
-    setScanError(null);
-    try {
-      const { Html5Qrcode } = await import('html5-qrcode');
-      // Necesita un div en el DOM — usamos uno oculto
-      const hiddenDiv = document.getElementById('ios-scanner-hidden');
-      if (hiddenDiv) hiddenDiv.innerHTML = '';
-      const scanner = new Html5Qrcode('ios-scanner-hidden', { verbose: false });
-      const decodedText = await scanner.scanFile(file, false);
-      try { await scanner.clear(); } catch {}
-      setIosScanning(false);
-      setSearching(true);
-      const product = await getProductByBarcode(decodedText);
-      if (product) {
-        setSelectedProduct(product);
-        setServingInput(String(product.serving_quantity || 100));
-      } else {
-        setResults([]);
-        setQuery(`CÃ³digo: ${decodedText} (no encontrado)`);
-      }
-      setSearching(false);
-    } catch (err: unknown) {
-      setIosScanning(false);
-      const msg = String((err as any)?.message ?? err ?? '');
-      if (msg.toLowerCase().includes('no barcode') || msg.toLowerCase().includes('qr code parse error') || msg.toLowerCase().includes('no multiformat')) {
-        setScanError('No se detectó ningún código en la foto. Intenta de nuevo, asegúrate de que el código está bien iluminado y centrado.');
-      } else {
-        setScanError('No se pudo leer el código. Inténtalo de nuevo.');
-      }
-    }
-  }, []);
-
   const startScanner = useCallback(async () => {
     setScanning(true);
     setScanError(null);
     try {
-      const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
+      const { BrowserMultiFormatReader, BarcodeFormat } = await import('@zxing/browser');
+      const { DecodeHintType, NotFoundException } = await import('@zxing/library');
 
-      const formatsToSupport = [
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.UPC_E,
-        Html5QrcodeSupportedFormats.CODE_128,
-      ];
+      const hints = new Map();
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+        BarcodeFormat.EAN_13,
+        BarcodeFormat.EAN_8,
+        BarcodeFormat.UPC_A,
+        BarcodeFormat.UPC_E,
+        BarcodeFormat.CODE_128,
+        BarcodeFormat.CODE_39,
+      ]);
+      hints.set(DecodeHintType.TRY_HARDER, true);
 
-      const boxRatio = 0.85;
-      // iOS Safari is less stable at high FPS; 10 is a reliable sweet spot.
-      const scanFps = IS_IOS ? 10 : 6;
-
-      const qrbox = (vw: number, vh: number) => ({
-        width: Math.floor(vw * boxRatio),
-        height: Math.floor(Math.min(vw * boxRatio * 0.55, vh * 0.5)),
+      const codeReader = new BrowserMultiFormatReader(hints, {
+        delayBetweenScanAttempts: 150,
       });
-      // Both platforms benefit from a defined scanning box for 1D barcode reliability.
-      const scannerConfig = { fps: scanFps, qrbox, disableFlip: true };
+      scannerRef.current = codeReader;
 
-      // Creates a fresh Html5Qrcode instance with a clean DOM container.
-      // A new instance is required after each failed start() — reusing a
-      // partially-initialised instance causes silent failures, especially on iOS.
-      const createScanner = () => {
-        const container = document.getElementById('scanner-container');
-        if (container) container.innerHTML = '';
-        return new Html5Qrcode('scanner-container', { formatsToSupport, verbose: false });
+      const container = document.getElementById('scanner-container');
+      if (!container) throw new Error('Scanner container not found');
+      container.innerHTML = '';
+
+      const videoEl = document.createElement('video');
+      videoEl.style.width = '100%';
+      videoEl.style.borderRadius = '0';
+      videoEl.setAttribute('playsinline', 'true');
+      videoEl.setAttribute('autoplay', 'true');
+      videoEl.setAttribute('muted', 'true');
+      container.appendChild(videoEl);
+
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
       };
 
-      // After scanner starts, request continuous autofocus.
-      // Zoom is intentionally kept conservative (1.5×) — higher values can
-      // shift focus distance and make thin barcode lines harder to resolve.
-      const applyAdvancedConstraints = async () => {
-        try {
-          const videoEl = document.querySelector('#scanner-container video') as HTMLVideoElement | null;
-          if (!videoEl) return;
-          const stream = videoEl.srcObject as MediaStream | null;
-          const track = stream?.getVideoTracks()[0];
-          if (!track) return;
-          const capabilities = (track as any).getCapabilities?.();
-          if (!capabilities) return;
-          const advanced: Record<string, unknown> = {};
-          if (capabilities.focusMode?.includes('continuous')) {
-            advanced.focusMode = 'continuous';
+      await codeReader.decodeFromConstraints(
+        constraints,
+        videoEl,
+        (result, err) => {
+          if (result) {
+            stopScanner();
+            const decodedText = result.getText();
+            setScanning(false);
+            setSearching(true);
+            getProductByBarcode(decodedText).then((product) => {
+              if (product) {
+                setSelectedProduct(product);
+                setServingInput(String(product.serving_quantity || 100));
+              } else {
+                setResults([]);
+                setQuery(`CÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³digo: ${decodedText} (no encontrado)`);
+              }
+              setSearching(false);
+            });
           }
-          if (capabilities.zoom && IS_IOS) {
-            const minZoom = capabilities.zoom.min ?? 1;
-            const maxZoom = capabilities.zoom.max ?? minZoom;
-            // 1.5× avoids the ultra-wide lens while keeping a usable focus range.
-            const preferredZoom = Math.min(maxZoom, Math.max(minZoom, 1.5));
-            if (preferredZoom > minZoom) {
-              advanced.zoom = preferredZoom;
-            }
+          if (err && !(err instanceof NotFoundException)) {
+            console.warn('Scan error:', err);
           }
-          if (Object.keys(advanced).length > 0) {
-            await track.applyConstraints({ advanced: [advanced] } as any);
-          }
-        } catch (e) {
-          // Non-critical — some browsers don't support advanced constraints
-          console.warn('Could not apply advanced camera constraints:', e);
         }
-      };
-
-      // onScanSuccess captures the current scanner via closure after each attempt.
-      let activeScanner: InstanceType<typeof Html5Qrcode> | null = null;
-      const onScanSuccess = async (decodedText: string) => {
-        try { await activeScanner?.stop(); } catch {}
-        setScanning(false);
-        setSearching(true);
-        const product = await getProductByBarcode(decodedText);
-        if (product) {
-          setSelectedProduct(product);
-          setServingInput(String(product.serving_quantity || 100));
-        } else {
-          setResults([]);
-          setQuery(`Código: ${decodedText} (no encontrado)`);
-        }
-        setSearching(false);
-      };
-
-      // iOS Safari rejects the exact facingMode constraint far more often than
-      // Android Chrome — start with `ideal` on iOS to avoid a guaranteed first
-      // failure that leaves the instance in a bad internal state.
-      const cameraConstraints = IS_IOS
-        ? [
-            { facingMode: { ideal: 'environment' } },
-            { facingMode: 'environment' },
-          ]
-        : [
-            { facingMode: 'environment' },
-            { facingMode: { ideal: 'environment' } },
-          ];
-
-      let lastErr: unknown;
-      for (const constraint of cameraConstraints) {
-        const scanner = createScanner();
-        activeScanner = scanner;
-        scannerRef.current = scanner;
-        try {
-          await scanner.start(constraint, scannerConfig, onScanSuccess, () => {});
-          await applyAdvancedConstraints();
-          return;
-        } catch (err) {
-          console.warn('Scanner start attempt failed:', err);
-          lastErr = err;
-          try { await scanner.stop(); } catch {}
-          try { (scanner as any).clear?.(); } catch {}
-          activeScanner = null;
-          scannerRef.current = null;
-        }
-      }
-
-      // Final fallback: pick a camera by device ID
-      const devices = await Html5Qrcode.getCameras();
-      if (devices && devices.length > 0) {
-        const backCam = devices.find(d => d.label.toLowerCase().includes('back'))
-          || devices[devices.length - 1];
-        const scanner = createScanner();
-        activeScanner = scanner;
-        scannerRef.current = scanner;
-        await scanner.start(backCam.id, scannerConfig, onScanSuccess, () => {});
-        await applyAdvancedConstraints();
-        return;
-      }
-
-      throw lastErr ?? new Error('No cameras available');
+      );
     } catch (err: unknown) {
       console.error('Scanner error:', err);
       setScanning(false);
       const name = (err as any)?.name ?? '';
-      const msg = (err as any)?.message ?? '';
-      if (name === 'NotAllowedError' || msg.toLowerCase().includes('permission')) {
-        setScanError('Permiso de cámara denegado. Actívalo en los ajustes del navegador.');
-      } else if (name === 'NotFoundError' || msg.includes('No cameras')) {
-        setScanError('No se encontró cámara en este dispositivo.');
-      } else if (name === 'OverconstrainedError') {
-        setScanError('La cámara no soporta la configuración solicitada. Inténtalo de nuevo.');
+      const msg  = String((err as any)?.message ?? '');
+      if (name === 'NotAllowedError' || msg.includes('Permission')) {
+        setScanError('Permiso de cÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡mara denegado. ActÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­valo en los ajustes del navegador.');
+      } else if (name === 'NotFoundError') {
+        setScanError('No se encontrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ cÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡mara en este dispositivo.');
       } else {
-        setScanError('No se pudo iniciar la cámara. Comprueba los permisos e inténtalo de nuevo.');
+        setScanError('No se pudo iniciar la cÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡mara. Comprueba los permisos e intÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ntalo de nuevo.');
       }
     }
   }, []);
 
-  const stopScanner = useCallback(async () => {
+  const stopScanner = useCallback(() => {
     if (scannerRef.current) {
-      try { await scannerRef.current.stop(); } catch {}
+      try {
+        scannerRef.current.reset?.();
+      } catch {}
+      scannerRef.current = null;
     }
     setScanning(false);
   }, []);
@@ -365,7 +265,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
         stopScanner();
       } else if (document.visibilityState === 'visible' && adding) {
         setAdding(false);
-        setAddError('La operación fue interrumpida. Inténtalo de nuevo.');
+        setAddError('La operaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n fue interrumpida. IntÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ntalo de nuevo.');
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -380,7 +280,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
   const handleAddFood = async () => {
     if (!selectedProduct || !user || adding) return;
     if (servingGrams <= 0) {
-      setAddError('Introduce una cantidad válida en gramos');
+      setAddError('Introduce una cantidad vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡lida en gramos');
       return;
     }
 
@@ -391,7 +291,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
     const n = product.nutriments;
     const ratio = servingGrams / 100;
 
-    // Micros — OFF stores all values in grams; scaleOrNull converts and returns null when not reported
+    // Micros ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â OFF stores all values in grams; scaleOrNull converts and returns null when not reported
     const vitaminB12 = scaleOrNull(n['vitamin-b12_100g'], ratio, 1e6, 2);
     const iron       = scaleOrNull(n['iron_100g'],         ratio, 1000, 1);
     const zinc       = scaleOrNull(n['zinc_100g'],         ratio, 1000, 1);
@@ -402,7 +302,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
 
     // Add with timeout
     const timeoutPromise = new Promise<{ error: string }>((resolve) =>
-      setTimeout(() => resolve({ error: 'La operación tardó demasiado. Comprueba tu conexión e inténtalo de nuevo.' }), ADD_TIMEOUT)
+      setTimeout(() => resolve({ error: 'La operaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n tardÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ demasiado. Comprueba tu conexiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n e intÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ntalo de nuevo.' }), ADD_TIMEOUT)
     );
 
     const addPromise = addEntry({
@@ -451,7 +351,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
       setAddError(null);
       fetchRecentFoods(user.id);
       window.dispatchEvent(new CustomEvent('navigate-diary', {
-        detail: { message: `${product.product_name} añadido a ${MEAL_LABELS[mealType]}` }
+        detail: { message: `${product.product_name} aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±adido a ${MEAL_LABELS[mealType]}` }
       }));
     }
   };
@@ -461,7 +361,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
     if (!user) return;
     const ratio = food.last_serving_g / 100;
 
-    // Values in RecentFood are already in target units (mcg, mg, g) per 100 g —
+    // Values in RecentFood are already in target units (mcg, mg, g) per 100 g ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â
     // preserve null when the original was unknown.
     const qB12     = food.vitamin_b12_known && food.vitamin_b12_mcg_per_100g !== null
       ? Math.round(food.vitamin_b12_mcg_per_100g * ratio * 100) / 100 : null;
@@ -508,7 +408,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
 
     if (!error) {
       window.dispatchEvent(new CustomEvent('navigate-diary', {
-        detail: { message: `${food.food_name} añadido a ${MEAL_LABELS[mealType]}` }
+        detail: { message: `${food.food_name} aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±adido a ${MEAL_LABELS[mealType]}` }
       }));
     }
   };
@@ -531,7 +431,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
         sugars_100g: food.sugar_per_100g,
         'saturated-fat_100g': food.saturated_fat_per_100g,
         sodium_100g: food.sodium_per_100g / 1000,
-        // Micros — stored in target units per 100g, convert back to grams for OFF format.
+        // Micros ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â stored in target units per 100g, convert back to grams for OFF format.
         // Omit the key when unknown so scaleOrNull in handleAddFood returns null (not 0).
         ...(food.vitamin_b12_mcg_per_100g !== null && { 'vitamin-b12_100g': food.vitamin_b12_mcg_per_100g / 1e6 }),
         ...(food.iron_mg_per_100g    !== null && { 'iron_100g':     food.iron_mg_per_100g    / 1000 }),
@@ -563,7 +463,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
         sugars_100g:          food.sugar_per_100g,
         'saturated-fat_100g': food.saturated_fat_per_100g,
         sodium_100g:          food.sodium_mg_per_100g / 1000,
-        // Micronutrientes — solo incluir si tienen valor real
+        // Micronutrientes ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â solo incluir si tienen valor real
         ...(food.vitamin_b12_mcg_per_100g != null && {
           'vitamin-b12_100g': food.vitamin_b12_mcg_per_100g / 1e6,
         }),
@@ -597,8 +497,8 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
 
     return (
       <div className="pb-32 px-4 pt-6">
-        <button onClick={clearProduct} aria-label="Volver a búsqueda" className="status-pill mb-4 hover:text-surface-700">
-          <X className="w-4 h-4" /> Volver a búsqueda
+        <button onClick={clearProduct} aria-label="Volver a bÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsqueda" className="status-pill mb-4 hover:text-surface-700">
+          <X className="w-4 h-4" /> Volver a bÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsqueda
         </button>
 
         <div className="page-shell overflow-hidden">
@@ -621,7 +521,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
               )}
             </div>
 
-            {/* Serving selector — allows empty input for typing */}
+            {/* Serving selector ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â allows empty input for typing */}
             <div>
               <label className="label">Cantidad (gramos)</label>
               <div className="flex items-center gap-2">
@@ -642,7 +542,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
                     onClick={() => setServingInput(String(selectedProduct.serving_quantity))}
                     className="btn-secondary text-xs whitespace-nowrap"
                   >
-                    1 porción ({selectedProduct.serving_quantity}g)
+                    1 porciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n ({selectedProduct.serving_quantity}g)
                   </button>
                 )}
               </div>
@@ -667,14 +567,14 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
             {/* Nutrients */}
             <div className="page-shell rounded-[1.5rem] p-4 space-y-2">
               <div className="flex justify-between font-semibold">
-                <span>Calorías</span>
+                <span>CalorÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­as</span>
                 <span className="font-mono">{servingGrams > 0 ? Math.round(n['energy-kcal_100g'] * ratio) : 0} kcal</span>
               </div>
               <div className="h-px bg-surface-200" />
               {[
-                { label: 'Proteínas', val: n.proteins_100g, color: 'text-blue-600' },
+                { label: 'ProteÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­nas', val: n.proteins_100g, color: 'text-blue-600' },
                 { label: 'Carbohidratos', val: n.carbohydrates_100g, color: 'text-amber-600' },
-                { label: '  de los cuales azúcares', val: n.sugars_100g, color: 'text-amber-400', indent: true },
+                { label: '  de los cuales azÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºcares', val: n.sugars_100g, color: 'text-amber-400', indent: true },
                 { label: 'Grasas', val: n.fat_100g, color: 'text-rose-600' },
                 { label: '  de las cuales saturadas', val: n['saturated-fat_100g'], color: 'text-rose-400', indent: true },
                 { label: 'Fibra', val: n.fiber_100g, color: 'text-green-600' },
@@ -704,7 +604,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
 
                 {!loadingAlternatives && alternatives.length === 0 && (
                   <p className="text-xs text-surface-400 py-3">
-                    No se encontraron alternativas veganas en esta categoría
+                    No se encontraron alternativas veganas en esta categorÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­a
                   </p>
                 )}
 
@@ -745,17 +645,17 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
               </div>
             )}
 
-            {/* Meal selector — ONLY shown when NOT coming from diary (no lockedMealType) */}
+            {/* Meal selector ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ONLY shown when NOT coming from diary (no lockedMealType) */}
             {lockedMealType ? (
               <div className="metric-tile px-4 py-3 flex items-center gap-2">
-                <span className="text-sm text-surface-600">Añadir a</span>
+                <span className="text-sm text-surface-600">AÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±adir a</span>
                 <span className="text-sm font-semibold text-surface-800">
                   {MEAL_OPTIONS.find(m => m.value === lockedMealType)?.icon} {MEAL_LABELS[lockedMealType]}
                 </span>
               </div>
             ) : (
               <div>
-                <label className="label">Añadir a</label>
+                <label className="label">AÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±adir a</label>
                 <div className="grid grid-cols-4 gap-2">
                   {MEAL_OPTIONS.map((m) => (
                     <button
@@ -792,12 +692,12 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
               {adding ? (
                 <>
                   <Spinner className="text-white" />
-                  <span>Añadiendo...</span>
+                  <span>AÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±adiendo...</span>
                 </>
               ) : (
                 <>
                   <Plus className="w-4 h-4" />
-                  Añadir {servingGrams > 0 ? `${servingGrams}g` : ''} al diario
+                  AÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±adir {servingGrams > 0 ? `${servingGrams}g` : ''} al diario
                 </>
               )}
             </button>
@@ -808,7 +708,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
                 onClick={() => setAdding(false)}
                 className="w-full text-center text-xs text-surface-400 hover:text-surface-600 py-1"
               >
-                ¿Tarda mucho? Toca aquí para cancelar
+                ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿Tarda mucho? Toca aquÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ para cancelar
               </button>
             )}
           </div>
@@ -863,53 +763,22 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
           {query && (
             <button
               onClick={() => { setQuery(''); setResults([]); setCustomResults([]); inputRef.current?.focus(); }}
-              aria-label="Limpiar búsqueda"
+              aria-label="Limpiar bÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsqueda"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
             >
               <X className="w-4 h-4" />
             </button>
           )}
         </div>
-        {IS_IOS ? (
-          <>
-            {/* iOS: input oculto que abre la cámara nativa */}
-            <input
-              ref={iosFileInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleIOSScan(file);
-                // Reset para permitir escanear el mismo código dos veces
-                e.target.value = '';
-              }}
-            />
-            <button
-              onClick={() => iosFileInputRef.current?.click()}
-              disabled={iosScanning}
-              aria-label="Escanear código de barras"
-              className="w-12 h-12 flex items-center justify-center rounded-2xl transition-colors flex-shrink-0 bg-brand-50 text-brand-600 hover:bg-brand-100 disabled:opacity-50"
-            >
-              {iosScanning ? (
-                <Spinner className="w-5 h-5 text-brand-600" />
-              ) : (
-                <ScanBarcode className="w-5 h-5" />
-              )}
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={scanning ? stopScanner : startScanner}
-            aria-label={scanning ? "Detener escáner" : "Escanear código de barras"}
-            className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-colors flex-shrink-0 ${
-              scanning ? 'bg-red-100 text-red-600' : 'bg-brand-50 text-brand-600 hover:bg-brand-100'
-            }`}
-          >
-            <ScanBarcode className="w-5 h-5" />
-          </button>
-        )}
+        <button
+          onClick={scanning ? stopScanner : startScanner}
+          aria-label={scanning ? "Detener escÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ner" : "Escanear cÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³digo de barras"}
+          className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-colors flex-shrink-0 ${
+            scanning ? 'bg-red-100 text-red-600' : 'bg-brand-50 text-brand-600 hover:bg-brand-100'
+          }`}
+        >
+          <ScanBarcode className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Filters row */}
@@ -926,28 +795,14 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
         </button>
       </div>
       </div>
-
-      {/* Div oculto que html5-qrcode necesita para scanFile en iOS */}
-      <div id="ios-scanner-hidden" className="hidden" />
-
-      {/* Scanner container — solo Android/Desktop */}
-      {!IS_IOS && scanning && (
+      {scanning && (
         <div className="mb-4 card overflow-hidden border-2 border-brand-500">
           <div id="scanner-container" className="w-full" />
           <p className="text-center text-sm text-surface-500 py-2 bg-surface-50">
-            Enfoca el código de barras
+            Enfoca el cÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³digo de barras
           </p>
         </div>
       )}
-
-      {/* iOS: feedback mientras decodifica */}
-      {IS_IOS && iosScanning && (
-        <div className="mb-4 card px-4 py-3 flex items-center gap-3 border-brand-200">
-          <Spinner className="w-5 h-5 text-brand-500 flex-shrink-0" />
-          <p className="text-sm text-surface-600">Leyendo código de barras...</p>
-        </div>
-      )}
-
       {/* Camera permission / init error */}
       {scanError && (
         <div className="mb-4 card text-red-600 text-sm px-4 py-3 flex items-start gap-2">
@@ -972,8 +827,8 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
       {freshResults.length > 0 && query.length >= 2 && !selectedProduct && (
         <div className="mb-3">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-base">🌱</span>
-            <span className="text-xs font-semibold text-surface-500 uppercase tracking-wide">Frescos · datos verificados</span>
+            <span className="text-base">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã¢â‚¬â„¢Ãƒâ€šÃ‚Â±</span>
+            <span className="text-xs font-semibold text-surface-500 uppercase tracking-wide">Frescos ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· datos verificados</span>
           </div>
           <div className="space-y-2">
             {freshResults.map((product) => (
@@ -995,7 +850,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
                       <Leaf className="w-2.5 h-2.5 text-brand-600" />
                     </span>
                   </div>
-                  <p className="text-xs text-surface-400">BEDCA · {product.nutriments['energy-kcal_100g']} kcal/100g</p>
+                  <p className="text-xs text-surface-400">BEDCA ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {product.nutriments['energy-kcal_100g']} kcal/100g</p>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-sm font-semibold font-mono">{product.nutriments['energy-kcal_100g']}</p>
@@ -1102,14 +957,14 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
         </div>
       )}
 
-      {/* Empty state for search — with create custom food button */}
+      {/* Empty state for search ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â with create custom food button */}
       {!searching && query.length >= 2 && results.length === 0 && customResults.length === 0 && (
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-surface-100 rounded-3xl flex items-center justify-center mx-auto mb-3">
             <Search className="w-7 h-7 text-surface-300" />
           </div>
           <p className="text-surface-500">No se encontraron resultados</p>
-          <p className="text-sm text-surface-400 mt-1 mb-4">Prueba con otro término o crea tu propio alimento</p>
+          <p className="text-sm text-surface-400 mt-1 mb-4">Prueba con otro tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rmino o crea tu propio alimento</p>
           <button
             onClick={() => setShowCustomFoodModal(true)}
             className="btn-primary inline-flex items-center gap-2"
@@ -1119,7 +974,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
         </div>
       )}
 
-      {/* Recent foods (shown when not searching) — limited with "show more" */}
+      {/* Recent foods (shown when not searching) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â limited with "show more" */}
       {!searching && !query && recentFoods.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
@@ -1169,15 +1024,15 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
                     )}
                   </div>
                   <p className="text-xs text-surface-400">
-                    {food.last_serving_g}g · {Math.round(food.calories_per_100g * food.last_serving_g / 100)} kcal
-                    {food.use_count > 1 && ` · ×${food.use_count}`}
+                    {food.last_serving_g}g ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {Math.round(food.calories_per_100g * food.last_serving_g / 100)} kcal
+                    {food.use_count > 1 && ` ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â${food.use_count}`}
                   </p>
                 </button>
                 <button
                   onClick={() => handleQuickAdd(food)}
-                  aria-label={`Añadir ${food.food_name}`}
+                  aria-label={`AÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±adir ${food.food_name}`}
                   className="w-9 h-9 flex items-center justify-center rounded-xl bg-brand-50 text-brand-600 hover:bg-brand-100 transition-colors flex-shrink-0"
-                  title="Añadir rápido"
+                  title="AÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±adir rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡pido"
                 >
                   <Plus className="w-4 h-4" strokeWidth={2.5} />
                 </button>
@@ -1192,7 +1047,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
               {showAllRecents ? (
                 <><ChevronUp className="w-3 h-3" /> Mostrar menos</>
               ) : (
-                <><ChevronDown className="w-3 h-3" /> Ver {recentFoods.length - 5} más</>
+                <><ChevronDown className="w-3 h-3" /> Ver {recentFoods.length - 5} mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡s</>
               )}
             </button>
           )}
