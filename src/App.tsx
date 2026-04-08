@@ -18,6 +18,7 @@ import { useSupplementStore } from '@/stores/supplementStore';
 import { Spinner } from '@/components/ui/Spinner';
 import { AppLogo } from '@/components/ui/AppLogo';
 import { ProSuccessModal } from '@/features/pro/ProSuccessModal';
+import type { MealType } from '@/types';
 
 export default function App() {
   const { isDark, toggle: toggleDark } = useDarkMode();
@@ -27,6 +28,7 @@ export default function App() {
   const [showLanding, setShowLanding] = useState(true);
   const [diaryMessage, setDiaryMessage] = useState<string | null>(null);
   const [searchSubview, setSearchSubview] = useState<'main' | 'recipes'>('main');
+  const [searchLockedMeal, setSearchLockedMeal] = useState<MealType | null>(null);
   const [showProSuccess, setShowProSuccess] = useState(false);
   const { fetchRecipes } = useRecipeStore();
   const { fetchSupplements, fetchTodayLogs } = useSupplementStore();
@@ -67,7 +69,12 @@ export default function App() {
 
   // Listen for search navigation from diary
   useEffect(() => {
-    const handler = () => setActiveTab('search');
+    const handler = (e: Event) => {
+      const meal = (e as CustomEvent).detail as MealType | undefined;
+      setActiveTab('search');
+      setSearchSubview('main');
+      if (meal) setSearchLockedMeal(meal);
+    };
     window.addEventListener('navigate-search', handler);
     return () => window.removeEventListener('navigate-search', handler);
   }, []);
@@ -136,7 +143,10 @@ export default function App() {
           {activeTab === 'search' && (
             searchSubview === 'recipes'
               ? <RecipesPage onBack={() => setSearchSubview('main')} />
-              : <SearchPage />
+              : <SearchPage
+                  initialLockedMeal={searchLockedMeal}
+                  onClearLock={() => setSearchLockedMeal(null)}
+                />
           )}
           {activeTab === 'dashboard' && <DashboardPage />}
           {activeTab === 'progress' && <ProgressPage />}

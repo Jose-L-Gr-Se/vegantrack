@@ -11,6 +11,9 @@ import { SkeletonList } from '@/components/ui/Skeleton';
 import { Search, ScanBarcode, X, Leaf, Plus, Clock, ChevronDown, ChevronUp, AlertCircle, Star, ChefHat } from 'lucide-react';
 import type { OpenFoodFactsProduct, MealType, RecentFood, CustomFood } from '@/types';
 
+// Detectar iOS una vez — getUserMedia en PWA standalone de iOS es poco fiable
+const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+
 const MEAL_OPTIONS: { value: MealType; label: string; icon: string }[] = [
   { value: 'breakfast', label: 'Desayuno', icon: '🌅' },
   { value: 'lunch', label: 'Comida', icon: '☀️' },
@@ -47,7 +50,12 @@ const scaleOrNull = (
   return Math.round(scaled * factor) / factor;
 };
 
-export function SearchPage() {
+interface SearchPageProps {
+  initialLockedMeal?: MealType | null;
+  onClearLock?: () => void;
+}
+
+export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) {
   const { user } = useAuthStore();
   const { addEntry, selectedDate, recentFoods, fetchRecentFoods } = useDiaryStore();
   const { searchCustomFoods } = useCustomFoodStore();
@@ -70,6 +78,8 @@ export function SearchPage() {
   const [showCustomFoodModal, setShowCustomFoodModal] = useState(false);
   const [alternatives, setAlternatives] = useState<OpenFoodFactsProduct[]>([]);
   const [debouncePending, setDebouncePending] = useState(false);
+  const iosFileInputRef = useRef<HTMLInputElement>(null);
+  const [iosScanning, setIosScanning] = useState(false);
   const [loadingAlternatives, setLoadingAlternatives] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const scannerRef = useRef<any>(null);
@@ -84,20 +94,18 @@ export function SearchPage() {
 
   // Listen for meal type from diary page (locked — no selector shown)
   useEffect(() => {
-    const handler = (e: CustomEvent) => {
-      if (e.detail) {
-        setMealType(e.detail);
-        setLockedMealType(e.detail);
-      }
-    };
-    window.addEventListener('navigate-search', handler as any);
-    return () => window.removeEventListener('navigate-search', handler as any);
-  }, []);
+    if (initialLockedMeal) {
+      setMealType(initialLockedMeal);
+      setLockedMealType(initialLockedMeal);
+    }
+  }, [initialLockedMeal]);
 
   // Reset locked meal type when going back to search list
   const clearProduct = () => {
     setSelectedProduct(null);
     setAddError(null);
+    setLockedMealType(null);
+    onClearLock?.();
   };
 
   // Intercept Android/iOS system back when product detail is open
@@ -161,6 +169,40 @@ export function SearchPage() {
     };
   }, [query, veganOnly, selectedProduct]);
 
+  // iOS: decodifica un barcode desde una foto tomada con la cámara nativa
+  const handleIOSScan = useCallback(async (file: File) => {
+    setIosScanning(true);
+    setScanError(null);
+    try {
+      const { Html5Qrcode } = await import('html5-qrcode');
+      // Necesita un div en el DOM — usamos uno oculto
+      const hiddenDiv = document.getElementById('ios-scanner-hidden');
+      if (hiddenDiv) hiddenDiv.innerHTML = '';
+      const scanner = new Html5Qrcode('ios-scanner-hidden', { verbose: false });
+      const decodedText = await scanner.scanFile(file, false);
+      try { await scanner.clear(); } catch {}
+      setIosScanning(false);
+      setSearching(true);
+      const product = await getProductByBarcode(decodedText);
+      if (product) {
+        setSelectedProduct(product);
+        setServingInput(String(product.serving_quantity || 100));
+      } else {
+        setResults([]);
+        setQuery(`CÃ³digo: ${decodedText} (no encontrado)`);
+      }
+      setSearching(false);
+    } catch (err: unknown) {
+      setIosScanning(false);
+      const msg = String((err as any)?.message ?? err ?? '');
+      if (msg.toLowerCase().includes('no barcode') || msg.toLowerCase().includes('qr code parse error') || msg.toLowerCase().includes('no multiformat')) {
+        setScanError('No se detectó ningún código en la foto. Intenta de nuevo, asegúrate de que el código está bien iluminado y centrado.');
+      } else {
+        setScanError('No se pudo leer el código. Inténtalo de nuevo.');
+      }
+    }
+  }, []);
+
   const startScanner = useCallback(async () => {
     setScanning(true);
     setScanError(null);
@@ -175,11 +217,9 @@ export function SearchPage() {
         Html5QrcodeSupportedFormats.CODE_128,
       ];
 
-      const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-
       const boxRatio = 0.85;
       // iOS Safari is less stable at high FPS; 10 is a reliable sweet spot.
-      const scanFps = isIOS ? 10 : 6;
+      const scanFps = IS_IOS ? 10 : 6;
 
       const qrbox = (vw: number, vh: number) => ({
         width: Math.floor(vw * boxRatio),
@@ -213,7 +253,7 @@ export function SearchPage() {
           if (capabilities.focusMode?.includes('continuous')) {
             advanced.focusMode = 'continuous';
           }
-          if (capabilities.zoom && isIOS) {
+          if (capabilities.zoom && IS_IOS) {
             const minZoom = capabilities.zoom.min ?? 1;
             const maxZoom = capabilities.zoom.max ?? minZoom;
             // 1.5× avoids the ultra-wide lens while keeping a usable focus range.
@@ -251,7 +291,7 @@ export function SearchPage() {
       // iOS Safari rejects the exact facingMode constraint far more often than
       // Android Chrome — start with `ideal` on iOS to avoid a guaranteed first
       // failure that leaves the instance in a bad internal state.
-      const cameraConstraints = isIOS
+      const cameraConstraints = IS_IOS
         ? [
             { facingMode: { ideal: 'environment' } },
             { facingMode: 'environment' },
@@ -407,6 +447,7 @@ export function SearchPage() {
     } else {
       setSelectedProduct(null);
       setLockedMealType(null);
+      onClearLock?.();
       setAddError(null);
       fetchRecentFoods(user.id);
       window.dispatchEvent(new CustomEvent('navigate-diary', {
@@ -829,15 +870,46 @@ export function SearchPage() {
             </button>
           )}
         </div>
-        <button
-          onClick={scanning ? stopScanner : startScanner}
-          aria-label={scanning ? "Detener escáner" : "Escanear código de barras"}
-          className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-colors flex-shrink-0 ${
-            scanning ? 'bg-red-100 text-red-600' : 'bg-brand-50 text-brand-600 hover:bg-brand-100'
-          }`}
-        >
-          <ScanBarcode className="w-5 h-5" />
-        </button>
+        {IS_IOS ? (
+          <>
+            {/* iOS: input oculto que abre la cámara nativa */}
+            <input
+              ref={iosFileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleIOSScan(file);
+                // Reset para permitir escanear el mismo código dos veces
+                e.target.value = '';
+              }}
+            />
+            <button
+              onClick={() => iosFileInputRef.current?.click()}
+              disabled={iosScanning}
+              aria-label="Escanear código de barras"
+              className="w-12 h-12 flex items-center justify-center rounded-2xl transition-colors flex-shrink-0 bg-brand-50 text-brand-600 hover:bg-brand-100 disabled:opacity-50"
+            >
+              {iosScanning ? (
+                <Spinner className="w-5 h-5 text-brand-600" />
+              ) : (
+                <ScanBarcode className="w-5 h-5" />
+              )}
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={scanning ? stopScanner : startScanner}
+            aria-label={scanning ? "Detener escáner" : "Escanear código de barras"}
+            className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-colors flex-shrink-0 ${
+              scanning ? 'bg-red-100 text-red-600' : 'bg-brand-50 text-brand-600 hover:bg-brand-100'
+            }`}
+          >
+            <ScanBarcode className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Filters row */}
@@ -855,13 +927,24 @@ export function SearchPage() {
       </div>
       </div>
 
-      {/* Scanner container */}
-      {scanning && (
+      {/* Div oculto que html5-qrcode necesita para scanFile en iOS */}
+      <div id="ios-scanner-hidden" className="hidden" />
+
+      {/* Scanner container — solo Android/Desktop */}
+      {!IS_IOS && scanning && (
         <div className="mb-4 card overflow-hidden border-2 border-brand-500">
           <div id="scanner-container" className="w-full" />
           <p className="text-center text-sm text-surface-500 py-2 bg-surface-50">
             Enfoca el código de barras
           </p>
+        </div>
+      )}
+
+      {/* iOS: feedback mientras decodifica */}
+      {IS_IOS && iosScanning && (
+        <div className="mb-4 card px-4 py-3 flex items-center gap-3 border-brand-200">
+          <Spinner className="w-5 h-5 text-brand-500 flex-shrink-0" />
+          <p className="text-sm text-surface-600">Leyendo código de barras...</p>
         </div>
       )}
 
