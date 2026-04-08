@@ -4,6 +4,7 @@ import { searchProducts, getProductByBarcode, isProductVegan, findVeganAlternati
 import { useAuthStore } from '@/stores/authStore';
 import { useDiaryStore } from '@/stores/diaryStore';
 import { useCustomFoodStore } from '@/stores/customFoodStore';
+import { searchFreshProduce, freshItemToProduct } from '@/lib/freshProduce';
 import { CustomFoodModal } from './CustomFoodModal';
 import { Spinner } from '@/components/ui/Spinner';
 import { SkeletonList } from '@/components/ui/Skeleton';
@@ -53,6 +54,7 @@ export function SearchPage() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<OpenFoodFactsProduct[]>([]);
   const [customResults, setCustomResults] = useState<CustomFood[]>([]);
+  const [freshResults, setFreshResults] = useState<ReturnType<typeof freshItemToProduct>[]>([]);
   const [searching, setSearching] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [veganOnly, setVeganOnly] = useState(false);
@@ -128,6 +130,7 @@ export function SearchPage() {
     if (!query.trim() || query.length < 2) {
       setResults([]);
       setCustomResults([]);
+      setFreshResults([]);
       setDebouncePending(false);
       return;
     }
@@ -135,6 +138,10 @@ export function SearchPage() {
     // Instant: search custom foods locally
     const localResults = searchCustomFoods(query);
     setCustomResults(veganOnly ? localResults.filter((f) => f.is_vegan) : localResults);
+
+    // Instant: search fresh produce local DB
+    const fresh = searchFreshProduce(query);
+    setFreshResults(fresh.map(freshItemToProduct));
 
     // Show pending indicator immediately while debounce waits
     setDebouncePending(true);
@@ -878,6 +885,45 @@ export function SearchPage() {
         />
       )}
 
+      {/* Frescos - base de datos local verificada */}
+      {freshResults.length > 0 && query.length >= 2 && !selectedProduct && (
+        <div className="mb-3">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-base">🌱</span>
+            <span className="text-xs font-semibold text-surface-500 uppercase tracking-wide">Frescos · datos verificados</span>
+          </div>
+          <div className="space-y-2">
+            {freshResults.map((product) => (
+              <button
+                key={product.code}
+                onClick={() => {
+                  setSelectedProduct(product as any);
+                  setServingInput('100');
+                }}
+                className="w-full card p-3 flex items-center gap-3 text-left hover:border-brand-200 transition-colors border-brand-100"
+              >
+                <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0 text-2xl">
+                  {(product as any)._emoji}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-surface-800 truncate">{product.product_name}</p>
+                    <span className="flex-shrink-0 w-4 h-4 bg-brand-100 rounded-full flex items-center justify-center">
+                      <Leaf className="w-2.5 h-2.5 text-brand-600" />
+                    </span>
+                  </div>
+                  <p className="text-xs text-surface-400">BEDCA · {product.nutriments['energy-kcal_100g']} kcal/100g</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-semibold font-mono">{product.nutriments['energy-kcal_100g']}</p>
+                  <p className="text-[10px] text-surface-400">kcal/100g</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Custom food results (instant, shown above OFF results) */}
       {!searching && customResults.length > 0 && query.length >= 2 && (
         <div className="mb-3">
@@ -929,7 +975,7 @@ export function SearchPage() {
       {/* OpenFoodFacts results */}
       {!searching && results.length > 0 && (
         <div>
-          {customResults.length > 0 && query.length >= 2 && (
+          {(customResults.length > 0 || freshResults.length > 0) && query.length >= 2 && (
             <div className="flex items-center gap-2 mb-2">
               <Search className="w-3.5 h-3.5 text-surface-400" />
               <span className="text-xs font-semibold text-surface-500 uppercase tracking-wide">OpenFoodFacts</span>
