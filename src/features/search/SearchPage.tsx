@@ -8,9 +8,25 @@ import { searchFreshProduce, freshItemToProduct } from '@/lib/freshProduce';
 import { CustomFoodModal } from './CustomFoodModal';
 import { Spinner } from '@/components/ui/Spinner';
 import { SkeletonList } from '@/components/ui/Skeleton';
-import { Search, ScanBarcode, X, Leaf, Plus, Clock, ChevronDown, ChevronUp, AlertCircle, Star, ChefHat } from 'lucide-react';
+import { Search, ScanBarcode, X, Leaf, Plus, Clock, ChevronDown, ChevronUp, AlertCircle, Star, ChefHat, Camera } from 'lucide-react';
 import type { OpenFoodFactsProduct, MealType, RecentFood, CustomFood } from '@/types';
 
+<<<<<<< Updated upstream
+=======
+type Html5QrcodeCtor = typeof import('html5-qrcode')['Html5Qrcode'];
+type Html5QrcodeSupportedFormatsEnum = typeof import('html5-qrcode')['Html5QrcodeSupportedFormats'];
+type Html5QrcodeInstance = InstanceType<Html5QrcodeCtor>;
+
+// Detectar iOS una vez. En iPhone instalado como PWA seguimos ofreciendo
+// captura nativa como respaldo, pero intentamos escaneo en vivo primero.
+const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+const IS_STANDALONE_PWA =
+  (window.matchMedia?.('(display-mode: standalone)')?.matches ?? false)
+  || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+const IS_IOS_STANDALONE_PWA = IS_IOS && IS_STANDALONE_PWA;
+const FILE_SCAN_MAX_DIMENSION = 2200;
+const BARCODE_DETECTOR_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'] as const;
+>>>>>>> Stashed changes
 
 const MEAL_OPTIONS: { value: MealType; label: string; icon: string }[] = [
   { value: 'breakfast', label: 'Desayuno', icon: 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã¢â‚¬â„¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦' },
@@ -46,6 +62,239 @@ const scaleOrNull = (
   const scaled = Number(rawValue) * ratio * unitMultiplier;
   const factor = 10 ** decimals;
   return Math.round(scaled * factor) / factor;
+};
+
+const getBarcodeFormats = (formats: Html5QrcodeSupportedFormatsEnum) => [
+  formats.EAN_13,
+  formats.EAN_8,
+  formats.UPC_A,
+  formats.UPC_E,
+  formats.CODE_128,
+];
+
+const loadImageToCanvas = (file: File, maxDimension = FILE_SCAN_MAX_DIMENSION): Promise<HTMLCanvasElement> =>
+  new Promise((resolve, reject) => {
+    const imageUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    const cleanup = () => URL.revokeObjectURL(imageUrl);
+
+    image.onload = () => {
+      const sourceWidth = image.naturalWidth || image.width;
+      const sourceHeight = image.naturalHeight || image.height;
+      const scale = Math.min(1, maxDimension / Math.max(sourceWidth, sourceHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+      canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+
+      const context = canvas.getContext('2d');
+      if (!context) {
+        cleanup();
+        reject(new Error('No se pudo preparar la imagen para el escaneo.'));
+        return;
+      }
+
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      cleanup();
+      resolve(canvas);
+    };
+
+    image.onerror = () => {
+      cleanup();
+      reject(new Error('No se pudo cargar la imagen capturada.'));
+    };
+
+    image.src = imageUrl;
+  });
+
+const createCanvasVariant = (
+  source: HTMLCanvasElement,
+  crop: { x: number; y: number; width: number; height: number },
+  rotation: 0 | 90 | -90 = 0,
+): HTMLCanvasElement => {
+  const canvas = document.createElement('canvas');
+  const rotate = rotation !== 0;
+
+  canvas.width = rotate ? crop.height : crop.width;
+  canvas.height = rotate ? crop.width : crop.height;
+
+  const context = canvas.getContext('2d');
+  if (!context) {
+    throw new Error('No se pudo preparar una variante del escaneo.');
+  }
+
+  if (rotation === 90) {
+    context.translate(canvas.width, 0);
+    context.rotate(Math.PI / 2);
+  } else if (rotation === -90) {
+    context.translate(0, canvas.height);
+    context.rotate(-Math.PI / 2);
+  }
+
+  context.drawImage(
+    source,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    crop.width,
+    crop.height,
+  );
+
+  return canvas;
+};
+
+const buildScanVariants = (source: HTMLCanvasElement): HTMLCanvasElement[] => {
+  const width = source.width;
+  const height = source.height;
+  const centerY = Math.floor(height / 2);
+  const band55Height = Math.max(160, Math.floor(height * 0.55));
+  const band35Height = Math.max(120, Math.floor(height * 0.35));
+  const centeredWidth = Math.max(200, Math.floor(width * 0.9));
+
+  const variants: HTMLCanvasElement[] = [
+    source,
+    createCanvasVariant(source, {
+      x: 0,
+      y: Math.max(0, centerY - Math.floor(band55Height / 2)),
+      width,
+      height: Math.min(height, band55Height),
+    }),
+    createCanvasVariant(source, {
+      x: 0,
+      y: Math.max(0, centerY - Math.floor(band35Height / 2)),
+      width,
+      height: Math.min(height, band35Height),
+    }),
+    createCanvasVariant(source, {
+      x: Math.max(0, Math.floor((width - centeredWidth) / 2)),
+      y: Math.max(0, centerY - Math.floor(band35Height / 2)),
+      width: Math.min(width, centeredWidth),
+      height: Math.min(height, band35Height),
+    }),
+    createCanvasVariant(source, { x: 0, y: 0, width, height }, 90),
+  ];
+
+  return variants;
+};
+
+const canvasToFile = (canvas: HTMLCanvasElement, fileName: string): Promise<File> =>
+  new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error('No se pudo preparar la imagen del código.'));
+        return;
+      }
+      resolve(new File([blob], fileName, { type: 'image/png' }));
+    }, 'image/png');
+  });
+
+const decodeWithBarcodeDetector = async (canvas: HTMLCanvasElement): Promise<string | null> => {
+  const DetectorCtor = (window as Window & {
+    BarcodeDetector?: {
+      new(config: { formats: string[] }): { detect(source: CanvasImageSource): Promise<Array<{ rawValue?: string; boundingBox?: DOMRectReadOnly }>> };
+      getSupportedFormats?: () => Promise<string[]>;
+    };
+  }).BarcodeDetector;
+
+  if (!DetectorCtor) {
+    return null;
+  }
+
+  let formats = [...BARCODE_DETECTOR_FORMATS];
+  if (typeof DetectorCtor.getSupportedFormats === 'function') {
+    try {
+      const supportedFormats = await DetectorCtor.getSupportedFormats();
+      formats = formats.filter((format) => supportedFormats.includes(format));
+    } catch {
+      // Ignoramos el fallo y probamos con los formatos por defecto.
+    }
+  }
+
+  if (formats.length === 0) {
+    return null;
+  }
+
+  try {
+    const detector = new DetectorCtor({ formats });
+    const detections = await detector.detect(canvas);
+    if (!detections?.length) {
+      return null;
+    }
+
+    const bestMatch = [...detections].sort((a, b) => {
+      const areaA = (a.boundingBox?.width ?? 0) * (a.boundingBox?.height ?? 0);
+      const areaB = (b.boundingBox?.width ?? 0) * (b.boundingBox?.height ?? 0);
+      return areaB - areaA;
+    })[0];
+
+    return bestMatch?.rawValue?.trim() || null;
+  } catch {
+    return null;
+  }
+};
+
+const decodeCanvasWithHtml5Qrcode = async (
+  Html5Qrcode: Html5QrcodeCtor,
+  formatsToSupport: ReturnType<typeof getBarcodeFormats>,
+  canvas: HTMLCanvasElement,
+  elementId: string,
+): Promise<string | null> => {
+  const scanner = new Html5Qrcode(elementId, { formatsToSupport, verbose: false });
+
+  try {
+    const file = await canvasToFile(canvas, 'barcode-candidate.png');
+    return await scanner.scanFile(file, false);
+  } catch {
+    return null;
+  } finally {
+    try { await scanner.clear(); } catch {}
+  }
+};
+
+const decodeBarcodeFromCapturedFile = async (file: File, elementId: string): Promise<string> => {
+  const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
+  const formatsToSupport = getBarcodeFormats(Html5QrcodeSupportedFormats);
+  const directScanner = new Html5Qrcode(elementId, { formatsToSupport, verbose: false });
+
+  let directError: unknown = null;
+  try {
+    return await directScanner.scanFile(file, false);
+  } catch (error) {
+    directError = error;
+  } finally {
+    try { await directScanner.clear(); } catch {}
+  }
+
+  const sourceCanvas = await loadImageToCanvas(file);
+  const scanVariants = buildScanVariants(sourceCanvas);
+  for (const [index, variant] of scanVariants.entries()) {
+    const barcodeDetectorResult = await decodeWithBarcodeDetector(variant);
+    if (barcodeDetectorResult) {
+      return barcodeDetectorResult;
+    }
+
+    const html5QrcodeResult = await decodeCanvasWithHtml5Qrcode(
+      Html5Qrcode,
+      formatsToSupport,
+      variant,
+      elementId,
+    );
+
+    if (html5QrcodeResult) {
+      return html5QrcodeResult;
+    }
+
+    // Evita retener canvases pesados más tiempo del necesario.
+    if (index > 0) {
+      variant.width = 0;
+      variant.height = 0;
+    }
+  }
+
+  throw directError ?? new Error('No se detectó ningún código.');
 };
 
 interface SearchPageProps {
@@ -165,6 +414,40 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
     };
   }, [query, veganOnly, selectedProduct]);
 
+<<<<<<< Updated upstream
+=======
+  // Respaldo iOS: decodifica un barcode desde una foto tomada con la cámara nativa.
+  const handleIOSScan = useCallback(async (file: File) => {
+    setIosScanning(true);
+    setScanError(null);
+    try {
+      const hiddenDiv = document.getElementById('ios-scanner-hidden');
+      if (hiddenDiv) hiddenDiv.innerHTML = '';
+
+      const decodedText = await decodeBarcodeFromCapturedFile(file, 'ios-scanner-hidden');
+      setIosScanning(false);
+      setSearching(true);
+      const product = await getProductByBarcode(decodedText);
+      if (product) {
+        setSelectedProduct(product);
+        setServingInput(String(product.serving_quantity || 100));
+      } else {
+        setResults([]);
+        setQuery(`CÃ³digo: ${decodedText} (no encontrado)`);
+      }
+      setSearching(false);
+    } catch (err: unknown) {
+      setIosScanning(false);
+      const msg = String((err as any)?.message ?? err ?? '');
+      if (msg.toLowerCase().includes('no barcode') || msg.toLowerCase().includes('qr code parse error') || msg.toLowerCase().includes('no multiformat')) {
+        setScanError('No se detectó ningún código en la foto. Intenta de nuevo, asegúrate de que el código está bien iluminado y centrado.');
+      } else {
+        setScanError('No se pudo leer el código. Inténtalo de nuevo.');
+      }
+    }
+  }, []);
+
+>>>>>>> Stashed changes
   const startScanner = useCallback(async () => {
     setScanning(true);
     setScanError(null);
@@ -172,6 +455,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
       const { BrowserMultiFormatReader, BarcodeFormat } = await import('@zxing/browser');
       const { DecodeHintType, NotFoundException } = await import('@zxing/library');
 
+<<<<<<< Updated upstream
       const hints = new Map();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [
         BarcodeFormat.EAN_13,
@@ -182,6 +466,9 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
         BarcodeFormat.CODE_39,
       ]);
       hints.set(DecodeHintType.TRY_HARDER, true);
+=======
+      const formatsToSupport = getBarcodeFormats(Html5QrcodeSupportedFormats);
+>>>>>>> Stashed changes
 
       const codeReader = new BrowserMultiFormatReader(hints, {
         delayBetweenScanAttempts: 150,
@@ -232,10 +519,81 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
             console.warn('Scan error:', err);
           }
         }
+<<<<<<< Updated upstream
       );
+=======
+      };
+
+      // onScanSuccess captures the current scanner via closure after each attempt.
+      let activeScanner: Html5QrcodeInstance | null = null;
+      const onScanSuccess = async (decodedText: string) => {
+        try { await activeScanner?.stop(); } catch {}
+        try { await activeScanner?.clear(); } catch {}
+        scannerRef.current = null;
+        setScanning(false);
+        setSearching(true);
+        const product = await getProductByBarcode(decodedText);
+        if (product) {
+          setSelectedProduct(product);
+          setServingInput(String(product.serving_quantity || 100));
+        } else {
+          setResults([]);
+          setQuery(`Código: ${decodedText} (no encontrado)`);
+        }
+        setSearching(false);
+      };
+
+      // iOS Safari rejects the exact facingMode constraint far more often than
+      // Android Chrome — start with `ideal` on iOS to avoid a guaranteed first
+      // failure that leaves the instance in a bad internal state.
+      const cameraConstraints = IS_IOS
+        ? [
+            { facingMode: { ideal: 'environment' } },
+            { facingMode: 'environment' },
+          ]
+        : [
+            { facingMode: 'environment' },
+            { facingMode: { ideal: 'environment' } },
+          ];
+
+      let lastErr: unknown;
+      for (const constraint of cameraConstraints) {
+        const scanner = createScanner();
+        activeScanner = scanner;
+        scannerRef.current = scanner;
+        try {
+          await scanner.start(constraint, scannerConfig, onScanSuccess, () => {});
+          await applyAdvancedConstraints();
+          return;
+        } catch (err) {
+          console.warn('Scanner start attempt failed:', err);
+          lastErr = err;
+          try { await scanner.stop(); } catch {}
+          try { (scanner as any).clear?.(); } catch {}
+          activeScanner = null;
+          scannerRef.current = null;
+        }
+      }
+
+      // Final fallback: pick a camera by device ID
+      const devices = await Html5Qrcode.getCameras();
+      if (devices && devices.length > 0) {
+        const backCam = devices.find(d => d.label.toLowerCase().includes('back'))
+          || devices[devices.length - 1];
+        const scanner = createScanner();
+        activeScanner = scanner;
+        scannerRef.current = scanner;
+        await scanner.start(backCam.id, scannerConfig, onScanSuccess, () => {});
+        await applyAdvancedConstraints();
+        return;
+      }
+
+      throw lastErr ?? new Error('No cameras available');
+>>>>>>> Stashed changes
     } catch (err: unknown) {
       console.error('Scanner error:', err);
       setScanning(false);
+      scannerRef.current = null;
       const name = (err as any)?.name ?? '';
       const msg  = String((err as any)?.message ?? '');
       if (name === 'NotAllowedError' || msg.includes('Permission')) {
@@ -243,18 +601,32 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
       } else if (name === 'NotFoundError') {
         setScanError('No se encontrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ cÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡mara en este dispositivo.');
       } else {
+<<<<<<< Updated upstream
         setScanError('No se pudo iniciar la cÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡mara. Comprueba los permisos e intÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©ntalo de nuevo.');
+=======
+        setScanError(
+          IS_IOS_STANDALONE_PWA
+            ? 'No se pudo iniciar la cámara en la app instalada. Prueba el botón de foto si falla de nuevo.'
+            : 'No se pudo iniciar la cámara. Comprueba los permisos e inténtalo de nuevo.',
+        );
+>>>>>>> Stashed changes
       }
     }
   }, []);
 
   const stopScanner = useCallback(() => {
     if (scannerRef.current) {
+<<<<<<< Updated upstream
       try {
         scannerRef.current.reset?.();
       } catch {}
       scannerRef.current = null;
+=======
+      try { await scannerRef.current.stop(); } catch {}
+      try { await scannerRef.current.clear(); } catch {}
+>>>>>>> Stashed changes
     }
+    scannerRef.current = null;
     setScanning(false);
   }, []);
 
@@ -772,6 +1144,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
         </div>
         <button
           onClick={scanning ? stopScanner : startScanner}
+<<<<<<< Updated upstream
           aria-label={scanning ? "Detener escÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ner" : "Escanear cÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³digo de barras"}
           className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-colors flex-shrink-0 ${
             scanning ? 'bg-red-100 text-red-600' : 'bg-brand-50 text-brand-600 hover:bg-brand-100'
@@ -779,7 +1152,52 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
         >
           <ScanBarcode className="w-5 h-5" />
         </button>
+=======
+          disabled={iosScanning}
+          aria-label={scanning ? "Detener escáner" : "Escanear código de barras"}
+          className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-colors flex-shrink-0 ${
+            scanning ? 'bg-red-100 text-red-600' : 'bg-brand-50 text-brand-600 hover:bg-brand-100'
+          } ${iosScanning ? 'opacity-50' : ''}`}
+        >
+          <ScanBarcode className="w-5 h-5" />
+        </button>
+        {IS_IOS && (
+          <>
+            {/* iOS: captura nativa como respaldo si la PWA se pone difícil */}
+            <input
+              ref={iosFileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleIOSScan(file);
+                // Reset para permitir escanear el mismo código dos veces
+                e.target.value = '';
+              }}
+            />
+            <button
+              onClick={() => iosFileInputRef.current?.click()}
+              disabled={iosScanning || scanning}
+              aria-label="Hacer foto del código"
+              className="w-12 h-12 flex items-center justify-center rounded-2xl transition-colors flex-shrink-0 bg-surface-100 text-surface-600 hover:bg-surface-200 disabled:opacity-50"
+            >
+              {iosScanning ? (
+                <Spinner className="w-5 h-5 text-surface-600" />
+              ) : (
+                <Camera className="w-5 h-5" />
+              )}
+            </button>
+          </>
+        )}
+>>>>>>> Stashed changes
       </div>
+      {IS_IOS_STANDALONE_PWA && !scanning && (
+        <p className="text-xs text-surface-500">
+          En iPhone instalado puedes usar el escaneo en vivo y, si iOS falla, hacer una foto del código.
+        </p>
+      )}
 
       {/* Filters row */}
       <div className="flex gap-2">
@@ -795,11 +1213,25 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
         </button>
       </div>
       </div>
+<<<<<<< Updated upstream
+=======
+
+      {/* Div oculto que html5-qrcode necesita para scanFile en iOS */}
+      <div id="ios-scanner-hidden" className="hidden" />
+
+      {/* Scanner container */}
+>>>>>>> Stashed changes
       {scanning && (
         <div className="mb-4 card overflow-hidden border-2 border-brand-500">
           <div id="scanner-container" className="w-full" />
           <p className="text-center text-sm text-surface-500 py-2 bg-surface-50">
+<<<<<<< Updated upstream
             Enfoca el cÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³digo de barras
+=======
+            {IS_IOS_STANDALONE_PWA
+              ? 'Enfoca el código. Si iPhone no coopera, usa el botón de foto.'
+              : 'Enfoca el código de barras'}
+>>>>>>> Stashed changes
           </p>
         </div>
       )}
