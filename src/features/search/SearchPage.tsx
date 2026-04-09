@@ -345,6 +345,9 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
         setScanError('No se encontró cámara en este dispositivo.');
       } else if (name === 'OverconstrainedError') {
         setScanError('La cámara no soporta la configuración solicitada. Inténtalo de nuevo.');
+      } else if (IS_IOS) {
+        // On iOS PWA, getUserMedia may fail — fall back to native camera photo capture
+        setScanError('ios-photo-fallback');
       } else {
         setScanError('No se pudo iniciar la cámara. Comprueba los permisos e inténtalo de nuevo.');
       }
@@ -870,46 +873,35 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
             </button>
           )}
         </div>
-        {IS_IOS ? (
-          <>
-            {/* iOS: input oculto que abre la cámara nativa */}
-            <input
-              ref={iosFileInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleIOSScan(file);
-                // Reset para permitir escanear el mismo código dos veces
-                e.target.value = '';
-              }}
-            />
-            <button
-              onClick={() => iosFileInputRef.current?.click()}
-              disabled={iosScanning}
-              aria-label="Escanear código de barras"
-              className="w-12 h-12 flex items-center justify-center rounded-2xl transition-colors flex-shrink-0 bg-brand-50 text-brand-600 hover:bg-brand-100 disabled:opacity-50"
-            >
-              {iosScanning ? (
-                <Spinner className="w-5 h-5 text-brand-600" />
-              ) : (
-                <ScanBarcode className="w-5 h-5" />
-              )}
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={scanning ? stopScanner : startScanner}
-            aria-label={scanning ? "Detener escáner" : "Escanear código de barras"}
-            className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-colors flex-shrink-0 ${
-              scanning ? 'bg-red-100 text-red-600' : 'bg-brand-50 text-brand-600 hover:bg-brand-100'
-            }`}
-          >
-            <ScanBarcode className="w-5 h-5" />
-          </button>
+        {/* iOS: input oculto como fallback si getUserMedia falla */}
+        {IS_IOS && (
+          <input
+            ref={iosFileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleIOSScan(file);
+              e.target.value = '';
+            }}
+          />
         )}
+        <button
+          onClick={scanning ? stopScanner : startScanner}
+          disabled={iosScanning}
+          aria-label={scanning ? "Detener escáner" : "Escanear código de barras"}
+          className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-colors flex-shrink-0 ${
+            scanning ? 'bg-red-100 text-red-600' : 'bg-brand-50 text-brand-600 hover:bg-brand-100'
+          } disabled:opacity-50`}
+        >
+          {iosScanning ? (
+            <Spinner className="w-5 h-5 text-brand-600" />
+          ) : (
+            <ScanBarcode className="w-5 h-5" />
+          )}
+        </button>
       </div>
 
       {/* Filters row */}
@@ -930,8 +922,8 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
       {/* Div oculto que html5-qrcode necesita para scanFile en iOS */}
       <div id="ios-scanner-hidden" className="hidden" />
 
-      {/* Scanner container — solo Android/Desktop */}
-      {!IS_IOS && scanning && (
+      {/* Scanner container — ambas plataformas */}
+      {scanning && (
         <div className="mb-4 card overflow-hidden border-2 border-brand-500">
           <div id="scanner-container" className="w-full" />
           <p className="text-center text-sm text-surface-500 py-2 bg-surface-50">
@@ -940,8 +932,23 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
         </div>
       )}
 
-      {/* iOS: feedback mientras decodifica */}
-      {IS_IOS && iosScanning && (
+      {/* iOS: fallback a foto si getUserMedia falla */}
+      {IS_IOS && scanError === 'ios-photo-fallback' && (
+        <div className="mb-4 card px-4 py-3 border-amber-200 bg-amber-50">
+          <p className="text-sm text-surface-600 mb-2">
+            No se pudo iniciar la cámara en tiempo real. Puedes escanear tomando una foto:
+          </p>
+          <button
+            onClick={() => { setScanError(null); iosFileInputRef.current?.click(); }}
+            className="w-full py-2 rounded-xl bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 transition-colors"
+          >
+            Escanear desde foto
+          </button>
+        </div>
+      )}
+
+      {/* iOS: feedback mientras decodifica foto */}
+      {iosScanning && (
         <div className="mb-4 card px-4 py-3 flex items-center gap-3 border-brand-200">
           <Spinner className="w-5 h-5 text-brand-500 flex-shrink-0" />
           <p className="text-sm text-surface-600">Leyendo código de barras...</p>
@@ -949,7 +956,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
       )}
 
       {/* Camera permission / init error */}
-      {scanError && (
+      {scanError && scanError !== 'ios-photo-fallback' && (
         <div className="mb-4 card text-red-600 text-sm px-4 py-3 flex items-start gap-2">
           <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
           <span>{scanError}</span>
