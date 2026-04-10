@@ -218,15 +218,24 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
       ];
 
       const boxRatio = 0.85;
-      // iOS Safari is less stable at high FPS; 10 is a reliable sweet spot.
-      const scanFps = IS_IOS ? 10 : 6;
+      // With native BarcodeDetector (Safari 16.4+) decoding is hardware-accelerated,
+      // so we can scan more frames per second. Fall back to conservative FPS for
+      // the JS-based ZXing decoder.
+      const hasNativeDetector = 'BarcodeDetector' in globalThis;
+      const scanFps = hasNativeDetector ? 15 : (IS_IOS ? 10 : 6);
 
       const qrbox = (vw: number, vh: number) => ({
         width: Math.floor(vw * boxRatio),
         height: Math.floor(Math.min(vw * boxRatio * 0.55, vh * 0.5)),
       });
-      // Both platforms benefit from a defined scanning box for 1D barcode reliability.
-      const scannerConfig = { fps: scanFps, qrbox, disableFlip: true };
+      const scannerConfig = {
+        fps: scanFps,
+        qrbox,
+        disableFlip: true,
+        // Use the native BarcodeDetector API when available (Safari 16.4+, Chrome 83+).
+        // Hardware-accelerated detection is dramatically faster than the JS ZXing decoder.
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+      };
 
       // Creates a fresh Html5Qrcode instance with a clean DOM container.
       // A new instance is required after each failed start() — reusing a
@@ -256,8 +265,9 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
           if (capabilities.zoom && IS_IOS) {
             const minZoom = capabilities.zoom.min ?? 1;
             const maxZoom = capabilities.zoom.max ?? minZoom;
-            // 1.5× avoids the ultra-wide lens while keeping a usable focus range.
-            const preferredZoom = Math.min(maxZoom, Math.max(minZoom, 1.5));
+            // 2× switches away from the ultra-wide lens on modern iPhones,
+            // giving a sharper image at typical barcode-scanning distance.
+            const preferredZoom = Math.min(maxZoom, Math.max(minZoom, 2.0));
             if (preferredZoom > minZoom) {
               advanced.zoom = preferredZoom;
             }
@@ -291,8 +301,10 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
       // iOS Safari rejects the exact facingMode constraint far more often than
       // Android Chrome — start with `ideal` on iOS to avoid a guaranteed first
       // failure that leaves the instance in a bad internal state.
+      // Request HD resolution on iOS for sharper barcode images.
       const cameraConstraints = IS_IOS
         ? [
+            { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
             { facingMode: { ideal: 'environment' } },
             { facingMode: 'environment' },
           ]
