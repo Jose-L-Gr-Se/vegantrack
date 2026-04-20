@@ -4,5 +4,5 @@ interface AppLogoProps {
 }
 
 export function AppLogo({ className = '', alt = 'VeganTrack' }: AppLogoProps) {
-  return <img src="/icon.svg" alt={alt} className={className} />;
+  return <img src="/vegantrack-icon-rounded-256.png" alt={alt} className={className} />;
 }
