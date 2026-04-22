@@ -227,7 +227,7 @@ export function OnboardingPage() {
                         <div className="text-xs text-surface-500 mt-1">carbos</div>
                       </div>
                       <div className="metric-tile text-center">
-                        <div className="font-display text-2xl font-bold text-rose-600">{targets.fat_g}g</div>
+                        <div className="font-display text-2xl font-bold text-purple-600">{targets.fat_g}g</div>
                         <div className="text-xs text-surface-500 mt-1">grasas</div>
                       </div>
                     </div>

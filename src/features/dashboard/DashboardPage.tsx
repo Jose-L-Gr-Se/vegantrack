@@ -117,7 +117,7 @@ export function DashboardPage() {
     },
     iron_mg: {
       condition: (pct) => pct < 70,
-      text: 'El hierro vegetal se absorbe mejor con vitamina C. Combínalo en la misma comida con pimiento, cítricos, kiwi o perejil para mejorar la absorción.',
+      text: 'Combinar hierro vegetal con vitamina C en la misma comida (pimiento, naranja, kiwi, perejil) puede mejorar significativamente su absorción. Es una estrategia dietética, no requiere suplementación.',
       type: 'tip',
     },
     vitamin_b12_mcg: {
@@ -305,7 +305,7 @@ export function DashboardPage() {
           <div className="flex-1 space-y-3">
             <MacroBar label="Proteína" value={summary.protein_g} target={profile?.protein_target_g ?? 120} color="#3b82f6" />
             <MacroBar label="Carbos" value={summary.carbs_g} target={profile?.carbs_target_g ?? 250} color="#f59e0b" />
-            <MacroBar label="Grasas" value={summary.fat_g} target={profile?.fat_target_g ?? 65} color="#ef4444" />
+            <MacroBar label="Grasas" value={summary.fat_g} target={profile?.fat_target_g ?? 65} color="#8b5cf6" />
           </div>
         </div>
 
@@ -423,7 +423,7 @@ export function DashboardPage() {
               { label: 'Calorías', value: weekAvg.calories, target: calorieTarget, unit: '', color: 'text-brand-600' },
               { label: 'Proteína', value: weekAvg.protein, target: profile?.protein_target_g ?? 120, unit: 'g', color: 'text-blue-600' },
               { label: 'Carbos', value: weekAvg.carbs, target: profile?.carbs_target_g ?? 250, unit: 'g', color: 'text-amber-600' },
-              { label: 'Grasas', value: weekAvg.fat, target: profile?.fat_target_g ?? 65, unit: 'g', color: 'text-rose-600' },
+              { label: 'Grasas', value: weekAvg.fat, target: profile?.fat_target_g ?? 65, unit: 'g', color: 'text-purple-600' },
             ].map((item) => {
               const pct = item.target > 0 ? Math.round((item.value / item.target) * 100) : 0;
               return (
@@ -554,21 +554,21 @@ export function DashboardPage() {
           if (ironTotal <= 0) return null;
           const ironAbsorbable = Math.round(ironTotal * IRON_NONHEME_FACTOR * 10) / 10;
           return (
-            <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
-              <p className="text-[11px] font-semibold text-amber-700 mb-1 uppercase tracking-wide">
+            <div className="mt-3 rounded-xl border border-surface-200 bg-surface-50 px-4 py-3">
+              <p className="text-[11px] font-semibold text-surface-500 mb-1 uppercase tracking-wide">
                 Hierro absorbible estimado
               </p>
               <div className="flex items-baseline gap-2">
-                <span className="font-display text-xl font-bold text-amber-700">
+                <span className="font-display text-xl font-bold text-surface-700">
                   {ironAbsorbable} mg
                 </span>
-                <span className="text-xs text-amber-600">
-                  de {Math.round(ironTotal * 10) / 10} mg totales
+                <span className="text-xs text-surface-500">
+                  de {Math.round(ironTotal * 10) / 10} mg ingeridos
                 </span>
               </div>
-              <p className="text-[10px] text-amber-600 mt-1 leading-relaxed">
-                El hierro vegetal se absorbe en menor proporción (~12% vs ~25% del animal).
-                Combinarlo con vitamina C puede doblar esta cifra.
+              <p className="text-[10px] text-surface-400 mt-1 leading-relaxed">
+                Estimación orientativa — el hierro vegetal tiene menor tasa de absorción que el animal.
+                Con vitamina C en la misma comida esta cifra puede mejorar notablemente.
               </p>
             </div>
           );
