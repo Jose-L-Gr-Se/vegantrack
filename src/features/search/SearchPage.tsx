@@ -690,8 +690,8 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
                 { label: 'Proteínas', val: n.proteins_100g, color: 'text-blue-600' },
                 { label: 'Carbohidratos', val: n.carbohydrates_100g, color: 'text-amber-600' },
                 { label: '  de los cuales azúcares', val: n.sugars_100g, color: 'text-amber-400', indent: true },
-                { label: 'Grasas', val: n.fat_100g, color: 'text-rose-600' },
-                { label: '  de las cuales saturadas', val: n['saturated-fat_100g'], color: 'text-rose-400', indent: true },
+                { label: 'Grasas', val: n.fat_100g, color: 'text-purple-600' },
+                { label: '  de las cuales saturadas', val: n['saturated-fat_100g'], color: 'text-purple-400', indent: true },
                 { label: 'Fibra', val: n.fiber_100g, color: 'text-green-600' },
               ].map((item) => (
                 <div key={item.label} className={`flex justify-between text-sm ${item.indent ? 'pl-3 text-surface-500' : ''}`}>

@@ -18,6 +18,7 @@ interface DiaryState {
   getWeekData: (userId: string) => Promise<{ date: string; calories: number; protein: number; carbs: number; fat: number }[]>;
   loadOverrides: () => Promise<void>;
   copyDayEntries: (fromDate: string, toDate: string) => Promise<{ count: number; error: string | null }>;
+  copyMealEntries: (fromDate: string, toDate: string, mealType: string) => Promise<{ count: number; error: string | null }>;
 }
 
 const today = () => new Date().toISOString().split('T')[0];
@@ -95,6 +96,36 @@ export const useDiaryStore = create<DiaryState>((set, get) => ({
     }
 
     return { count, error: error?.message ?? null };
+  },
+
+  copyMealEntries: async (fromDate, toDate, mealType) => {
+    const { useAuthStore } = await import('@/stores/authStore');
+    const user = useAuthStore.getState().user;
+    if (!user) return { count: 0, error: 'No autenticado' };
+
+    const { data, error } = await supabase
+      .from('food_log')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('date', fromDate)
+      .eq('meal_type', mealType);
+
+    if (error) return { count: 0, error: error.message };
+    if (!data || data.length === 0) return { count: 0, error: null };
+
+    const toInsert = data.map(({ id: _id, created_at: _ca, ...rest }: any) => ({
+      ...rest,
+      date: toDate,
+    }));
+
+    const { error: insertError } = await supabase.from('food_log').insert(toInsert);
+    if (insertError) return { count: 0, error: insertError.message };
+
+    if (toDate === get().selectedDate) {
+      await get().fetchEntries(user.id, toDate);
+    }
+
+    return { count: data.length, error: null };
   },
 
   getDaySummary: () => {

@@ -378,8 +378,10 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
     const servings = Math.max(0.5, parseFloat(logDialog.servings) || 1);
     const t = computeRecipeNutrients(logDialog.recipe.ingredients, servings / logDialog.recipe.total_servings);
     return (
-      <div className="fixed inset-0 z-[60] bg-black/50 flex items-end justify-center" onClick={() => { setLogDialog(null); setLogError(null); }}>
-        <div className="card rounded-t-[2rem] w-full max-w-lg p-5 pb-10 space-y-4" onClick={e => e.stopPropagation()}>
+      <div className="fixed inset-0 z-[70] bg-black/50 flex items-end justify-center" onClick={() => { setLogDialog(null); setLogError(null); }}>
+        <div className="card rounded-t-[2rem] w-full max-w-lg overflow-y-auto overscroll-contain pb-[calc(env(safe-area-inset-bottom)+5rem)] max-h-[calc(100vh-4rem)]" onClick={e => e.stopPropagation()}>
+          <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 bg-surface-300 rounded-full" /></div>
+          <div className="px-5 pb-2 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-surface-900">{logDialog.recipe.name}</h3>
             <button onClick={() => setLogDialog(null)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-surface-100">
@@ -407,7 +409,7 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
             <div><p className="font-bold text-surface-900 font-mono">{t.calories}</p><p className="text-[10px] text-surface-400">kcal</p></div>
             <div><p className="font-bold text-blue-600 font-mono">{t.protein_g}g</p><p className="text-[10px] text-surface-400">prot</p></div>
             <div><p className="font-bold text-amber-600 font-mono">{t.carbs_g}g</p><p className="text-[10px] text-surface-400">carbs</p></div>
-            <div><p className="font-bold text-rose-600 font-mono">{t.fat_g}g</p><p className="text-[10px] text-surface-400">grasa</p></div>
+            <div><p className="font-bold text-purple-600 font-mono">{t.fat_g}g</p><p className="text-[10px] text-surface-400">grasa</p></div>
           </div>
 
           {/* Meal selector */}
@@ -435,6 +437,7 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
               : <><Plus className="w-4 h-4" /> Añadir al diario</>
             }
           </button>
+          </div>
         </div>
       </div>
     );
@@ -546,7 +549,7 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
                       <span className="text-sm font-bold font-mono">{t.calories} kcal</span>
                       <span className="text-sm text-blue-600 font-mono">P{t.protein_g}g</span>
                       <span className="text-sm text-amber-600 font-mono">C{t.carbs_g}g</span>
-                      <span className="text-sm text-rose-600 font-mono">G{t.fat_g}g</span>
+                      <span className="text-sm text-purple-600 font-mono">G{t.fat_g}g</span>
                     </div>
                   </div>
                 );
@@ -606,7 +609,7 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
                 { label: 'Calorías', val: `${perServing.calories}`, unit: 'kcal', color: 'text-surface-900', bg: 'bg-surface-50' },
                 { label: 'Proteína', val: `${perServing.protein_g}`, unit: 'g', color: 'text-blue-600', bg: 'bg-blue-50' },
                 { label: 'Carbos',   val: `${perServing.carbs_g}`,   unit: 'g', color: 'text-amber-600', bg: 'bg-amber-50' },
-                { label: 'Grasa',    val: `${perServing.fat_g}`,     unit: 'g', color: 'text-rose-600', bg: 'bg-rose-50' },
+                { label: 'Grasa',    val: `${perServing.fat_g}`,     unit: 'g', color: 'text-purple-600', bg: 'bg-purple-50' },
               ].map(m => (
                 <div key={m.label} className={`${m.bg} rounded-xl p-2 text-center`}>
                   <p className={`font-bold text-sm font-mono ${m.color}`}>{m.val}<span className="text-[10px] font-normal">{m.unit}</span></p>

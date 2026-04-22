@@ -70,7 +70,7 @@ interface DiaryPageProps {
 
 export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
   const { user, profile } = useAuthStore();
-  const { entries, selectedDate, setDate, fetchEntries, deleteEntry, getDaySummary, copyDayEntries } = useDiaryStore();
+  const { entries, selectedDate, setDate, fetchEntries, deleteEntry, getDaySummary } = useDiaryStore();
   const [editingEntry, setEditingEntry] = useState<FoodLogEntry | null>(null);
   const [showMacroDetail, setShowMacroDetail] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -140,10 +140,11 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
   const calorieTarget = profile?.calorie_target || 2000;
   const getEntriesForMeal = (type: MealType) => entries.filter((e) => e.meal_type === type);
 
-  const handleCopySuccess = (count: number, fromDate: string) => {
+  const handleCopySuccess = (count: number, fromDate: string, mealLabel?: string) => {
     setShowCopySheet(false);
     const label = formatDate(fromDate).toLowerCase();
-    setCopyBanner(`${count} alimentos copiados de ${label} OK`);
+    const mealStr = mealLabel ? ` · ${mealLabel}` : '';
+    setCopyBanner(`${count} alimentos copiados de ${label}${mealStr}`);
   };
 
   return (
@@ -303,7 +304,7 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
               <div className="flex-1 space-y-3">
                 <MacroBar label="Proteina" value={summary.protein_g} target={profile?.protein_target_g || 120} color="#3b82f6" />
                 <MacroBar label="Carbos" value={summary.carbs_g} target={profile?.carbs_target_g || 250} color="#f59e0b" />
-                <MacroBar label="Grasas" value={summary.fat_g} target={profile?.fat_target_g || 65} color="#ef4444" />
+                <MacroBar label="Grasas" value={summary.fat_g} target={profile?.fat_target_g || 65} color="#8b5cf6" />
               </div>
             </div>
             <div className="soft-divider my-4" />
@@ -331,6 +332,7 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
           )}
 
           {showCopySheet && <CopyDaySheet selectedDate={selectedDate} onClose={() => setShowCopySheet(false)} onCopied={handleCopySuccess} />}
+
 
           <div className="mt-5">
             <SupplementsWidget date={selectedDate} />
@@ -420,12 +422,21 @@ interface DayData {
   total_calories: number;
 }
 
-function CopyDaySheet({ selectedDate, onClose, onCopied }: { selectedDate: string; onClose: () => void; onCopied: (count: number, fromDate: string) => void; }) {
+const COPY_MEAL_OPTIONS = [
+  { value: null, label: 'Día completo', icon: '📋' },
+  { value: 'breakfast', label: 'Desayuno', icon: '🌅' },
+  { value: 'lunch', label: 'Comida', icon: '☀️' },
+  { value: 'dinner', label: 'Cena', icon: '🌙' },
+  { value: 'snack', label: 'Snacks', icon: '🍎' },
+] as const;
+
+function CopyDaySheet({ selectedDate, onClose, onCopied }: { selectedDate: string; onClose: () => void; onCopied: (count: number, fromDate: string, mealLabel?: string) => void; }) {
   const [days, setDays] = useState<DayData[]>([]);
   const [loading, setLoading] = useState(true);
   const [copying, setCopying] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { copyDayEntries } = useDiaryStore();
+  const [mealMode, setMealMode] = useState<string | null>(null);
+  const { copyDayEntries, copyMealEntries } = useDiaryStore();
 
   useBackHandler(true, onClose);
   const { sheetRef, backdropRef, onTouchStart, onTouchMove, onTouchEnd } = useSwipeToDismiss({ onDismiss: onClose });
@@ -447,11 +458,29 @@ function CopyDaySheet({ selectedDate, onClose, onCopied }: { selectedDate: strin
   const handleCopy = async (fromDate: string) => {
     setCopying(fromDate);
     setError(null);
-    const { count, error: copyError } = await copyDayEntries(fromDate, selectedDate);
+    let count = 0;
+    let copyError: string | null = null;
+
+    if (mealMode === null) {
+      const result = await copyDayEntries(fromDate, selectedDate);
+      count = result.count;
+      copyError = result.error;
+    } else {
+      const result = await copyMealEntries(fromDate, selectedDate, mealMode);
+      count = result.count;
+      copyError = result.error;
+    }
+
     setCopying(null);
-    if (copyError) setError('Error al copiar. Intentalo de nuevo.');
-    else if (count === 0) setError('Ese dia no tiene alimentos para copiar.');
-    else onCopied(count, fromDate);
+    if (copyError) {
+      setError('Error al copiar. Intentalo de nuevo.');
+    } else if (count === 0) {
+      const mealLabel = COPY_MEAL_OPTIONS.find(m => m.value === mealMode)?.label;
+      setError(mealMode ? `Sin alimentos de ${mealLabel?.toLowerCase()} ese dia.` : 'Ese dia no tiene alimentos para copiar.');
+    } else {
+      const mealLabel = mealMode ? COPY_MEAL_OPTIONS.find(m => m.value === mealMode)?.label : undefined;
+      onCopied(count, fromDate, mealLabel);
+    }
   };
 
   const formatDayLabel = (dateStr: string) => {
@@ -462,6 +491,8 @@ function CopyDaySheet({ selectedDate, onClose, onCopied }: { selectedDate: strin
     if (date.getTime() === yesterday.getTime()) return 'Ayer';
     return date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' });
   };
+
+  const selectedMealOption = COPY_MEAL_OPTIONS.find(m => m.value === mealMode)!;
 
   return (
     <div ref={backdropRef} className="fixed inset-0 z-[70] bg-black/40 flex items-end justify-center" onClick={onClose}>
@@ -477,18 +508,49 @@ function CopyDaySheet({ selectedDate, onClose, onCopied }: { selectedDate: strin
           <div className="w-10 h-1 bg-surface-300 rounded-full" />
         </div>
         <div className="px-5 pb-4">
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <p className="section-label mb-1">Copiar al diario</p>
-              <h3 className="font-display text-xl font-bold text-surface-900">De que dia copias?</h3>
+              <h3 className="font-display text-xl font-bold text-surface-900">¿Qué copias?</h3>
             </div>
             <button onClick={onClose} aria-label="Cerrar" className="icon-badge w-9 h-9">
               <X className="w-4 h-4 text-surface-500" />
             </button>
           </div>
-          <p className="text-xs text-surface-400 mb-5 leading-relaxed">Se copiaran todos los alimentos de ese dia a <strong className="text-surface-600">{formatDate(selectedDate).toLowerCase()}</strong>.</p>
+
+          {/* Meal mode selector */}
+          <div className="mb-5">
+            <p className="text-xs font-semibold text-surface-400 uppercase tracking-[0.15em] mb-2">Comida a copiar</p>
+            <div className="flex gap-1.5 flex-wrap">
+              {COPY_MEAL_OPTIONS.map((opt) => (
+                <button
+                  key={String(opt.value)}
+                  onClick={() => { setMealMode(opt.value as string | null); setError(null); }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border-2 transition-all ${
+                    mealMode === opt.value
+                      ? 'border-brand-500 bg-brand-50 text-brand-700'
+                      : 'border-surface-200 text-surface-500 hover:border-surface-300'
+                  }`}
+                >
+                  <span>{opt.icon}</span> {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-xs text-surface-400 mb-4 leading-relaxed">
+            {mealMode === null
+              ? <>Se copian <strong className="text-surface-600">todos los alimentos</strong> del día seleccionado a <strong className="text-surface-600">{formatDate(selectedDate).toLowerCase()}</strong>.</>
+              : <>Se copia el <strong className="text-surface-600">{selectedMealOption.label.toLowerCase()}</strong> del día seleccionado a <strong className="text-surface-600">{formatDate(selectedDate).toLowerCase()}</strong>.</>
+            }
+          </p>
+
           {loading && <div className="flex items-center justify-center py-12"><Spinner className="text-brand-500 w-6 h-6" /></div>}
-          {!loading && error && <div className="text-center py-8"><p className="text-sm text-red-500">{error}</p></div>}
+          {!loading && error && (
+            <div className="text-center py-4 mb-2">
+              <p className="text-sm text-amber-600 bg-amber-50 rounded-xl px-4 py-3 border border-amber-100">{error}</p>
+            </div>
+          )}
           {!loading && !error && days.length === 0 && (
             <div className="text-center py-12">
               <div className="w-12 h-12 bg-surface-100 rounded-2xl flex items-center justify-center mx-auto mb-3"><Copy className="w-5 h-5 text-surface-300" /></div>
@@ -498,6 +560,7 @@ function CopyDaySheet({ selectedDate, onClose, onCopied }: { selectedDate: strin
           )}
           {!loading && days.length > 0 && (
             <div className="space-y-2">
+              <p className="text-xs font-semibold text-surface-400 uppercase tracking-[0.15em] mb-2">¿De qué día?</p>
               {days.map((day) => (
                 <button
                   key={day.log_date}
@@ -612,7 +675,7 @@ function EditEntryModal({ entry, onClose, onSaved }: { entry: FoodLogEntry; onCl
             {[
               { label: 'Proteinas', val: proteinPer100g, color: 'text-blue-600' },
               { label: 'Carbohidratos', val: carbsPer100g, color: 'text-amber-600' },
-              { label: 'Grasas', val: fatPer100g, color: 'text-rose-600' },
+              { label: 'Grasas', val: fatPer100g, color: 'text-purple-600' },
               { label: 'Fibra', val: fiberPer100g, color: 'text-green-600' },
             ].map((item) => <div key={item.label} className="flex justify-between text-sm"><span>{item.label}</span><span className={`font-mono ${item.color}`}>{(item.val * ratio).toFixed(1)}g</span></div>)}
           </div>
@@ -649,11 +712,11 @@ function MacroDetailModal({ summary, profile, entries, onClose }: { summary: { c
           <div className="grid grid-cols-4 gap-3">{[
             { label: 'Proteina', val: summary.protein_g, target: proteinTarget, unit: 'g', color: 'text-blue-600', bg: 'bg-blue-50' },
             { label: 'Carbos', val: summary.carbs_g, target: carbsTarget, unit: 'g', color: 'text-amber-600', bg: 'bg-amber-50' },
-            { label: 'Grasas', val: summary.fat_g, target: fatTarget, unit: 'g', color: 'text-rose-600', bg: 'bg-rose-50' },
+            { label: 'Grasas', val: summary.fat_g, target: fatTarget, unit: 'g', color: 'text-purple-600', bg: 'bg-purple-50' },
             { label: 'Fibra', val: summary.fiber_g, target: 30, unit: 'g', color: 'text-green-600', bg: 'bg-green-50' },
           ].map((m) => <div key={m.label} className={`${m.bg} rounded-2xl p-3 text-center`}><div className={`font-display text-lg font-bold ${m.color}`}>{Math.round(m.val)}{m.unit}</div><div className="text-[10px] text-surface-500 mt-0.5">{m.label}</div><div className={`text-[10px] font-mono mt-0.5 ${pct(m.val, m.target) >= 90 && pct(m.val, m.target) <= 110 ? 'text-brand-600 font-semibold' : pct(m.val, m.target) > 110 ? 'text-red-500' : 'text-surface-400'}`}>{pct(m.val, m.target)}%</div></div>)}</div>
           {mealBreakdown.length > 0 && <div><h4 className="text-sm font-semibold text-surface-600 mb-2">Distribucion por comida</h4><div className="space-y-2">{mealBreakdown.map((meal) => { const pctCal = summary.calories > 0 ? Math.round((meal.calories / summary.calories) * 100) : 0; return <div key={meal.type} className="flex items-center gap-3"><div className="flex-1"><div className="flex justify-between text-sm"><span className="text-surface-700">{meal.label}</span><span className="font-mono text-surface-600">{Math.round(meal.calories)} kcal</span></div><div className="h-1.5 bg-surface-100 rounded-full mt-1 overflow-hidden"><div className="h-full bg-brand-400 rounded-full" style={{ width: `${pctCal}%` }} /></div></div><span className="text-xs text-surface-400 w-8 text-right font-mono">{pctCal}%</span></div>; })}</div></div>}
-          {summary.calories > 0 && <div><h4 className="text-sm font-semibold text-surface-600 mb-2">Ratio de macros</h4><div className="flex h-4 rounded-full overflow-hidden"><div className="bg-blue-400" style={{ width: `${Math.round((summary.protein_g * 4 / summary.calories) * 100)}%` }} /><div className="bg-amber-400" style={{ width: `${Math.round((summary.carbs_g * 4 / summary.calories) * 100)}%` }} /><div className="bg-rose-400" style={{ width: `${Math.round((summary.fat_g * 9 / summary.calories) * 100)}%` }} /></div><div className="flex justify-between mt-1.5"><span className="text-[10px] text-blue-600 font-mono">{Math.round((summary.protein_g * 4 / summary.calories) * 100)}% P</span><span className="text-[10px] text-amber-600 font-mono">{Math.round((summary.carbs_g * 4 / summary.calories) * 100)}% C</span><span className="text-[10px] text-rose-600 font-mono">{Math.round((summary.fat_g * 9 / summary.calories) * 100)}% G</span></div></div>}
+          {summary.calories > 0 && <div><h4 className="text-sm font-semibold text-surface-600 mb-2">Ratio de macros</h4><div className="flex h-4 rounded-full overflow-hidden"><div className="bg-blue-400" style={{ width: `${Math.round((summary.protein_g * 4 / summary.calories) * 100)}%` }} /><div className="bg-amber-400" style={{ width: `${Math.round((summary.carbs_g * 4 / summary.calories) * 100)}%` }} /><div className="bg-purple-400" style={{ width: `${Math.round((summary.fat_g * 9 / summary.calories) * 100)}%` }} /></div><div className="flex justify-between mt-1.5"><span className="text-[10px] text-blue-600 font-mono">{Math.round((summary.protein_g * 4 / summary.calories) * 100)}% P</span><span className="text-[10px] text-amber-600 font-mono">{Math.round((summary.carbs_g * 4 / summary.calories) * 100)}% C</span><span className="text-[10px] text-purple-600 font-mono">{Math.round((summary.fat_g * 9 / summary.calories) * 100)}% G</span></div></div>}
         </div>
       </div>
     </div>
@@ -851,7 +914,7 @@ function QuickAddModal({
               {[
                 { label: 'Proteina', state: protein, setter: setProtein, color: 'text-blue-600', unit: 'g' },
                 { label: 'Carbos', state: carbs, setter: setCarbs, color: 'text-amber-600', unit: 'g' },
-                { label: 'Grasa', state: fat, setter: setFat, color: 'text-rose-600', unit: 'g' },
+                { label: 'Grasa', state: fat, setter: setFat, color: 'text-purple-600', unit: 'g' },
               ].map((macro) => (
                 <div key={macro.label}>
                   <label className={`text-[10px] font-semibold uppercase tracking-wide ${macro.color} block mb-1`}>
