@@ -18,6 +18,7 @@ import { useSupplementStore } from '@/stores/supplementStore';
 import { Spinner } from '@/components/ui/Spinner';
 import { AppLogo } from '@/components/ui/AppLogo';
 import { ProSuccessModal } from '@/features/pro/ProSuccessModal';
+import { ToastContainer } from '@/components/ui/Toast';
 import type { MealType } from '@/types';
 
 export default function App() {
@@ -153,6 +154,7 @@ export default function App() {
           {activeTab === 'profile' && <ProfilePage isDark={isDark} onToggleDark={toggleDark} />}
         </main>
         {showProSuccess && <ProSuccessModal onClose={() => setShowProSuccess(false)} />}
+        <ToastContainer />
         <BottomNav activeTab={activeTab} onTabChange={(tab) => {
           if (tab === 'search') setSearchSubview('main');
           setActiveTab(tab);

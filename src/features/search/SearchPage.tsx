@@ -611,7 +611,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
     const vegan = isProductVegan(selectedProduct);
 
     return (
-      <div className="pb-32 px-4 pt-6">
+      <div className="pb-[calc(8rem+env(safe-area-inset-bottom))] px-4 pt-6">
         <button onClick={clearProduct} aria-label="Volver a búsqueda" className="status-pill mb-4 hover:text-surface-700">
           <X className="w-4 h-4" /> Volver a búsqueda
         </button>
@@ -837,7 +837,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
   const recentsToShow = showAllRecents ? recentFoods : recentFoods.slice(0, 5);
 
   return (
-    <div className="pb-32 px-4 pt-6">
+    <div className="pb-[calc(8rem+env(safe-area-inset-bottom))] px-4 pt-6">
       <div className="page-shell p-5 mb-4">
         <div className="relative z-10 flex items-start justify-between gap-3">
         <div>

@@ -148,7 +148,7 @@ export function DiaryPage({ successMessage, onMessageShown }: DiaryPageProps) {
   };
 
   return (
-    <div className="pb-32 px-4 pt-6">
+    <div className="pb-[calc(8rem+env(safe-area-inset-bottom))] px-4 pt-6">
       {successMessage && (
         <div className="mb-4 card text-brand-700 text-sm px-4 py-3 flex items-center gap-2">
           <Leaf className="w-4 h-4 flex-shrink-0" />

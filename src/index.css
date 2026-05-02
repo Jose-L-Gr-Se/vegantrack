@@ -342,3 +342,9 @@
 .dark .bg-white\/80                { background-color: rgb(15 23 42 / 0.97); }
 .dark nav                          { background-color: rgb(15 23 42 / 0.78); border-color: rgb(51 65 85 / 0.95); }
 .dark nav button span              { color: #64748b; }
+
+/* Toast */
+@keyframes toast-in {
+  from { transform: translateY(-10px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}

@@ -145,7 +145,7 @@ export function ProfilePage({ isDark, onToggleDark }: ProfilePageProps) {
   };
 
   return (
-    <div className="pb-32 px-4 pt-6">
+    <div className="pb-[calc(8rem+env(safe-area-inset-bottom))] px-4 pt-6">
       <SectionHeader
         title="Perfil"
         subtitle={profile.display_name || 'Sin nombre'}

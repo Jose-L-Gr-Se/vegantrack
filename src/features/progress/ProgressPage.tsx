@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Scale, Plus, Trash2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Scale, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { toast } from '@/stores/toastStore';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import {
   ResponsiveContainer,
@@ -27,8 +28,7 @@ export function ProgressPage() {
   const [period, setPeriod] = useState(30);
   const [inputWeight, setInputWeight] = useState('');
   const [saving, setSaving] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -45,24 +45,22 @@ export function ProgressPage() {
     if (!user || !inputWeight.trim()) return;
     const kg = parseFloat(inputWeight.replace(',', '.'));
     if (isNaN(kg) || kg < 20 || kg > 300) {
-      setErrorMsg('Introduce un peso valido entre 20 y 300 kg');
+      toast.error('Introduce un peso válido entre 20 y 300 kg');
       return;
     }
     setSaving(true);
-    setErrorMsg(null);
     const { error } = await addLog(user.id, today, kg);
     if (error) {
-      setErrorMsg(error);
+      toast.error(error);
     } else {
       setInputWeight('');
-      setSuccessMsg(todayLog ? 'Peso actualizado ✓' : 'Peso registrado ✓');
-      setTimeout(() => setSuccessMsg(null), 2500);
+      toast.success(todayLog ? 'Peso actualizado ✓' : 'Peso registrado ✓');
     }
     setSaving(false);
   };
 
   return (
-    <div className="pb-32 px-4 pt-6">
+    <div className="pb-[calc(8rem+env(safe-area-inset-bottom))] px-4 pt-6">
       <SectionHeader
         title="Progreso"
         subtitle="Registra y visualiza tu evolución"
@@ -77,7 +75,7 @@ export function ProgressPage() {
         <div className="relative z-10">
           <div className="flex items-start justify-between gap-3 mb-5">
             <div>
-              <p className="section-label mb-2">Registro rapido</p>
+              <p className="section-label mb-2">Registro rápido</p>
               <h2 className="font-display text-2xl font-bold tracking-[-0.04em] text-surface-900">
                 {todayLog ? 'Peso de hoy' : 'Registrar peso'}
               </h2>
@@ -107,16 +105,14 @@ export function ProgressPage() {
               {saving ? '...' : 'Guardar'}
             </button>
           </div>
-          {errorMsg && <p className="text-red-500 text-xs mt-3">{errorMsg}</p>}
-          {successMsg && <p className="text-brand-600 text-xs mt-3 font-medium">{successMsg}</p>}
         </div>
       </div>
 
       {stats.current !== null && (
         <div className="grid grid-cols-2 gap-3 mb-4">
           <StatCard label="Actual" value={`${stats.current}kg`} colorClass="text-brand-700" />
-          <StatCard label="Minimo" value={`${stats.min}kg`} colorClass="text-blue-700" />
-          <StatCard label="Maximo" value={`${stats.max}kg`} colorClass="text-amber-700" />
+          <StatCard label="Mínimo" value={`${stats.min}kg`} colorClass="text-blue-700" />
+          <StatCard label="Máximo" value={`${stats.max}kg`} colorClass="text-amber-700" />
           <StatCard
             label="Cambio"
             value={stats.change !== null ? `${stats.change > 0 ? '+' : ''}${stats.change}kg` : '-'}
@@ -172,9 +168,9 @@ export function ProgressPage() {
         ) : !hasData ? (
           <div className="h-48 flex flex-col items-center justify-center text-surface-400">
             <Scale className="w-10 h-10 mb-2 opacity-30" />
-            <p className="text-sm font-medium">Sin datos todavia</p>
+            <p className="text-sm font-medium">Sin datos todavía</p>
             <p className="text-xs mt-1 text-center">
-              Registra tu primer peso arriba para ver tu grafico
+              Registra tu primer peso arriba para ver tu gráfico
             </p>
           </div>
         ) : (
@@ -198,7 +194,7 @@ export function ProgressPage() {
                 <Tooltip
                   formatter={(val: number, name: string) => [
                     val != null ? `${val} kg` : '-',
-                    name === 'weight' ? 'Peso' : 'Media 7 dias',
+                    name === 'weight' ? 'Peso' : 'Media 7 días',
                   ]}
                   labelStyle={{ fontSize: 11, color: '#334155' }}
                   contentStyle={{
@@ -237,7 +233,7 @@ export function ProgressPage() {
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-6 border-t-2 border-dashed border-brand-300" />
-                <span className="text-xs text-surface-500">Media 7 dias</span>
+                <span className="text-xs text-surface-500">Media 7 días</span>
               </div>
             </div>
           </>
@@ -289,13 +285,30 @@ export function ProgressPage() {
                       })}
                     </div>
                   </div>
-                  <button
-                    onClick={() => deleteLog(log.id)}
-                    className="icon-badge w-9 h-9 text-surface-300 hover:text-red-400 transition-colors"
-                    aria-label="Eliminar registro"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {confirmDeleteId === log.id ? (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="text-xs text-surface-400 hover:text-surface-600 px-2 py-1 rounded-lg transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={() => { deleteLog(log.id); setConfirmDeleteId(null); }}
+                        className="text-xs font-semibold text-white bg-red-500 hover:bg-red-600 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1"
+                      >
+                        <AlertTriangle className="w-3 h-3" /> Eliminar
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(log.id)}
+                      className="icon-badge w-9 h-9 text-surface-300 hover:text-red-400 transition-colors"
+                      aria-label="Eliminar registro"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               );
             })}

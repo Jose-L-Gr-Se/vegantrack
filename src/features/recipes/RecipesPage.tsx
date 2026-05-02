@@ -47,6 +47,7 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
   const [savingHeader, setSavingHeader]     = useState(false);
   const [headerSaved, setHeaderSaved]       = useState(false);
   const [editorOrigin, setEditorOrigin]     = useState<'list' | 'detail'>('list');
+  const [confirmDelete, setConfirmDelete]   = useState(false);
   const savedValuesRef = useRef({ name: '', desc: '', servings: '1' });
 
   // Log dialog
@@ -581,10 +582,23 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
 
           {/* Delete recipe */}
           {editorRecipe && (
-            <button onClick={() => { deleteRecipe(editorRecipe.id); setView('list'); }}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-red-500 hover:bg-red-50 text-sm font-medium transition-colors border border-red-100">
-              <Trash2 className="w-4 h-4" /> Eliminar receta
-            </button>
+            confirmDelete ? (
+              <div className="flex gap-2">
+                <button onClick={() => setConfirmDelete(false)}
+                  className="flex-1 py-3 rounded-2xl text-sm font-medium text-surface-600 bg-surface-100 hover:bg-surface-200 transition-colors">
+                  Cancelar
+                </button>
+                <button onClick={() => { deleteRecipe(editorRecipe.id); setView('list'); }}
+                  className="flex-1 py-3 rounded-2xl text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors">
+                  Sí, eliminar
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmDelete(true)}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-red-500 hover:bg-red-50 text-sm font-medium transition-colors border border-red-100">
+                <Trash2 className="w-4 h-4" /> Eliminar receta
+              </button>
+            )
           )}
         </div>
 

@@ -179,8 +179,116 @@ export function DashboardPage() {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="pb-[calc(8rem+env(safe-area-inset-bottom))] px-4 pt-6 animate-pulse">
+        <SectionHeader title="Resumen" subtitle="Tu progreso nutricional"
+          action={<div className="icon-badge"><TrendingUp className="w-5 h-5 text-brand-600" /></div>}
+        />
+        {/* VeganScore skeleton */}
+        <div className="page-shell p-5 mb-4">
+          <div className="relative z-10">
+            <div className="flex items-start justify-between mb-5">
+              <div className="space-y-2">
+                <div className="h-2.5 w-20 bg-surface-200 rounded-full" />
+                <div className="h-5 w-44 bg-surface-200 rounded-full" />
+              </div>
+              <div className="h-6 w-14 bg-surface-200 rounded-full" />
+            </div>
+            <div className="flex items-start gap-5">
+              <div className="w-[100px] h-[100px] rounded-full bg-surface-200 flex-shrink-0" />
+              <div className="flex-1 space-y-3.5 pt-1">
+                {[90, 75, 60, 80, 50].map((w, i) => (
+                  <div key={i}>
+                    <div className="flex justify-between mb-1.5">
+                      <div className="h-2.5 bg-surface-200 rounded-full" style={{ width: `${w * 0.4}%` }} />
+                      <div className="h-2.5 w-12 bg-surface-100 rounded-full" />
+                    </div>
+                    <div className="h-2 bg-surface-100 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Balance diario skeleton */}
+        <div className="card p-5 mb-4">
+          <div className="flex items-start justify-between mb-5">
+            <div className="space-y-2">
+              <div className="h-2.5 w-10 bg-surface-200 rounded-full" />
+              <div className="h-5 w-36 bg-surface-200 rounded-full" />
+            </div>
+            <div className="h-6 w-24 bg-surface-200 rounded-full" />
+          </div>
+          <div className="flex items-center gap-5">
+            <div className="w-28 h-28 rounded-full bg-surface-100 flex-shrink-0" />
+            <div className="flex-1 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i}>
+                  <div className="flex justify-between mb-1.5">
+                    <div className="h-2.5 w-16 bg-surface-200 rounded-full" />
+                    <div className="h-2.5 w-10 bg-surface-100 rounded-full" />
+                  </div>
+                  <div className="h-2 bg-surface-100 rounded-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="soft-divider my-4" />
+          <div className="grid grid-cols-2 gap-3">
+            {[1, 2].map((i) => (
+              <div key={i} className="metric-tile">
+                <div className="h-4 w-24 bg-surface-200 rounded-full mb-2" />
+                <div className="h-7 w-16 bg-surface-100 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Weekly chart skeleton */}
+        <div className="card p-5 mb-4">
+          <div className="flex justify-between mb-5">
+            <div className="space-y-2">
+              <div className="h-2.5 w-24 bg-surface-200 rounded-full" />
+              <div className="h-5 w-40 bg-surface-200 rounded-full" />
+            </div>
+          </div>
+          <div className="flex items-end gap-1.5 h-36">
+            {[55, 80, 40, 90, 65, 75, 100].map((h, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <div className="w-full bg-surface-100 rounded-lg" style={{ height: `${h}%` }} />
+                <div className="h-2 w-5 bg-surface-100 rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Micros skeleton */}
+        <div className="card p-5">
+          <div className="flex items-start justify-between mb-5">
+            <div className="space-y-2">
+              <div className="h-2.5 w-28 bg-surface-200 rounded-full" />
+              <div className="h-5 w-44 bg-surface-200 rounded-full" />
+            </div>
+          </div>
+          <div className="space-y-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i}>
+                <div className="flex justify-between mb-1.5">
+                  <div className="h-2.5 w-24 bg-surface-200 rounded-full" />
+                  <div className="h-2.5 w-16 bg-surface-100 rounded-full" />
+                </div>
+                <div className="h-2 bg-surface-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-surface-200 rounded-full" style={{ width: `${30 + i * 10}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="pb-32 px-4 pt-6">
+    <div className="pb-[calc(8rem+env(safe-area-inset-bottom))] px-4 pt-6">
       <SectionHeader
         title="Resumen"
         subtitle="Tu progreso nutricional"
@@ -345,17 +453,7 @@ export function DashboardPage() {
           )}
         </div>
 
-        {loading ? (
-          <div className="flex items-end gap-1.5 h-36 animate-pulse">
-            {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full bg-surface-100 rounded-lg" style={{ height: `${20 + Math.random() * 60}%` }} />
-                <div className="h-2 w-6 bg-surface-100 rounded" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <>
+        <>
             <div className="flex items-end gap-1.5 h-36 relative">
               {maxCalInWeek > 0 && (
                 <div
@@ -408,7 +506,6 @@ export function DashboardPage() {
               )}
             </div>
           </>
-        )}
       </div>
 
       {weekAvg && (
