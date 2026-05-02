@@ -46,6 +46,8 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
   const [editorServings, setEditorServings] = useState('1');
   const [savingHeader, setSavingHeader]     = useState(false);
   const [headerSaved, setHeaderSaved]       = useState(false);
+  const [editorOrigin, setEditorOrigin]     = useState<'list' | 'detail'>('list');
+  const savedValuesRef = useRef({ name: '', desc: '', servings: '1' });
 
   // Log dialog
   const [logDialog, setLogDialog] = useState<{ recipe: Recipe; mealType: MealType; servings: string } | null>(null);
@@ -98,12 +100,14 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
 
   const openCreate = () => {
     setEditorName(''); setEditorDesc(''); setEditorServings('1');
-    setEditorRecipe(null); setHeaderSaved(false); setView('editor');
+    savedValuesRef.current = { name: '', desc: '', servings: '1' };
+    setEditorRecipe(null); setHeaderSaved(false); setEditorOrigin('list'); setView('editor');
   };
-  const openEdit = (r: Recipe) => {
+  const openEdit = (r: Recipe, origin: 'list' | 'detail' = 'list') => {
     setEditorName(r.name); setEditorDesc(r.description ?? '');
     setEditorServings(String(r.total_servings));
-    setEditorRecipe(r); setHeaderSaved(true); setView('editor');
+    savedValuesRef.current = { name: r.name, desc: r.description ?? '', servings: String(r.total_servings) };
+    setEditorRecipe(r); setHeaderSaved(true); setEditorOrigin(origin); setView('editor');
   };
 
   const handleSaveHeader = async () => {
@@ -112,13 +116,17 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
     const servings = Math.max(1, parseFloat(editorServings) || 1);
     if (!editorRecipe) {
       const r = await createRecipe(user.id, editorName.trim(), editorDesc.trim(), servings);
-      if (r) { setEditorRecipe(r); setHeaderSaved(true); }
+      if (r) {
+        savedValuesRef.current = { name: editorName.trim(), desc: editorDesc.trim(), servings: editorServings };
+        setEditorRecipe(r); setHeaderSaved(true);
+      }
     } else {
       await updateRecipe(editorRecipe.id, {
         name: editorName.trim(),
         description: editorDesc.trim() || null,
         total_servings: servings,
       } as any);
+      savedValuesRef.current = { name: editorName.trim(), desc: editorDesc.trim(), servings: editorServings };
       setHeaderSaved(true);
     }
     setSavingHeader(false);
@@ -240,7 +248,7 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
 
         {pickerSelected ? (
           /* Gram confirmation */
-          <div className="px-5 pb-8 space-y-4">
+          <div className="px-5 pb-[calc(2rem+env(safe-area-inset-bottom))] space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-surface-900">
                 {isRecent(pickerSelected) ? pickerSelected.food_name
@@ -302,7 +310,7 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
               </div>
             </div>
 
-            <div className="overflow-y-auto flex-1 px-4 pb-6 space-y-1">
+            <div className="overflow-y-auto flex-1 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] space-y-1">
               {/* Custom foods */}
               {filteredCustom.length > 0 && (
                 <>
@@ -445,11 +453,18 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
 
   // ── EDITOR VIEW ───────────────────────────────────────────────────────────
   if (view === 'editor') {
+    const hasUnsavedChanges = headerSaved && editorRecipe && (
+      editorName.trim() !== savedValuesRef.current.name ||
+      editorDesc.trim() !== savedValuesRef.current.desc ||
+      editorServings !== savedValuesRef.current.servings
+    );
+    const isActuallySaved = headerSaved && editorRecipe && !hasUnsavedChanges;
+
     return (
-      <div className="pb-32 px-4 pt-6">
+      <div className="pb-[calc(8rem+env(safe-area-inset-bottom))] px-4 pt-6">
         <div className="page-shell px-5 py-5 mb-4">
           <div className="flex items-center gap-3">
-            <button onClick={() => setView('list')} className="icon-badge">
+            <button onClick={() => setView(editorOrigin)} className="icon-badge">
               <ChevronLeft className="w-5 h-5 text-surface-700" />
             </button>
             <div className="relative z-10">
@@ -489,13 +504,20 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
             </div>
             <button onClick={handleSaveHeader} disabled={savingHeader || !editorName.trim()}
               className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold transition-colors text-sm ${
-                headerSaved && editorRecipe ? 'bg-surface-100 text-surface-600' : 'bg-brand-600 hover:bg-brand-700 text-white'
+                isActuallySaved ? 'bg-surface-100 text-surface-600' : 'bg-brand-600 hover:bg-brand-700 text-white'
               }`}>
               {savingHeader
                 ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                : headerSaved && editorRecipe ? <><Check className="w-4 h-4 text-green-500" /> Guardado</> : 'Guardar receta'
+                : isActuallySaved
+                  ? <><Check className="w-4 h-4 text-green-500" /> Guardado</>
+                  : hasUnsavedChanges ? 'Guardar cambios' : 'Guardar receta'
               }
             </button>
+            {!editorRecipe && editorName.trim() && (
+              <p className="text-xs text-surface-400 text-center -mt-1">
+                Guarda la receta para poder añadir ingredientes
+              </p>
+            )}
           </div>
 
           {/* Ingredients */}
@@ -576,7 +598,7 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
     const totals = computeRecipeNutrients(selectedRecipe.ingredients);
     const perServing = computeRecipeNutrients(selectedRecipe.ingredients, 1 / selectedRecipe.total_servings);
     return (
-      <div className="pb-32 px-4 pt-6">
+      <div className="pb-[calc(8rem+env(safe-area-inset-bottom))] px-4 pt-6">
         <div className="page-shell px-5 py-5 mb-4">
           <div className="flex items-center gap-3 mb-1">
             <button onClick={() => setView('list')} className="icon-badge">
@@ -587,7 +609,7 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
               <h1 className="font-display text-[2rem] font-bold tracking-[-0.05em] text-surface-900 truncate">{selectedRecipe.name}</h1>
               {selectedRecipe.description && <p className="text-surface-500 text-xs mt-2">{selectedRecipe.description}</p>}
             </div>
-            <button onClick={() => openEdit(selectedRecipe)} className="icon-badge">
+            <button onClick={() => openEdit(selectedRecipe, 'detail')} className="icon-badge">
               <Edit2 className="w-4 h-4 text-surface-700" />
             </button>
           </div>
@@ -658,7 +680,7 @@ export function RecipesPage({ onBack }: RecipesPageProps) {
 
   // ── LIST VIEW ─────────────────────────────────────────────────────────────
   return (
-    <div className="pb-32 px-4 pt-6">
+    <div className="pb-[calc(8rem+env(safe-area-inset-bottom))] px-4 pt-6">
       <div className="page-shell px-5 py-5 mb-4">
         <div className="flex items-center gap-3 mb-1">
           <button onClick={onBack} className="icon-badge">
