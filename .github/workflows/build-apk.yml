@@ -1,6 +1,9 @@
-name: Build Android APK
+name: Build Android AAB (Capacitor)
 
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
@@ -10,260 +13,52 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build web assets (native mode — sin PWA service worker)
+        run: npm run build:native
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_REVENUECAT_ANDROID_KEY: ${{ secrets.VITE_REVENUECAT_ANDROID_KEY }}
+
+      - name: Sync Capacitor Android project
+        run: npx cap sync android
+
+      - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.7'
-
-      - name: Install Android SDK packages
+      # Decodifica el keystore desde el secret Base64 al disco
+      - name: Decode signing keystore
         run: |
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/vegantrack-release.jks
 
-      - name: Create Android project
+      # Inyecta las variables de firma en gradle.properties para que build.gradle las lea
+      - name: Configure signing in gradle.properties
         run: |
-          mkdir -p twa-app/app/src/main/res/values
-                    mkdir -p twa-app/app/src/main/java/com/vegantrack/app
-          mkdir -p twa-app/app/src/main/res/mipmap-anydpi-v26
-          mkdir -p twa-app/app/src/main/res/mipmap-hdpi
-          mkdir -p twa-app/app/src/main/res/mipmap-mdpi
-          mkdir -p twa-app/app/src/main/res/mipmap-xhdpi
-          mkdir -p twa-app/app/src/main/res/mipmap-xxhdpi
-          mkdir -p twa-app/app/src/main/res/mipmap-xxxhdpi
+          echo "KEYSTORE_FILE=vegantrack-release.jks" >> android/gradle.properties
+          echo "KEYSTORE_PASSWORD=${{ secrets.ANDROID_STORE_PASSWORD }}" >> android/gradle.properties
+          echo "KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/gradle.properties
+          echo "KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/gradle.properties
 
-          cat > twa-app/settings.gradle <<'EOF'
-          pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
+      - name: Grant Gradle wrapper permission
+        run: chmod +x android/gradlew
 
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
+      - name: Build signed AAB
+        working-directory: android
+        run: ./gradlew bundleRelease --no-daemon
 
-          rootProject.name = "VeganTrack"
-          include ':app'
-          EOF
-
-          cat > twa-app/build.gradle <<'EOF'
-          plugins {
-              id 'com.android.application' version '8.2.2' apply false
-          }
-          EOF
-
-          cat > twa-app/gradle.properties <<'EOF'
-          android.useAndroidX=true
-          android.enableJetifier=true
-          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-          EOF
-
-          cat > twa-app/app/build.gradle <<'EOF'
-          plugins {
-              id 'com.android.application'
-          }
-
-          android {
-              namespace 'com.vegantrack.app'
-              compileSdk 34
-
-              defaultConfig {
-                  applicationId "com.vegantrack.app"
-                  minSdk 21
-                  targetSdk 34
-                  versionCode 1
-                  versionName "1.0.0"
-              }
-
-              buildTypes {
-                  release {
-                      minifyEnabled false
-                      signingConfig signingConfigs.debug
-                  }
-              }
-
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
-              }
-
-              buildFeatures {
-                  buildConfig true
-              }
-          }
-
-          dependencies {
-              implementation 'androidx.appcompat:appcompat:1.6.1'
-              implementation 'androidx.webkit:webkit:1.11.0'
-          }
-          EOF
-
-          cat > twa-app/app/src/main/java/com/vegantrack/app/MainActivity.java <<'EOF'
-          package com.vegantrack.app;
-
-          import android.annotation.SuppressLint;
-          import android.graphics.Bitmap;
-          import android.os.Bundle;
-          import android.view.ViewGroup;
-          import android.webkit.WebResourceRequest;
-          import android.webkit.WebSettings;
-          import android.webkit.WebView;
-          import android.webkit.WebViewClient;
-
-          import androidx.annotation.NonNull;
-          import androidx.appcompat.app.AppCompatActivity;
-
-          public class MainActivity extends AppCompatActivity {
-              private static final String START_URL = "https://vegantrack.vercel.app/";
-              private WebView webView;
-
-              @SuppressLint("SetJavaScriptEnabled")
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-
-                  webView = new WebView(this);
-                  webView.setLayoutParams(new ViewGroup.LayoutParams(
-                          ViewGroup.LayoutParams.MATCH_PARENT,
-                          ViewGroup.LayoutParams.MATCH_PARENT));
-                  setContentView(webView);
-
-                  WebSettings settings = webView.getSettings();
-                  settings.setJavaScriptEnabled(true);
-                  settings.setDomStorageEnabled(true);
-                  settings.setDatabaseEnabled(true);
-                  settings.setAllowFileAccess(false);
-                  settings.setAllowContentAccess(false);
-                  settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
-                  settings.setMediaPlaybackRequiresUserGesture(false);
-                  settings.setBuiltInZoomControls(false);
-                  settings.setDisplayZoomControls(false);
-                  settings.setLoadWithOverviewMode(true);
-                  settings.setUseWideViewPort(true);
-
-                  webView.setWebViewClient(new VeganTrackWebViewClient());
-
-                  if (savedInstanceState != null) {
-                      webView.restoreState(savedInstanceState);
-                  } else {
-                      webView.loadUrl(START_URL);
-                  }
-              }
-
-              @Override
-              protected void onSaveInstanceState(@NonNull Bundle outState) {
-                  super.onSaveInstanceState(outState);
-                  webView.saveState(outState);
-              }
-
-              @Override
-              public void onBackPressed() {
-                  if (webView.canGoBack()) {
-                      webView.goBack();
-                      return;
-                  }
-                  super.onBackPressed();
-              }
-
-              @Override
-              protected void onDestroy() {
-                  if (webView != null) {
-                      webView.destroy();
-                  }
-                  super.onDestroy();
-              }
-
-              private static class VeganTrackWebViewClient extends WebViewClient {
-                  @Override
-                  public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                      view.loadUrl(request.getUrl().toString());
-                      return true;
-                  }
-
-                  @Override
-                  public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                      super.onPageStarted(view, url, favicon);
-                  }
-              }
-          }
-          EOF
-
-          cat > twa-app/app/src/main/AndroidManifest.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.INTERNET" />
-              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
-              <application
-                  android:allowBackup="true"
-                  android:icon="@mipmap/ic_launcher"
-                  android:label="VeganTrack"
-                  android:roundIcon="@mipmap/ic_launcher"
-                  android:supportsRtl="true"
-                  android:theme="@style/AppTheme">
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
-
-          cat > twa-app/app/src/main/res/values/colors.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <color name="colorPrimary">#16a34a</color>
-              <color name="backgroundColor">#f8fafc</color>
-          </resources>
-          EOF
-
-          cat > twa-app/app/src/main/res/values/styles.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
-                  <item name="colorPrimary">@color/colorPrimary</item>
-              </style>
-          </resources>
-          EOF
-
-          cp public/icon-192.png twa-app/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          cp public/icon-192.png twa-app/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          cp public/icon-192.png twa-app/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          cp public/icon-512.png twa-app/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          cp public/icon-512.png twa-app/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-
-          cat > twa-app/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-              <background android:drawable="@color/backgroundColor" />
-              <foreground android:drawable="@mipmap/ic_launcher" />
-          </adaptive-icon>
-          EOF
-
-      - name: Build APK
-        run: gradle -p twa-app :app:assembleRelease --no-daemon --stacktrace
-
-      - name: Upload APK artifact
+      - name: Upload signed AAB
         uses: actions/upload-artifact@v4
         with:
-          name: vegantrack-apk
-          path: twa-app/app/build/outputs/apk/release/*.apk
-          retention-days: 7
+          name: vegantrack-${{ github.ref_name }}.aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30

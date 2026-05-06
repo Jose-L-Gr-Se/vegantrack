@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useAuthStore } from '@/stores/authStore';
 import { X, Check, Zap } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
+import { getOfferings, purchasePackage } from '@/lib/revenuecat';
 
 interface ProModalProps {
   onClose: () => void;
@@ -24,10 +26,18 @@ const FEATURES_FREE = [
 ];
 
 export function ProModal({ onClose }: ProModalProps) {
-  const { user } = useAuthStore();
+  const { user, fetchProfile } = useAuthStore();
   const [plan, setPlan] = useState<'monthly' | 'yearly'>('yearly');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nativeOfferings, setNativeOfferings] = useState<any>(null);
+  const isNative = Capacitor.isNativePlatform();
+
+  // En nativo, cargamos las ofertas de RevenueCat al abrir el modal
+  useEffect(() => {
+    if (!isNative) return;
+    getOfferings().then(setNativeOfferings);
+  }, [isNative]);
 
   const handleUpgrade = async () => {
     if (!user) return;
@@ -35,22 +45,39 @@ export function ProModal({ onClose }: ProModalProps) {
     setError(null);
 
     try {
-      const res = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan,
-          userId: user.id,
-          email: user.email,
-        }),
-      });
+      if (isNative && nativeOfferings) {
+        // Compra in-app via RevenueCat (Google Play Billing)
+        const pkg = plan === 'yearly'
+          ? nativeOfferings.annual
+          : nativeOfferings.monthly;
 
-      const data = await res.json();
+        if (!pkg) {
+          setError('Plan no disponible. Inténtalo de nuevo más tarde.');
+          setLoading(false);
+          return;
+        }
 
-      if (data.url) {
-        window.location.href = data.url;
+        const success = await purchasePackage(pkg);
+        if (success) {
+          // RevenueCat webhook actualizará Supabase, pero también recargamos perfil
+          await fetchProfile();
+          onClose();
+        } else {
+          setError('Compra cancelada.');
+        }
       } else {
-        setError(data.error || 'No se pudo iniciar el proceso de pago. Inténtalo de nuevo.');
+        // Web: checkout de Stripe (comportamiento original)
+        const res = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan, userId: user.id, email: user.email }),
+        });
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          setError(data.error || 'No se pudo iniciar el proceso de pago. Inténtalo de nuevo.');
+        }
       }
     } catch {
       setError('Error de conexión. Comprueba tu internet e inténtalo de nuevo.');
@@ -182,7 +209,9 @@ export function ProModal({ onClose }: ProModalProps) {
           </button>
 
           <p className="text-center text-xs text-surface-400 pb-2">
-            Pago seguro con Stripe · Cancela cuando quieras · Sin permanencia
+            {isNative
+              ? 'Pago seguro con Google Play · Cancela cuando quieras'
+              : 'Pago seguro con Stripe · Cancela cuando quieras · Sin permanencia'}
           </p>
         </div>
       </div>

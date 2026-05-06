@@ -6,6 +6,11 @@
   color-scheme: light;
   --page-shadow: 0 24px 60px -36px rgba(15, 23, 42, 0.3);
   --panel-shadow: 0 20px 48px -34px rgba(15, 23, 42, 0.22);
+  /* Safe areas para Capacitor (notch, home indicator) */
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
 }
 
 @layer base {

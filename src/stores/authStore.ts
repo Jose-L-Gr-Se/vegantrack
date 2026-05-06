@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/types';
 import type { User } from '@supabase/supabase-js';
@@ -10,6 +11,7 @@ interface AuthState {
   initialized: boolean;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   fetchProfile: () => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<{ error: string | null }>;
@@ -68,6 +70,32 @@ initialize: async () => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     set({ loading: false });
     return { error: error?.message ?? null };
+  },
+
+  signInWithGoogle: async () => {
+    set({ loading: true });
+    try {
+      if (Capacitor.isNativePlatform()) {
+        // Nativo: usamos el plugin de Google Auth para obtener idToken
+        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+        const googleUser = await GoogleAuth.signIn();
+        const idToken = googleUser.authentication.idToken;
+        const { error } = await supabase.auth.signInWithIdToken({ provider: 'google', token: idToken });
+        set({ loading: false });
+        return { error: error?.message ?? null };
+      } else {
+        // Web: OAuth redirect vía Supabase
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: window.location.origin },
+        });
+        set({ loading: false });
+        return { error: error?.message ?? null };
+      }
+    } catch (err: unknown) {
+      set({ loading: false });
+      return { error: (err as Error)?.message ?? 'Error al iniciar sesión con Google' };
+    }
   },
 
   signOut: async () => {

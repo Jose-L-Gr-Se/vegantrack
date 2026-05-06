@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useBackHandler } from '@/hooks/useBackHandler';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { searchProducts, getProductByBarcode, isProductVegan, findVeganAlternatives } from '@/lib/openfoodfacts';
 import { useAuthStore } from '@/stores/authStore';
 import { useDiaryStore } from '@/stores/diaryStore';
@@ -59,6 +60,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
   const { user } = useAuthStore();
   const { addEntry, selectedDate, recentFoods, fetchRecentFoods } = useDiaryStore();
   const { searchCustomFoods } = useCustomFoodStore();
+  const { scan: nativeScan, isNative } = useBarcodeScanner();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<OpenFoodFactsProduct[]>([]);
   const [customResults, setCustomResults] = useState<CustomFood[]>([]);
@@ -372,6 +374,28 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
     }
     setScanning(false);
   }, []);
+
+  // En nativo usa MLKit; en web usa html5-qrcode
+  const handleScanPress = useCallback(async () => {
+    if (isNative) {
+      setScanError(null);
+      setSearching(true);
+      const barcode = await nativeScan();
+      if (barcode) {
+        const product = await getProductByBarcode(barcode);
+        if (product) {
+          setSelectedProduct(product);
+          setServingInput(String(product.serving_quantity || 100));
+        } else {
+          setResults([]);
+          setQuery(`Código: ${barcode} (no encontrado)`);
+        }
+      }
+      setSearching(false);
+      return;
+    }
+    startScanner();
+  }, [isNative, nativeScan, startScanner]);
 
   // Stop scanner when app goes to background; reset stuck adding state on resume
   useEffect(() => {
@@ -901,7 +925,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
           />
         )}
         <button
-          onClick={scanning ? stopScanner : startScanner}
+          onClick={scanning ? stopScanner : handleScanPress}
           disabled={iosScanning}
           aria-label={scanning ? "Detener escáner" : "Escanear código de barras"}
           className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-colors flex-shrink-0 ${

@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { SplashScreen } from '@capacitor/splash-screen';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { useAuthStore } from '@/stores/authStore';
 import { useCustomFoodStore } from '@/stores/customFoodStore';
@@ -18,6 +21,9 @@ import { useSupplementStore } from '@/stores/supplementStore';
 import { Spinner } from '@/components/ui/Spinner';
 import { AppLogo } from '@/components/ui/AppLogo';
 import { ProSuccessModal } from '@/features/pro/ProSuccessModal';
+import { PrivacyPolicy } from '@/features/legal/PrivacyPolicy';
+import { TermsOfService } from '@/features/legal/TermsOfService';
+import { initRevenueCat } from '@/lib/revenuecat';
 import type { MealType } from '@/types';
 
 export default function App() {
@@ -37,6 +43,19 @@ export default function App() {
   useEffect(() => {
     initialize();
   }, []);
+
+  // Inicializar StatusBar y SplashScreen en Capacitor
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    StatusBar.setStyle({ style: Style.Light });
+    StatusBar.setBackgroundColor({ color: '#16a34a' });
+    SplashScreen.hide();
+  }, []);
+
+  // Inicializar RevenueCat cuando el usuario esté disponible
+  useEffect(() => {
+    if (user) initRevenueCat(user.id);
+  }, [user?.id]);
 
   useEffect(() => {
     useDiaryStore.getState().loadOverrides();
@@ -111,6 +130,11 @@ export default function App() {
       }
     }
   }, [user]);
+
+  // Rutas legales accesibles sin login
+  const path = window.location.pathname;
+  if (path === '/privacy') return <PrivacyPolicy />;
+  if (path === '/terms') return <TermsOfService />;
 
   // Loading screen
   if (!initialized) {

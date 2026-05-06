@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
 
@@ -11,7 +12,114 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return new Uint8Array([...rawData].map((c) => c.charCodeAt(0)));
 }
 
-export function usePushNotifications() {
+// ─── Native (Capacitor) push ────────────────────────────────────────────────
+
+function useNativePushNotifications() {
+  const { user } = useAuthStore();
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [savedReminderHour, setSavedReminderHour] = useState<number>(20);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    void checkNativeSubscription();
+  }, [user?.id]);
+
+  const checkNativeSubscription = async () => {
+    const { data } = await supabase
+      .from('push_subscriptions')
+      .select('reminder_hour')
+      .eq('user_id', user!.id)
+      .eq('endpoint', 'fcm')
+      .maybeSingle();
+    setIsSubscribed(!!data);
+    if (data?.reminder_hour != null) setSavedReminderHour(data.reminder_hour);
+  };
+
+  const subscribe = async (reminderHour = 20): Promise<boolean> => {
+    if (!user) return false;
+    setLoading(true);
+    try {
+      const { PushNotifications } = await import('@capacitor/push-notifications');
+      let perm = await PushNotifications.checkPermissions();
+      if (perm.receive !== 'granted') {
+        perm = await PushNotifications.requestPermissions();
+      }
+      if (perm.receive !== 'granted') { setLoading(false); return false; }
+
+      await PushNotifications.register();
+
+      // El token FCM llega via evento 'registration' — lo capturamos con una promesa
+      const token = await new Promise<string | null>((resolve) => {
+        const timeout = setTimeout(() => resolve(null), 10000);
+        PushNotifications.addListener('registration', (t) => {
+          clearTimeout(timeout);
+          resolve(t.value);
+        });
+        PushNotifications.addListener('registrationError', () => {
+          clearTimeout(timeout);
+          resolve(null);
+        });
+      });
+
+      if (!token) { setLoading(false); return false; }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token;
+
+      const res = await fetch('/api/push-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ subscription: { type: 'fcm', token }, action: 'subscribe', reminderHour }),
+      });
+
+      if (res.ok) {
+        setIsSubscribed(true);
+        setSavedReminderHour(reminderHour);
+        setLoading(false);
+        return true;
+      }
+      setLoading(false);
+      return false;
+    } catch (err) {
+      console.error('Native push subscribe error:', err);
+      setLoading(false);
+      return false;
+    }
+  };
+
+  const unsubscribe = async (): Promise<void> => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token;
+      await fetch('/api/push-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ subscription: { type: 'fcm' }, action: 'unsubscribe' }),
+      });
+      setIsSubscribed(false);
+    } catch (err) {
+      console.error('Native push unsubscribe error:', err);
+    }
+    setLoading(false);
+  };
+
+  return {
+    isSubscribed,
+    isSupported: true,
+    permission: 'default' as NotificationPermission,
+    loading,
+    savedReminderHour,
+    subscribe,
+    unsubscribe,
+  };
+}
+
+// ─── Web Push ────────────────────────────────────────────────────────────────
+
+function useWebPushNotifications() {
   const { user } = useAuthStore();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
@@ -38,7 +146,6 @@ export function usePushNotifications() {
       const sub = await reg.pushManager.getSubscription();
       setIsSubscribed(!!sub);
 
-      // Cargar la hora guardada en BD
       if (sub && user) {
         const { data } = await supabase
           .from('push_subscriptions')
@@ -46,9 +153,7 @@ export function usePushNotifications() {
           .eq('user_id', user.id)
           .eq('endpoint', sub.endpoint)
           .single();
-        if (data?.reminder_hour != null) {
-          setSavedReminderHour(data.reminder_hour);
-        }
+        if (data?.reminder_hour != null) setSavedReminderHour(data.reminder_hour);
       }
     } catch {
       setIsSubscribed(false);
@@ -58,7 +163,6 @@ export function usePushNotifications() {
   const subscribe = async (reminderHour = 20): Promise<boolean> => {
     if (!user || !isSupported || !VAPID_PUBLIC_KEY) return false;
     setLoading(true);
-
     try {
       const perm = await Notification.requestPermission();
       setPermission(perm);
@@ -76,15 +180,8 @@ export function usePushNotifications() {
 
       const res = await fetch('/api/push-subscribe', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          subscription: sub.toJSON(),
-          action: 'subscribe',
-          reminderHour,
-        }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ subscription: sub.toJSON(), action: 'subscribe', reminderHour }),
       });
 
       if (res.ok) {
@@ -93,7 +190,6 @@ export function usePushNotifications() {
         setLoading(false);
         return true;
       }
-
       if (!existingSub) await sub.unsubscribe();
       setLoading(false);
       return false;
@@ -110,17 +206,12 @@ export function usePushNotifications() {
     try {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
-
       if (sub) {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-
         await fetch('/api/push-subscribe', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ subscription: sub.toJSON(), action: 'unsubscribe' }),
         });
         await sub.unsubscribe();
@@ -132,13 +223,14 @@ export function usePushNotifications() {
     setLoading(false);
   };
 
-  return {
-    isSubscribed,
-    isSupported,
-    permission,
-    loading,
-    savedReminderHour,
-    subscribe,
-    unsubscribe,
-  };
+  return { isSubscribed, isSupported, permission, loading, savedReminderHour, subscribe, unsubscribe };
+}
+
+// ─── Public hook — elige nativo o web automáticamente ───────────────────────
+
+export function usePushNotifications() {
+  const isNative = Capacitor.isNativePlatform();
+  const nativeHook = useNativePushNotifications();
+  const webHook = useWebPushNotifications();
+  return isNative ? nativeHook : webHook;
 }

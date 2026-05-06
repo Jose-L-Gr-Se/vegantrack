@@ -6,9 +6,23 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "build:native": "CAPACITOR_BUILD=true tsc -b && CAPACITOR_BUILD=true vite build",
+    "preview": "vite preview",
+    "cap:sync": "npm run build:native && npx cap sync android",
+    "cap:open": "npx cap open android",
+    "cap:run": "npm run build:native && npx cap run android"
   },
   "dependencies": {
+    "@capacitor-mlkit/barcode-scanning": "^6.2.0",
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/app": "^6.0.3",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/keyboard": "^6.0.4",
+    "@capacitor/push-notifications": "^6.0.5",
+    "@capacitor/splash-screen": "^6.0.4",
+    "@capacitor/status-bar": "^6.0.3",
+    "@codetrix-studio/capacitor-google-auth": "^3.4.0-rc.4",
+    "@revenuecat/purchases-capacitor": "^13.0.1",
     "@supabase/supabase-js": "^2.49.0",
     "@vercel/analytics": "^2.0.1",
     "html5-qrcode": "^2.3.8",
@@ -22,6 +36,7 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^6.2.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",

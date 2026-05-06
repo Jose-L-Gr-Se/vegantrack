@@ -7,11 +7,14 @@ export default defineConfig(({ mode }) => {
   const supabaseUrl = env.VITE_SUPABASE_URL || ''
   // Extrae solo el hostname para el pattern de Workbox
   const supabaseHost = supabaseUrl.replace(/^https?:\/\//, '')
+  // En builds nativos (Capacitor), deshabilitamos el service worker —
+  // los WebViews nativos no lo necesitan y puede interferir con la app.
+  const isNativeBuild = process.env.CAPACITOR_BUILD === 'true'
 
   return {
     plugins: [
       react(),
-      VitePWA({
+      !isNativeBuild && VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'icon.svg', 'icon-192.png', 'icon-512.png'],
         manifest: false,
@@ -63,7 +66,7 @@ export default defineConfig(({ mode }) => {
           ],
         },
       }),
-    ],
+    ].filter(Boolean),
     resolve: {
       alias: { '@': '/src' },
     },

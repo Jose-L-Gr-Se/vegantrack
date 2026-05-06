@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">VeganTrack</string>
+    <string name="title_activity_main">VeganTrack</string>
+    <string name="package_name">com.vegantrack.app</string>
+    <string name="custom_url_scheme">com.vegantrack.app</string>
+</resources>
