@@ -22,7 +22,7 @@
     "@capacitor/splash-screen": "^6.0.4",
     "@capacitor/status-bar": "^6.0.3",
     "@codetrix-studio/capacitor-google-auth": "^3.4.0-rc.4",
-    "@revenuecat/purchases-capacitor": "^13.0.1",
+    "@revenuecat/purchases-capacitor": "^9.2.2",
     "@supabase/supabase-js": "^2.49.0",
     "@vercel/analytics": "^2.0.1",
     "html5-qrcode": "^2.3.8",
