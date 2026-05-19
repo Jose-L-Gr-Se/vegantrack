@@ -42,8 +42,8 @@
       "typedRoutes": true
     },
     "extra": {
-      "supabaseUrl": "SUPABASE_URL_PLACEHOLDER",
-      "supabaseAnonKey": "SUPABASE_ANON_KEY_PLACEHOLDER"
+      "supabaseUrl": "https://hsxqwhsyqtdaenjxlhzo.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzeHF3aHN5cXRkYWVuanhsaHpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjU3NTEsImV4cCI6MjA4OTM0MTc1MX0.Gz6_QG7ehy4db6j4Lf6WI5C_OE61qGgIyrAF1UAl7vo"
     }
   }
 }
