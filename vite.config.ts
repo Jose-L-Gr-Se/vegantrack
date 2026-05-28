@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.ico', 'icon.svg', 'icon-192.png', 'icon-512.png'],
+        includeAssets: ['vegantrack-icon-64.png', 'vegantrack-icon-128.png', 'vegantrack-icon-256.png', 'vegantrack-icon-512.png', 'vegantrack-icon-1024.png', 'vegantrack-icon-rounded-64.png', 'vegantrack-icon-rounded-128.png', 'vegantrack-icon-rounded-256.png', 'vegantrack-icon-rounded-512.png', 'vegantrack-icon-rounded-1024.png'],
         manifest: false,
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],

@@ -624,7 +624,7 @@ function EditEntryModal({ entry, onClose, onSaved }: { entry: FoodLogEntry; onCl
   useBackHandler(true, onClose);
   const { sheetRef: editSheetRef, backdropRef: editBackdropRef, onTouchStart, onTouchMove, onTouchEnd } = useSwipeToDismiss({ onDismiss: onClose });
 
-  const grams = Math.max(1, parseInt(gramsInput) || 0);
+  const grams = Math.max(0.1, parseFloat(gramsInput) || 0);
   const ratio = grams / 100;
 
   const handleSave = async () => {
@@ -662,7 +662,7 @@ function EditEntryModal({ entry, onClose, onSaved }: { entry: FoodLogEntry; onCl
           </div>
           <div>
             <label className="label">Cantidad (gramos)</label>
-            <input type="number" value={gramsInput} onChange={(e) => setGramsInput(e.target.value)} onBlur={() => { if (!gramsInput || parseInt(gramsInput) <= 0) setGramsInput(String(entry.serving_size_g)); }} className="input font-mono" inputMode="numeric" />
+            <input type="number" value={gramsInput} onChange={(e) => setGramsInput(e.target.value)} onBlur={() => { if (!gramsInput || parseFloat(gramsInput) <= 0) setGramsInput(String(entry.serving_size_g)); }} className="input font-mono" inputMode="decimal" />
             <div className="flex gap-2 mt-2">
               {[50, 100, 150, 200].map((g) => (
                 <button key={g} onClick={() => setGramsInput(String(g))} className={`flex-1 py-1.5 rounded-xl text-xs font-medium border transition-all ${grams === g ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-surface-200 text-surface-500'}`}>{g}g</button>

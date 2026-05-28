@@ -14,25 +14,37 @@
   "categories": ["food", "health", "fitness", "lifestyle"],
   "icons": [
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
+      "src": "/vegantrack-icon-64.png",
+      "sizes": "64x64",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
+      "src": "/vegantrack-icon-128.png",
+      "sizes": "128x128",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/vegantrack-icon-256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/vegantrack-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/vegantrack-icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/vegantrack-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -40,14 +52,14 @@
   ],
   "screenshots": [
     {
-      "src": "/icon-512.png",
+      "src": "/vegantrack-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "VeganTrack - Diario nutricional"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/vegantrack-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "wide",

@@ -85,7 +85,7 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
   const scannerRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const servingGrams = Math.max(1, parseInt(servingInput) || 0);
+  const servingGrams = Math.max(0.1, parseFloat(servingInput) || 0);
 
   // Load recent foods on mount
   useEffect(() => {
@@ -645,12 +645,12 @@ export function SearchPage({ initialLockedMeal, onClearLock }: SearchPageProps) 
                   value={servingInput}
                   onChange={(e) => setServingInput(e.target.value)}
                   onBlur={() => {
-                    if (!servingInput || parseInt(servingInput) <= 0) {
+                    if (!servingInput || parseFloat(servingInput) <= 0) {
                       setServingInput('100');
                     }
                   }}
                   className="input flex-1 font-mono"
-                  inputMode="numeric"
+                  inputMode="decimal"
                 />
                 {selectedProduct.serving_quantity > 0 && (
                   <button
