@@ -24,11 +24,13 @@ La columna `food_log.source` es texto libre (sin CHECK), así que el nuevo valor
 
 | Variable | Obligatoria | Por defecto | Para qué |
 |---|---|---|---|
-| `ANTHROPIC_API_KEY` | **Sí** | — | Llamada a Claude (visión) |
-| `ANTHROPIC_MODEL` | No | `claude-sonnet-4-6` | Modelo de visión |
+| `GEMINI_API_KEY` | **Sí** | — | Llamada a Google Gemini (visión) |
+| `GEMINI_MODEL` | No | `gemini-2.5-flash-lite` | Modelo de visión |
 | `FREE_DAILY_SCANS` | No | `3` | Cuota diaria del plan free |
 | `VITE_SUPABASE_URL` | Ya existe | — | Reutiliza la del webhook de Stripe |
 | `SUPABASE_SERVICE_ROLE_KEY` | Ya existe | — | Reutiliza la del webhook de Stripe |
+
+La API key de Gemini se obtiene gratis en Google AI Studio (aistudio.google.com).
 
 Despliega la rama (o haz merge) para que `POST /api/analyze-meal` esté vivo.
 
@@ -56,9 +58,10 @@ Asegúrate de que la build apunta a la API desplegada:
 
 ## 5. Medir el embudo
 
-Eventos en `analytics_events`:
+Eventos en `analytics_events` (cliente):
 `app_open`, `photo_scan_started`, `photo_scan_success`, `photo_scan_quota_blocked`,
 `photo_scan_error`, `photo_entry_saved`, `paywall_viewed`, `checkout_opened`.
+El backend además registra `meal_analyzed` (verdad de servidor de cada análisis).
 
 Conversión de la palanca (fotos → paywall → checkout), últimos 30 días:
 
@@ -73,11 +76,14 @@ order by 2 desc;
 
 ## Notas
 
-- **Coste IA**: acotado por la cuota gratuita. Vigila el gasto real y ajusta
-  `ANTHROPIC_MODEL`/`FREE_DAILY_SCANS`. Para abaratar, `claude-haiku-4-5` es más
-  barato a costa de algo de precisión.
+- **Coste IA**: `gemini-2.5-flash-lite` es muy económico para imagen, ideal para
+  el modelo freemium. La cuota gratuita acota el gasto. Para más precisión a
+  algo más de coste, `gemini-2.5-flash` vía `GEMINI_MODEL`.
+- **Análisis general, no veganocéntrico**: analiza cualquier plato (con o sin
+  carne/pescado/lácteos) y nunca lo rechaza. La info vegana es sólo un dato
+  opcional y suave; siempre se puede guardar el plato.
 - **La foto estima macros, no micros** (B12/hierro/etc. quedan "desconocidos" a
   propósito: prometer micros desde una foto sería falso). Los micros siguen
   viniendo de productos etiquetados y suplementos.
-- **Privacidad**: la imagen se envía al backend y de ahí a Anthropic para el
-  análisis; no se almacena la foto (sólo el resultado al guardar la entrada).
+- **Privacidad**: la imagen se envía al backend y de ahí a Google (Gemini) para
+  el análisis; no se almacena la foto (sólo el resultado al guardar la entrada).

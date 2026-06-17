@@ -1,16 +1,18 @@
 /**
- * analyze-meal — Analiza la foto de un plato con Claude (visión) y devuelve
- * macros estimados + verificación vegana. La API key vive sólo en el servidor.
+ * analyze-meal — Analiza la foto de un plato con Google Gemini (visión) y
+ * devuelve macros estimados. Análisis nutricional GENERAL para cualquier
+ * persona: no rechaza platos por llevar carne, pescado, huevo o lácteos. La
+ * información vegana es sólo un dato opcional. La API key vive en el servidor.
  *
  * Flujo:
  *   1. Verifica el JWT de Supabase (Bearer) → userId.
  *   2. Comprueba el plan: si es free y ya gastó la cuota diaria → 402.
- *   3. Llama a Claude con la imagen y un contrato JSON estricto.
- *   4. Registra el escaneo (meal_scans) y devuelve resultado + cuota restante.
+ *   3. Llama a Gemini con la imagen y un contrato JSON estricto (responseSchema).
+ *   4. Registra el escaneo (meal_scans + analytics) y devuelve resultado + cuota.
  *
  * Env requeridas:
- *   ANTHROPIC_API_KEY, VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
- *   (opcional) ANTHROPIC_MODEL, FREE_DAILY_SCANS
+ *   GEMINI_API_KEY, VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ *   (opcional) GEMINI_MODEL (default gemini-2.5-flash-lite), FREE_DAILY_SCANS
  */
 import { createClient } from '@supabase/supabase-js';
 
@@ -19,40 +21,66 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6';
+const MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash-lite';
 const FREE_DAILY_SCANS = Number(process.env.FREE_DAILY_SCANS ?? '3');
 
 export const config = { runtime: 'edge' };
 
-const SYSTEM_PROMPT = `Eres un nutricionista experto en cocina vegana que estima la composición de un plato a partir de una foto.
-Devuelve SIEMPRE valores nutricionales POR 100 g (no del plato entero) y una estimación del peso total del plato en gramos.
-Sé realista y conservador. Si la imagen no es comida, responde is_food=false.
-Marca is_vegan=false si detectas cualquier ingrediente de origen animal (carne, pescado, huevo, lácteos, miel, gelatina).
-Responde ÚNICAMENTE con un objeto JSON válido, sin markdown ni texto adicional.`;
+const PROMPT = `Analiza la foto de comida para una app de nutrición general que usa todo tipo de personas (no sólo veganas).
+Estima el plato más probable, los ingredientes visibles, los gramos aproximados del plato y los valores nutricionales POR 100 g (calorías, proteínas, carbohidratos, grasas, fibra, azúcares y grasas saturadas).
+No rechaces ni penalices platos por llevar carne, pescado, huevo, lácteos, miel u otros ingredientes de origen animal: simplemente analízalos.
+Indica si el plato es vegano (is_vegan) sólo como dato informativo. Si ves ingredientes posiblemente NO veganos, repórtalos en non_vegan_ingredients como información opcional, sin juzgar.
+Si no estás seguro de algo, indícalo (vegan_confidence más baja, o una nota breve); no inventes datos.
+Si la imagen no es comida, responde is_food=false.
+Devuelve ÚNICAMENTE el JSON con el contrato esperado.`;
 
-const JSON_CONTRACT = `Esquema JSON exacto:
-{
-  "is_food": boolean,
-  "food_name": "string corto en español (p. ej. 'Bowl de garbanzos y aguacate')",
-  "estimated_grams": number,
-  "per_100g": {
-    "calories": number,
-    "protein_g": number,
-    "carbs_g": number,
-    "fat_g": number,
-    "fiber_g": number,
-    "sugar_g": number,
-    "saturated_fat_g": number
+// Contrato de salida (idéntico al que espera la app móvil).
+const RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    is_food: { type: 'boolean' },
+    food_name: { type: 'string' },
+    estimated_grams: { type: 'number' },
+    per_100g: {
+      type: 'object',
+      properties: {
+        calories: { type: 'number' },
+        protein_g: { type: 'number' },
+        carbs_g: { type: 'number' },
+        fat_g: { type: 'number' },
+        fiber_g: { type: 'number' },
+        sugar_g: { type: 'number' },
+        saturated_fat_g: { type: 'number' },
+      },
+      required: ['calories', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g', 'sugar_g', 'saturated_fat_g'],
+    },
+    is_vegan: { type: 'boolean' },
+    vegan_confidence: { type: 'string', enum: ['high', 'medium', 'low', 'unknown'] },
+    non_vegan_ingredients: { type: 'array', items: { type: 'string' } },
+    notes: { type: 'string' },
   },
-  "is_vegan": boolean,
-  "vegan_confidence": "high" | "medium" | "low" | "unknown",
-  "non_vegan_ingredients": ["lista de ingredientes no veganos detectados, vacía si es vegano"],
-  "notes": "una frase opcional con supuestos de la estimación"
-}`;
+  required: ['is_food', 'food_name', 'estimated_grams', 'per_100g', 'is_vegan', 'vegan_confidence', 'non_vegan_ingredients'],
+} as const;
 
 function parseJson(text: string): any {
   const cleaned = text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
   return JSON.parse(cleaned);
+}
+
+/** Valida defensivamente la forma mínima del contrato. */
+function isValidAnalysis(r: any): boolean {
+  if (!r || typeof r.is_food !== 'boolean') return false;
+  if (!r.is_food) return true; // "no es comida" es una respuesta válida
+  const p = r.per_100g;
+  return (
+    typeof r.food_name === 'string' &&
+    typeof r.estimated_grams === 'number' &&
+    p &&
+    typeof p.calories === 'number' &&
+    typeof p.protein_g === 'number' &&
+    typeof p.carbs_g === 'number' &&
+    typeof p.fat_g === 'number'
+  );
 }
 
 function todayUTC(): string {
@@ -109,48 +137,47 @@ export default async function handler(req: Request) {
       }
     }
 
-    // 3. Claude (visión)
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    // 3. Gemini (visión) con salida JSON forzada por esquema
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return json({ error: 'IA no configurada' }, 500);
 
-    const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+    const aiRes = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 800,
-        system: SYSTEM_PROMPT,
-        messages: [
+        contents: [
           {
             role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: mime_type || 'image/jpeg',
-                  data: image_base64,
-                },
-              },
-              { type: 'text', text: `Analiza este plato. ${JSON_CONTRACT}` },
+            parts: [
+              { inline_data: { mime_type: mime_type || 'image/jpeg', data: image_base64 } },
+              { text: PROMPT },
             ],
           },
         ],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 800,
+          responseMimeType: 'application/json',
+          responseSchema: RESPONSE_SCHEMA,
+        },
       }),
     });
 
     if (!aiRes.ok) {
       const detail = await aiRes.text().catch(() => '');
-      console.error('Anthropic error:', aiRes.status, detail);
+      console.error('Gemini error:', aiRes.status, detail);
       return json({ error: 'No se pudo analizar la imagen' }, 502);
     }
 
     const aiJson = await aiRes.json();
-    const text = aiJson?.content?.[0]?.text ?? '';
+    const text = aiJson?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    if (!text) {
+      // p. ej. respuesta bloqueada por seguridad o vacía
+      console.error('Gemini sin texto, finishReason:', aiJson?.candidates?.[0]?.finishReason);
+      return json({ error: 'La IA no devolvió un resultado. Prueba con otra foto.' }, 502);
+    }
+
     let result: any;
     try {
       result = parseJson(text);
@@ -159,12 +186,29 @@ export default async function handler(req: Request) {
       return json({ error: 'Respuesta de IA no interpretable' }, 502);
     }
 
-    if (!result?.is_food) {
+    if (!isValidAnalysis(result)) {
+      console.error('Contrato inválido:', JSON.stringify(result));
+      return json({ error: 'La IA no devolvió un análisis válido. Prueba con otra foto.' }, 502);
+    }
+
+    if (!result.is_food) {
       return json({ error: 'no_food', message: 'No parece un plato de comida.' }, 422);
     }
 
-    // 4. Registrar el escaneo (sólo en éxito) y devolver cuota
+    // Normaliza campos opcionales para que el contrato sea estable.
+    if (!Array.isArray(result.non_vegan_ingredients)) result.non_vegan_ingredients = [];
+    if (typeof result.vegan_confidence !== 'string') result.vegan_confidence = 'unknown';
+
+    // 4. Registrar el escaneo (sólo en éxito) + analítica de servidor.
     await supabase.from('meal_scans').insert({ user_id: userId, date: today });
+    void supabase
+      .from('analytics_events')
+      .insert({
+        user_id: userId,
+        event: 'meal_analyzed',
+        props: { model: MODEL, is_vegan: result.is_vegan, vegan_confidence: result.vegan_confidence },
+      })
+      .then(() => undefined, () => undefined);
 
     const remaining = isPro ? null : Math.max(0, FREE_DAILY_SCANS - (usedToday + 1));
     return json({ result, remaining, limit: FREE_DAILY_SCANS });
